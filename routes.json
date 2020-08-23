@@ -1,0 +1,72 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "version": "7.0.0",
+        "title": "TEI Publisher REST API",
+        "description": ""
+    },
+    "servers": [
+        {
+            "description": "Endpoint for testing on localhost",
+            "url": "http://localhost:8080/exist/apps/router"
+        }
+    ],
+    "paths": {
+        "/collection/{path}": {
+            "get": {
+                "operationId": "route:echo-parameters",
+                "parameters": [
+                    {
+                        "name": "path",
+                        "in": "path",
+                        "required": true,
+                        "description": "Path to the document, relative to the data root",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "view",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "items": {
+                                "enum": [
+                                    "div",
+                                    "page",
+                                    "single"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "root",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "xpath",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Document fragment",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
