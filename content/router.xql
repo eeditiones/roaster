@@ -4,13 +4,15 @@ module namespace router="http://exist-db.org/xquery/router";
 
 declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
     let $controller := request:get-attribute("$exist:controller")
-    let $json := ``[`{repo:get-root()}``{$controller}`/`{$jsonPath}`]``
+    let $json := replace(``[`{repo:get-root()}`/`{$controller}`/`{$jsonPath}`]``, "/+", "/")
     let $config := json-doc($json)
     return
         if (exists($config)) then
             router:match-path($config, $lookup)
-        else
-            response:set-status-code(404)
+        else (
+            response:set-status-code(404),
+            "JSON doc not found"
+        )
 };
 
 declare function router:match-path($config as map(*), $lookup as function(*)) {
@@ -58,13 +60,21 @@ declare function router:exec($route as map(*), $parameters as map(*), $lookup as
 
 declare function router:write-response($response, $config as map(*)) {
     let $content := $config?responses?200?content
-    (: currently we're only accepting one content type :)
-    let $contentType := head(map:keys($content))
-    return (
-        response:set-header("Content-Type", $contentType),
-        util:declare-option("output:method", router:method-for-content-type($contentType)),
-        $response
-    )
+    return
+        if (exists($content)) then
+            (: currently we're only accepting one content type :)
+            let $contentType := head(map:keys($content))
+            return (
+                response:set-header("Content-Type", $contentType),
+                util:declare-option("output:method", router:method-for-content-type($contentType)),
+                $response
+            )
+        else (
+            response:set-header("Content-Type", "text/xml"),
+            util:declare-option("output:method", "xml"),
+            $response
+        )
+
 };
 
 declare function router:method-for-content-type($type) {
@@ -110,11 +120,12 @@ declare function router:cast-parameter($values as xs:string*, $config as map(*))
 };
 
 declare function router:create-regex($path as xs:string) {
-    let $components := tokenize($path, "/")
-    let $suffix := head((replace($components[last()], "\{[^\}]+\}", "(.+)\$"), $components[last()]))
-    let $rest :=
-        subsequence($components, 1, count($components) - 1) !
-            head((replace(., "\{[^\}]+\}", "([^/]+)"), .))
+    let $components := substring-after($path, "/") => replace("\.", "\\.") => tokenize("/")
+    let $regex :=
+        for $component at $p in $components
+        return
+            (: replace($component, "\{[^\}]+\}", if ($p = 1) then "(.+?)" else "([^/]+)") :)
+            replace($component, "\{[^\}]+\}", "([^/]+)")
     return
-        string-join(($rest, $suffix), "/")
+        "/" || string-join($regex, "/")
 };

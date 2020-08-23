@@ -9,6 +9,19 @@ declare function route:echo-parameters($parameters as map(*)) {
     $parameters
 };
 
+declare function route:echo-xml($parameters as map(*)) {
+    <table>
+    {
+        map:for-each($parameters, function($name, $value) {
+            <tr>
+                <td>{$name}</td>
+                <td>{$value}</td>
+            </tr>
+        })
+    }
+    </table>
+};
+
 let $lookup := function($name as xs:string) {
     function-lookup(xs:QName($name), 1)
 }

@@ -8,11 +8,36 @@
     "servers": [
         {
             "description": "Endpoint for testing on localhost",
-            "url": "http://localhost:8080/exist/apps/router"
+            "url": "http://localhost:8080/exist/apps/oas-router"
         }
     ],
     "paths": {
-        "/collection/{path}": {
+        "/{path}/{doc}.xml": {
+            "get": {
+                "description": "Retrieve XML document",
+                "operationId": "route:echo-xml",
+                "parameters": [
+                    {
+                        "name": "path",
+                        "in": "path",
+                        "required": true,
+                        "description": "Relative collection path"
+                    },
+                    {
+                        "name": "doc",
+                        "in": "path",
+                        "required": true,
+                        "description": "Name of the document"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/{path}": {
             "get": {
                 "operationId": "route:echo-parameters",
                 "parameters": [

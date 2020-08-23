@@ -4,7 +4,7 @@
             "server": "http://localhost:8080/exist",
             "user": "admin",
             "password": "",
-            "root": "/db/apps/router"
+            "root": "/db/apps/oas-router"
         }
     },
     "sync": {
