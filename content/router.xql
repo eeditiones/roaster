@@ -38,7 +38,10 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
         if (empty($routes)) then
             response:set-status-code(404)
         else
-            let $route := head($routes)
+            (: if there are multiple matches, prefer the one matching the longest pattern :)
+            let $route := sort($routes, (), function($route) {
+                string-length($route?pattern)
+            }) => reverse() => head()
             let $parameters := map:merge((
                 router:map-request-parameters($route?config),
                 router:map-path-parameters($route, $path)
