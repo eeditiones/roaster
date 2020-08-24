@@ -2,6 +2,10 @@ xquery version "3.1";
 
 module namespace router="http://exist-db.org/xquery/router";
 
+declare variable $router:E_REQUIRED_PARAM := xs:QName("router:E_REQUIRED_PARAM");
+declare variable $router:E_OPERATION := xs:QName("router:E_OPERATION");
+declare variable $router:E_BODY_CONTENT_TYPE := xs:QName("router:E_BODY_CONTENT_TYPE");
+
 declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
     let $controller := request:get-attribute("$exist:controller")
     let $json := replace(``[`{repo:get-root()}`/`{$controller}`/`{$jsonPath}`]``, "/+", "/")
@@ -46,19 +50,34 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
                 router:map-request-parameters($route?config),
                 router:map-path-parameters($route, $path)
             ))
+            let $request := map {
+                "parameters": $parameters,
+                "body": router:request-body($route?config)
+            }
             return
-                router:exec($route?config, $parameters, $lookup) => router:write-response($route?config)
+                router:exec($route?config, $request, $lookup) => router:write-response($route?config)
 };
 
-declare function router:exec($route as map(*), $parameters as map(*), $lookup as function(*)) {
-    let $fn := $lookup($route?operationId)
+(:~
+ : Look up the XQuery function whose name matches property "operationId". If found,
+ : call it and pass the request map as single parameter.
+ :)
+declare function router:exec($route as map(*), $request as map(*), $lookup as function(*)) {
+    let $operationId := $route?operationId
     return
-        if (exists($fn)) then
-            $fn($parameters)
-        else (
-            response:set-status-code(404),
-            "Function not found: " || $route?operationId
-        )
+        if (exists($operationId)) then
+            try {
+                let $fn := $lookup($operationId)
+                return
+                    if (exists($fn)) then
+                        $fn($request)
+                    else
+                        error($router:E_OPERATION, "Function " || $operationId || " could not be resolved")
+            } catch * {
+                error($router:E_OPERATION, "Function " || $operationId || " could not be resolved")
+            }
+        else
+            error($router:E_OPERATION, "Operation does not define an operationId")
 };
 
 declare function router:write-response($response, $config as map(*)) {
@@ -93,11 +112,18 @@ declare function router:map-path-parameters($route as map(*), $path as xs:string
     let $matchPath := analyze-string($path, $route?regex)
     for $subst in $match//fn:group
     let $value := $matchPath//fn:group[@nr=$subst/@nr]/string()
-    let $paramConfig := array:filter($route?config?parameters, function($param) {
-        $param?name = $subst and $param?in = "path"
-    })
+    let $paramConfig := 
+        if (exists($route?config?parameters)) then
+            array:filter($route?config?parameters, function($param) {
+                $param?name = $subst and $param?in = "path"
+            })
+        else
+            ()
     return
-        map:entry($subst/string(), router:cast-parameter($value, $paramConfig?1))
+        if (exists($paramConfig) and array:size($paramConfig) > 0) then
+            map:entry($subst/string(), router:cast-parameter($value, $paramConfig?1))
+        else
+            error($router:E_REQUIRED_PARAM, "No definition for required path parameter " || $subst)
 };
 
 declare function router:map-request-parameters($route as map(*)) {
@@ -105,7 +131,8 @@ declare function router:map-request-parameters($route as map(*)) {
     return
         if (exists($params)) then
             for $param in $params?*
-            let $values := request:get-parameter($param?name, ())
+            let $default := if (exists($param?schema)) then $param?schema?default else ()
+            let $values := request:get-parameter($param?name, $default)
             return
                 map:entry($param?name, router:cast-parameter($values, $param))
         else
@@ -116,10 +143,40 @@ declare function router:cast-parameter($values as xs:string*, $config as map(*))
     for $value in $values
     return
         switch($config?schema?type)
-            case "xs:integer" return
+            case "integer" return
                 xs:integer($value)
+            case "number" return
+                number($value)
+            case "boolean" return
+                boolean($value)
             default return
                 string($value)
+};
+
+(:~
+ : Try to retrieve and convert the request body if specified
+ :)
+declare function router:request-body($route as map(*)) {
+    if (exists($route?requestBody) and exists($route?requestBody?content)) then
+        let $content := $route?requestBody?content
+        let $contentTypeHeader := request:get-header("Content-Type")
+        return
+            if (map:contains($content, $contentTypeHeader)) then
+                let $contentType := map:get($content, $contentTypeHeader)
+                let $body := request:get-data()
+                return
+                    switch ($contentTypeHeader)
+                        case "application/json" return
+                            parse-json(util:binary-to-string($body))
+                        case "text/xml" case "application/xml" return
+                            $body
+                        default return
+                            error(router:E_BODY_CONTENT_TYPE, "Unable to handle request body content type " || $contentType)
+            else
+                error(router:E_BODY_CONTENT_TYPE, "Passed in Content-Type " || $contentTypeHeader || 
+                    " not allowed")
+    else
+        ()
 };
 
 declare function router:create-regex($path as xs:string) {

@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "version": "7.0.0",
-        "title": "TEI Publisher REST API",
+        "title": "Demo REST API",
         "description": ""
     },
     "servers": [
@@ -12,76 +12,59 @@
         }
     ],
     "paths": {
-        "/{path}/{doc}.xml": {
+        "/posts": {
             "get": {
-                "description": "Retrieve XML document",
-                "operationId": "route:echo-xml",
+                "summary": "Return list of blog posts",
+                "description": "Returns a list of blog posts in JSON format",
+                "operationId": "route:list-posts",
                 "parameters": [
                     {
-                        "name": "path",
-                        "in": "path",
-                        "required": true,
-                        "description": "Relative collection path"
-                    },
-                    {
-                        "name": "doc",
-                        "in": "path",
-                        "required": true,
-                        "description": "Name of the document"
+                        "name": "start",
+                        "in": "query",
+                        "schema":{
+                            "type": "number",
+                            "default": 1
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/{path}": {
-            "get": {
-                "operationId": "route:echo-parameters",
-                "parameters": [
-                    {
-                        "name": "path",
-                        "in": "path",
-                        "required": true,
-                        "description": "Path to the document, relative to the data root",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "view",
-                        "in": "query",
-                        "schema": {
-                            "type": "string",
-                            "items": {
-                                "enum": [
-                                    "div",
-                                    "page",
-                                    "single"
-                                ]
+                        "description": "Array of blog posts",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "string"
+                                }
                             }
                         }
-                    },
-                    {
-                        "name": "root",
-                        "in": "query",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "xpath",
-                        "in": "query",
-                        "schema": {
-                            "type": "string"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Submit a post",
+                "operationId": "route:new-post",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/xml": {
+                            "schema": {
+                                "type": "string"
+                            },
+                            "example": "<article><title>My new article</title></article>"
+                        },
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            },
+                            "example": {
+                                "title": "My new blog post in JSON"
+                            }
                         }
                     }
-                ],
+                },
                 "responses": {
                     "200": {
-                        "description": "Document fragment",
+                        "description": "Description of the added post",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -89,6 +72,53 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/posts/{id}": {
+            "get": {
+                "summary": "Retrieve post content",
+                "operationId": "route:get-post",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "XML content of the post",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Delete a post",
+                "operationId": "route:delete-post",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     }
                 }
             }

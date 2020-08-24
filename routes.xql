@@ -5,21 +5,49 @@ import module namespace router="http://exist-db.org/xquery/router" at "./content
 declare namespace route="http://exist-db.org/apps/router/route";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 
-declare function route:echo-parameters($parameters as map(*)) {
-    $parameters
+declare function route:list-posts($request as map(*)) {
+    map {
+        "start": $request?parameters?start,
+        "posts":
+            [
+                map {
+                    "title": "Authoring Open API specifications"
+                },
+                map {
+                    "title": "Testing REST APIs"
+                }
+            ]
+    }
 };
 
-declare function route:echo-xml($parameters as map(*)) {
-    <table>
-    {
-        map:for-each($parameters, function($name, $value) {
-            <tr>
-                <td>{$name}</td>
-                <td>{$value}</td>
-            </tr>
-        })
+declare function route:new-post($request as map(*)) {
+    map {
+        "status": "created",
+        "id": util:uuid(),
+        "title": 
+            if ($request?body instance of map(*)) then 
+                $request?body?title 
+            else 
+                $request?body//title/text()
     }
-    </table>
+};
+
+declare function route:get-post($request as map(*)) {
+    <article xml:id="{$request?parameters?id}">
+        <title>Lorem ipsum</title>
+        <para>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy 
+        eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. 
+        At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, 
+        no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, 
+        consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et 
+        dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo 
+        dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem 
+        ipsum dolor sit amet.</para>
+    </article>
+};
+
+declare function route:delete-post($request as map(*)) {
+    ()
 };
 
 let $lookup := function($name as xs:string) {
