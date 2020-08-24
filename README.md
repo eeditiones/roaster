@@ -17,7 +17,7 @@ A demo using the examples contained in this repository is available: [demo](http
 
 ## Writing Request Handlers
 
-This implementation forwards requests to XQuery functions (see [routes.xql](routes.xql)), which should accept a single parameter: `$request`. This is a map with a number of keys:
+This implementation forwards requests to XQuery functions (see [routes.xql](routes.xql)). The name of the function is taken from the Open API property `operationId` associated with each request method. Each function should accept a single parameter: `$request`. This is a map with a number of keys:
 
 * _parameters_: a map containing all parameters (path and query) which were defined in the spec. The key is the name of the parameter, the value is the parameter value cast to the defined target type.
 * _body_: the body of the request (if ~requestBody~ was used), cast to the specified media type (currently application/json or application/xml).
