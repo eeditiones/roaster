@@ -16,8 +16,8 @@ Due to limitations in eXist's controller, `routes.xql` needs to be in a separate
 
 - [ ] Parameter type conversion
   - [X] string, integer, number, boolean
-  - [ ] array
-  - [ ] *format*: float, double, byte, binary, date, date-time
+  - [ ] array (check item type)
+  - [X] *format*: float, double, byte, binary, date, date-time
   - [X] *default* value
   - [ ] checking *required*
 - [X] requestBody in POST

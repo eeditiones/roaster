@@ -153,9 +153,25 @@ declare function router:cast-parameter($values as xs:string*, $config as map(*))
     return
         switch($config?schema?type)
             case "integer" return
-                xs:integer($value)
+                if ($config?schema?format) then
+                    switch ($config?schema?format)
+                        case "int32" case "int64" return
+                            xs:int($value)
+                        default return
+                            xs:integer($value)
+                else
+                    xs:integer($value)
             case "number" return
-                number($value)
+                if ($config?schema?format) then
+                    switch ($config?schema?format)
+                        case "float" return
+                            xs:float($value)
+                        case "double" return
+                            xs:double($value)
+                        default return
+                            number($value)
+                else
+                    number($value)
             case "boolean" return
                 boolean($value)
             case "string" return
@@ -165,6 +181,10 @@ declare function router:cast-parameter($values as xs:string*, $config as map(*))
                             xs:date($value)
                         case "date-time" return
                             xs:dateTime($value)
+                        case "binary" return
+                            xs:base64Binary($value)
+                        case "byte" return
+                            util:binary-to-string(xs:base64Binary($value))
                         default return
                             string(value)
                 else
