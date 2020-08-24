@@ -23,9 +23,9 @@ declare function route:list-posts($request as map(*)) {
 };
 
 declare function route:new-post($request as map(*)) {
-    let $user := request:get-attribute($request?loginDomain || ".user")
+    let $user := sm:id()//sm:real/sm:username
     return
-        if ($user) then
+        if ($user != "guest") then
             (: To indicate a different status code for the response, call router:response :)
             router:response($router:CREATED,
                 <metadata xml:id="{util:uuid()}">
@@ -57,9 +57,9 @@ declare function route:get-post($request as map(*)) {
 };
 
 declare function route:delete-post($request as map(*)) {
-    let $user := request:get-attribute($request?loginDomain || ".user")
+    let $user := sm:id()//sm:real/sm:username
     return
-        if ($user) then
+        if ($user != "guest") then
             router:response($router:NO_CONTENT, ())
         else
             (: errors will always return a JSON formatted response :)

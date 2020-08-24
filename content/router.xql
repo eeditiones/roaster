@@ -33,6 +33,7 @@ declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
     } catch errors:REQUIRED_PARAM | errors:OPERATION | errors:BODY_CONTENT_TYPE {
         router:send(400, $err:description, $err:value)
     } catch * {
+        util:log('ERROR', $err:description),
         router:send(500, $err:description, $err:value)
     }
 };

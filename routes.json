@@ -52,7 +52,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object"
                                 }
                             }
                         }
@@ -66,7 +66,14 @@
                 "operationId": "router:logout",
                 "responses": {
                     "401": {
-                        "description": "User logged out"
+                        "description": "User logged out",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -101,7 +108,7 @@
                         "content": {
                             "application/json": {
                                 "schema":{
-                                    "type": "string"
+                                    "type": "object"
                                 }
                             }
                         }
