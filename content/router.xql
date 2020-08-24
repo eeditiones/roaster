@@ -2,21 +2,34 @@ xquery version "3.1";
 
 module namespace router="http://exist-db.org/xquery/router";
 
-declare variable $router:E_REQUIRED_PARAM := xs:QName("router:E_REQUIRED_PARAM");
-declare variable $router:E_OPERATION := xs:QName("router:E_OPERATION");
-declare variable $router:E_BODY_CONTENT_TYPE := xs:QName("router:E_BODY_CONTENT_TYPE");
+import module namespace errors = "http://exist-db.org/xquery/router/errors" at "errors.xql";
 
 declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
-    let $controller := request:get-attribute("$exist:controller")
-    let $json := replace(``[`{repo:get-root()}`/`{$controller}`/`{$jsonPath}`]``, "/+", "/")
-    let $config := json-doc($json)
-    return
-        if (exists($config)) then
-            router:match-path($config, $lookup)
-        else (
-            response:set-status-code(404),
-            "JSON doc not found"
-        )
+    try {
+        let $controller := request:get-attribute("$exist:controller")
+        let $json := replace(``[`{repo:get-root()}`/`{$controller}`/`{$jsonPath}`]``, "/+", "/")
+        let $config := json-doc($json)
+        return
+            if (exists($config)) then
+                router:match-path($config, $lookup)
+            else
+                error($errors:NOT_FOUND, "Failed to load JSON file from " || $json)
+    } catch errors:NOT_FOUND_404 {
+        response:set-status-code(404),
+        $err:description
+    } catch errors:BAD_REQUEST_400 {
+        response:set-status-code(400),
+        $err:description
+    } catch errors:UNAUTHORIZED_401 {
+        response:set-status-code(401),
+        $err:description
+    } catch errors:FORBIDDEN_403 {
+        response:set-status-code(403),
+        $err:description
+    } catch * {
+        response:set-status-code(400),
+        $err:description
+    }
 };
 
 declare function router:match-path($config as map(*), $lookup as function(*)) {
@@ -66,18 +79,19 @@ declare function router:exec($route as map(*), $request as map(*), $lookup as fu
     let $operationId := $route?operationId
     return
         if (exists($operationId)) then
-            try {
-                let $fn := $lookup($operationId)
-                return
-                    if (exists($fn)) then
-                        $fn($request)
-                    else
-                        error($router:E_OPERATION, "Function " || $operationId || " could not be resolved")
-            } catch * {
-                error($router:E_OPERATION, "Function " || $operationId || " could not be resolved")
-            }
+            let $fn :=
+                try {
+                    $lookup($operationId)
+                } catch * {
+                    error($errors:OPERATION, "Function " || $operationId || " could not be resolved")
+                }
+            return
+                if (exists($fn)) then
+                    $fn($request)
+                else
+                    error($errors:OPERATION, "Function " || $operationId || " could not be resolved")
         else
-            error($router:E_OPERATION, "Operation does not define an operationId")
+            error($errors:OPERATION, "Operation does not define an operationId")
 };
 
 declare function router:write-response($response, $config as map(*)) {
@@ -123,7 +137,7 @@ declare function router:map-path-parameters($route as map(*), $path as xs:string
         if (exists($paramConfig) and array:size($paramConfig) > 0) then
             map:entry($subst/string(), router:cast-parameter($value, $paramConfig?1))
         else
-            error($router:E_REQUIRED_PARAM, "No definition for required path parameter " || $subst)
+            error($errors:REQUIRED_PARAM, "No definition for required path parameter " || $subst)
 };
 
 declare function router:map-request-parameters($route as map(*)) {
@@ -171,9 +185,9 @@ declare function router:request-body($route as map(*)) {
                         case "text/xml" case "application/xml" return
                             $body
                         default return
-                            error(router:E_BODY_CONTENT_TYPE, "Unable to handle request body content type " || $contentType)
+                            error($errors:BODY_CONTENT_TYPE, "Unable to handle request body content type " || $contentType)
             else
-                error(router:E_BODY_CONTENT_TYPE, "Passed in Content-Type " || $contentTypeHeader || 
+                error($errors:BODY_CONTENT_TYPE, "Passed in Content-Type " || $contentTypeHeader || 
                     " not allowed")
     else
         ()

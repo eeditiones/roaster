@@ -22,7 +22,7 @@
                         "name": "start",
                         "in": "query",
                         "schema":{
-                            "type": "number",
+                            "type": "integer",
                             "default": 1
                         }
                     }

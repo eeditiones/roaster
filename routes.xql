@@ -1,6 +1,7 @@
 xquery version "3.1";
 
-import module namespace router="http://exist-db.org/xquery/router" at "./content/router.xql";
+import module namespace router="http://exist-db.org/xquery/router" at "content/router.xql";
+import module namespace errors = "http://exist-db.org/xquery/router/errors" at "content/errors.xql";
 
 declare namespace route="http://exist-db.org/apps/router/route";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
@@ -47,7 +48,7 @@ declare function route:get-post($request as map(*)) {
 };
 
 declare function route:delete-post($request as map(*)) {
-    ()
+    error($errors:FORBIDDEN)
 };
 
 let $lookup := function($name as xs:string) {
