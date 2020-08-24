@@ -7,6 +7,10 @@
     },
     "servers": [
         {
+            "description": "apps5test.existsolutions.com",
+            "url": "http://apps5test.existsolutions.com/exist/apps/oas-router"
+        },
+        {
             "description": "Endpoint for testing on localhost",
             "url": "http://localhost:8080/exist/apps/oas-router"
         }
