@@ -158,6 +158,17 @@ declare function router:cast-parameter($values as xs:string*, $config as map(*))
                 number($value)
             case "boolean" return
                 boolean($value)
+            case "string" return
+                if ($config?schema?format) then
+                    switch ($config?schema?format)
+                        case "date" return
+                            xs:date($value)
+                        case "date-time" return
+                            xs:dateTime($value)
+                        default return
+                            string(value)
+                else
+                    string(value)
             default return
                 string($value)
 };

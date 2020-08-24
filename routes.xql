@@ -9,6 +9,7 @@ declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 declare function route:list-posts($request as map(*)) {
     map {
         "start": $request?parameters?start,
+        "date": format-date($request?parameters?date, '[FNn], [D1o] [MNn], [Y]'),
         "posts":
             [
                 map {

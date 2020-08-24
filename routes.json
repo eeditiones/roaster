@@ -29,6 +29,15 @@
                             "type": "integer",
                             "default": 1
                         }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "schema":{
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "example": "2020-08-24+02:00"
                     }
                 ],
                 "responses": {
