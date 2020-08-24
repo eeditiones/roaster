@@ -10,16 +10,3 @@ declare variable $errors:NOT_FOUND := xs:QName("errors:NOT_FOUND_404");
 declare variable $errors:BAD_REQUEST := xs:QName("errors:BAD_REQUEST_400");
 declare variable $errors:UNAUTHORIZED := xs:QName("errors:UNAUTHORIZED_401");
 declare variable $errors:FORBIDDEN := xs:QName("errors:FORBIDDEN_403");
-
-declare function errors:send($code as xs:integer, $description as xs:string, $value as item()*) {
-    response:set-status-code($code),
-    response:set-header("Content-Type", "application/json"),
-    util:declare-option("output:method", "json"),
-    if ($description = "") then
-        $value
-    else
-        map {
-            "description": $description,
-            "details": $value
-        }
-};

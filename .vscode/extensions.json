@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "42crunch.vscode-openapi",
-        "arjun.swagger-viewer"
+        "arjun.swagger-viewer",
+        "exist-db.existdb-vscode"
     ]
 }

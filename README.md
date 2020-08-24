@@ -25,5 +25,5 @@ Due to limitations in eXist's controller, `routes.xql` needs to be in a separate
 - [X] error handling
 - [ ] reusable components
 - [X] login (securityScheme)
-- [ ] allow other responses than 200, e.g. 201
-- [ ] respect media-types for errors
+- [X] allow other responses than 200, e.g. 201
+- [X] respect media-types for errors (if context is known, otherwise use JSON)

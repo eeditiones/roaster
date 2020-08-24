@@ -26,16 +26,20 @@ declare function route:new-post($request as map(*)) {
     let $user := request:get-attribute($request?loginDomain || ".user")
     return
         if ($user) then
-            map {
-                "id": util:uuid(),
-                "title": 
-                    if ($request?body instance of map(*)) then 
-                        $request?body?title 
-                    else 
-                        $request?body//title/text()
-            }
+            (: To indicate a different status code for the response, call router:response :)
+            router:response($router:CREATED,
+                <metadata xml:id="{util:uuid()}">
+                    <title>{
+                        if ($request?body instance of map(*)) then 
+                            $request?body?title
+                        else 
+                            $request?body//title/text()
+                    }</title>
+                    <author>{$request?parameters?author}</author>
+                </metadata>
+            )
         else
-            error($errors:UNAUTHORIZED, "Permission denied to create new post")
+            router:response($errors:UNAUTHORIZED, <error>Permission denied to create new post</error>)
 };
 
 declare function route:get-post($request as map(*)) {
@@ -53,9 +57,15 @@ declare function route:get-post($request as map(*)) {
 };
 
 declare function route:delete-post($request as map(*)) {
-    error($errors:UNAUTHORIZED, "You don't have permission to delete the post", map {
-        "id": $request?parameters?id
-    })
+    let $user := request:get-attribute($request?loginDomain || ".user")
+    return
+        if ($user) then
+            router:response($router:NO_CONTENT, ())
+        else
+            (: errors will always return a JSON formatted response :)
+            error($errors:UNAUTHORIZED, "You don't have permission to delete the post", map {
+                "id": $request?parameters?id
+            })
 };
 
 let $lookup := function($name as xs:string) {

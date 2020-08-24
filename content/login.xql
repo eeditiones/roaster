@@ -43,7 +43,7 @@ declare %private function login:get-credentials($domain as xs:string, $path as x
     plogin:login($token, login:callback(?, ?, ?, ?, $domain, $path, $asDba))
 };
 
-declare %private function login:create-login-session($domain as xs:string, $path as xs:string?, $user as xs:string, $password as xs:string,
+declare %private function login:create-login-session($domain as xs:string, $path as xs:string?, $user as xs:string, $password as xs:string?,
     $maxAge as xs:dayTimeDuration?, $asDba as xs:boolean) as empty-sequence() {
     if (exists($maxAge)) then (
         plogin:register($user, $password, $maxAge, login:callback(?, ?, ?, ?, $domain, $path, $asDba)),

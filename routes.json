@@ -109,6 +109,15 @@
             "post": {
                 "summary": "Submit a post",
                 "operationId": "route:new-post",
+                "parameters": [
+                    {
+                        "name": "author",
+                        "in": "query",
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -129,10 +138,20 @@
                     }
                 },
                 "responses": {
-                    "200": {
+                    "201": {
                         "description": "Description of the added post",
                         "content": {
-                            "application/json": {
+                            "application/xml": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "User not allowed to create document",
+                        "content": {
+                            "application/xml": {
                                 "schema": {
                                     "type": "string"
                                 }
@@ -183,7 +202,7 @@
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "204": {
                         "description": "OK"
                     },
                     "401": {

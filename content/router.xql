@@ -6,6 +6,7 @@ import module namespace errors = "http://exist-db.org/xquery/router/errors" at "
 import module namespace login="http://exist-db.org/xquery/router/login" at "login.xql";
 
 declare variable $router:CREATED := xs:QName("router:CREATED_201");
+declare variable $router:NO_CONTENT := xs:QName("router:NO_CONTENT_204");
 
 declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
     try {
@@ -17,17 +18,31 @@ declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
                 router:match-path($config, $lookup)
             else
                 error($errors:NOT_FOUND, "Failed to load JSON file from " || $json)
+    } catch router:CREATED_201 {
+        router:send(201, $err:description, $err:value)
+    } catch router:NO_CONTENT_204 {
+        router:send(204, $err:description, $err:value)
     } catch errors:NOT_FOUND_404 {
-        errors:send(404, $err:description, $err:value)
+        router:send(404, $err:description, $err:value)
     } catch errors:BAD_REQUEST_400 {
-        errors:send(400, $err:description, $err:value)
+        router:send(400, $err:description, $err:value)
     } catch errors:UNAUTHORIZED_401 {
-        errors:send(401, $err:description, $err:value)
+        router:send(401, $err:description, $err:value)
     } catch errors:FORBIDDEN_403 {
-        errors:send(401, $err:description, $err:value)
+        router:send(401, $err:description, $err:value)
+    } catch errors:REQUIRED_PARAM | errors:OPERATION | errors:BODY_CONTENT_TYPE {
+        router:send(400, $err:description, $err:value)
     } catch * {
-        errors:send(500, $err:description, $err:value)
+        router:send(500, $err:description, $err:value)
     }
+};
+
+(:~
+ : May be called from user code to send a response with a different
+ : response code than 200.
+ :)
+declare function router:response($code as xs:QName, $data as item()*) {
+    error($code, "", $data)
 };
 
 declare function router:match-path($config as map(*), $lookup as function(*)) {
@@ -72,7 +87,7 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
                     login:refresh($request)
                 else
                     (),
-                router:exec($route?config, $request, $lookup) => router:write-response($route?config)
+                router:exec($route?config, $request, $lookup) => router:write-response(200, $route?config)
             )
 };
 
@@ -92,30 +107,39 @@ declare function router:exec($route as map(*), $request as map(*), $lookup as fu
                 }
             return
                 if (exists($fn)) then
-                    $fn($request)
+                    try {
+                        $fn($request)
+                    } catch * {
+                        error($err:code, $err:description, map {
+                            "_config": $route,
+                            "_response": $err:value
+                        })
+                    }
                 else
                     error($errors:OPERATION, "Function " || $operationId || " could not be resolved")
         else
             error($errors:OPERATION, "Operation does not define an operationId")
 };
 
-declare function router:write-response($response, $config as map(*)) {
-    let $content := $config?responses?200?content
+declare function router:write-response($response, $code as xs:int, $config as map(*)) {
+    let $respDef := $config?responses?($code)
+    let $content := if (exists($respDef)) then $respDef?content else ()
     return
         if (exists($content)) then
             (: currently we're only accepting one content type :)
             let $contentType := head(map:keys($content))
             return (
+                response:set-status-code($code),
                 response:set-header("Content-Type", $contentType),
                 util:declare-option("output:method", router:method-for-content-type($contentType)),
                 $response
             )
         else (
+            response:set-status-code($code),
             response:set-header("Content-Type", "text/xml"),
             util:declare-option("output:method", "xml"),
             $response
         )
-
 };
 
 declare function router:method-for-content-type($type) {
@@ -255,11 +279,35 @@ declare function router:login-domain($config as map(*)) {
         ()
 };
 
+(:~
+ : Called when an error is caught. Note that users can also throw an error from within a function 
+ : to indicate that a different response code should be sent to the client. Errors thrown from user
+ : code will have a map with keys "_config" and "_response" as $value, where "_config" is the current
+ : oas configuration for the route and "_response" is the response data provided by the user function
+ : in the third argument of error().
+ :)
+declare function router:send($code as xs:integer, $description as xs:string, $value as item()*) {
+    if ($description = "" and count($value) = 1 and $value instance of map(*) and map:contains($value, "_config")) then
+        router:write-response(map:get($value, "_response"), $code, map:get($value, "_config"))
+    else (
+        response:set-status-code($code),
+        response:set-header("Content-Type", "application/json"),
+        util:declare-option("output:method", "json"),
+        if ($description = "") then
+            $value
+        else
+            map {
+                "description": $description,
+                "details": if (map:contains($value, "_response")) then map:get($value, "_response") else $value
+            }
+    )
+};
+
 declare function router:login($request as map(*)) {
     login:login($request),
     let $user := request:get-attribute($request?loginDomain || ".user")
     return
-        if ($user) then
+        if ($user and $user = $request?parameters?user) then
             map {
                 "user": $user,
                 "groups": array { sm:get-user-groups($user) },
