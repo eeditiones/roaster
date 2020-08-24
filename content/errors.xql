@@ -15,8 +15,11 @@ declare function errors:send($code as xs:integer, $description as xs:string, $va
     response:set-status-code($code),
     response:set-header("Content-Type", "application/json"),
     util:declare-option("output:method", "json"),
-    map {
-        "description": $description,
-        "details": $value
-    }
+    if ($description = "") then
+        $value
+    else
+        map {
+            "description": $description,
+            "details": $value
+        }
 };

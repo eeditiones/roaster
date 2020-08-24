@@ -7,15 +7,68 @@
     },
     "servers": [
         {
-            "description": "apps5test.existsolutions.com",
-            "url": "http://apps5test.existsolutions.com/exist/apps/oas-router"
-        },
-        {
             "description": "Endpoint for testing on localhost",
             "url": "http://localhost:8080/exist/apps/oas-router"
         }
     ],
+    "components": {
+        "securitySchemes": {
+            "cookieAuth": {
+                "type":"apiKey",
+                "name":"org.exist.login",
+                "in":"cookie"
+            }
+        }
+    },
     "paths": {
+        "/login": {
+            "post": {
+                "description": "Login the user",
+                "operationId": "router:login",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "name": "password",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "password"
+                        },
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "get": {
+                "description": "Log the current user out",
+                "operationId": "router:logout",
+                "responses": {
+                    "401": {
+                        "description": "User logged out"
+                    }
+                }
+            }
+        },
         "/posts": {
             "get": {
                 "summary": "Return list of blog posts",
@@ -139,5 +192,10 @@
                 }
             }
         }
-    }
+    },
+    "security": [
+        {
+            "cookieAuth": [ "org.exist.login" ]
+        }
+    ]
 }

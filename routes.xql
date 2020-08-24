@@ -23,15 +23,19 @@ declare function route:list-posts($request as map(*)) {
 };
 
 declare function route:new-post($request as map(*)) {
-    map {
-        "status": "created",
-        "id": util:uuid(),
-        "title": 
-            if ($request?body instance of map(*)) then 
-                $request?body?title 
-            else 
-                $request?body//title/text()
-    }
+    let $user := request:get-attribute($request?loginDomain || ".user")
+    return
+        if ($user) then
+            map {
+                "id": util:uuid(),
+                "title": 
+                    if ($request?body instance of map(*)) then 
+                        $request?body?title 
+                    else 
+                        $request?body//title/text()
+            }
+        else
+            error($errors:UNAUTHORIZED, "Permission denied to create new post")
 };
 
 declare function route:get-post($request as map(*)) {

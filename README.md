@@ -23,3 +23,7 @@ Due to limitations in eXist's controller, `routes.xql` needs to be in a separate
 - [X] requestBody in POST
   - [X] allow multiple content types
 - [X] error handling
+- [ ] reusable components
+- [X] login (securityScheme)
+- [ ] allow other responses than 200, e.g. 201
+- [ ] respect media-types for errors

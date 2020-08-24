@@ -3,6 +3,9 @@ xquery version "3.1";
 module namespace router="http://exist-db.org/xquery/router";
 
 import module namespace errors = "http://exist-db.org/xquery/router/errors" at "errors.xql";
+import module namespace login="http://exist-db.org/xquery/router/login" at "login.xql";
+
+declare variable $router:CREATED := xs:QName("router:CREATED_201");
 
 declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
     try {
@@ -23,7 +26,7 @@ declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
     } catch errors:FORBIDDEN_403 {
         errors:send(401, $err:description, $err:value)
     } catch * {
-        errors:send(400, $err:description, $err:value)
+        errors:send(500, $err:description, $err:value)
     }
 };
 
@@ -54,16 +57,23 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
             let $route := sort($routes, (), function($route) {
                 string-length($route?pattern)
             }) => reverse() => head()
+            let $loginDomain := router:login-domain($config)
             let $parameters := map:merge((
                 router:map-request-parameters($route?config),
                 router:map-path-parameters($route, $path)
             ))
             let $request := map {
                 "parameters": $parameters,
-                "body": router:request-body($route?config)
+                "body": router:request-body($route?config),
+                "loginDomain": $loginDomain
             }
-            return
+            return (
+                if ($loginDomain) then
+                    login:refresh($request)
+                else
+                    (),
                 router:exec($route?config, $request, $lookup) => router:write-response($route?config)
+            )
 };
 
 (:~
@@ -186,9 +196,9 @@ declare function router:cast-parameter($values as xs:string*, $config as map(*))
                         case "byte" return
                             util:binary-to-string(xs:base64Binary($value))
                         default return
-                            string(value)
+                            string($value)
                 else
-                    string(value)
+                    string($value)
             default return
                 string($value)
 };
@@ -228,4 +238,39 @@ declare function router:create-regex($path as xs:string) {
             replace($component, "\{[^\}]+\}", "([^/]+)")
     return
         "/" || string-join($regex, "/")
+};
+
+declare function router:login-domain($config as map(*)) {
+    if (exists($config?security)) then
+        let $key := 
+            for $entry in $config?security?*
+            return
+                $entry?cookieAuth
+        return
+            if (exists($key)) then
+                $key?1
+            else
+                ()
+    else
+        ()
+};
+
+declare function router:login($request as map(*)) {
+    login:login($request),
+    let $user := request:get-attribute($request?loginDomain || ".user")
+    return
+        if ($user) then
+            map {
+                "user": $user,
+                "groups": array { sm:get-user-groups($user) },
+                "dba": sm:is-dba($user),
+                "token": request:get-attribute($request?loginDomain || ".token")
+            }
+        else
+            error($errors:UNAUTHORIZED, "Wrong user or password")
+};
+
+declare function router:logout($request as map(*)) {
+    login:logout($request),
+    error($errors:UNAUTHORIZED, "User logged out")
 };

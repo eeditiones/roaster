@@ -8,6 +8,7 @@ declare variable $exist:root external;
 
 response:set-header("Access-Control-Allow-Origin", request:get-header("Origin") => replace("^(\w+://[^/]+).*$", "$1")),
 response:set-header("Access-Control-Allow-Methods", "GET, POST, DELETE"),
+response:set-header("Access-Control-Allow-Headers", "Content-Type"),
 if ($exist:resource = ("docs.html", "routes.json")) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
     </dispatch>
