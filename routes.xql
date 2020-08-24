@@ -48,7 +48,9 @@ declare function route:get-post($request as map(*)) {
 };
 
 declare function route:delete-post($request as map(*)) {
-    error($errors:FORBIDDEN)
+    error($errors:UNAUTHORIZED, "You don't have permission to delete the post", map {
+        "id": $request?parameters?id
+    })
 };
 
 let $lookup := function($name as xs:string) {

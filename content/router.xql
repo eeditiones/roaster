@@ -15,20 +15,15 @@ declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
             else
                 error($errors:NOT_FOUND, "Failed to load JSON file from " || $json)
     } catch errors:NOT_FOUND_404 {
-        response:set-status-code(404),
-        $err:description
+        errors:send(404, $err:description, $err:value)
     } catch errors:BAD_REQUEST_400 {
-        response:set-status-code(400),
-        $err:description
+        errors:send(400, $err:description, $err:value)
     } catch errors:UNAUTHORIZED_401 {
-        response:set-status-code(401),
-        $err:description
+        errors:send(401, $err:description, $err:value)
     } catch errors:FORBIDDEN_403 {
-        response:set-status-code(403),
-        $err:description
+        errors:send(401, $err:description, $err:value)
     } catch * {
-        response:set-status-code(400),
-        $err:description
+        errors:send(400, $err:description, $err:value)
     }
 };
 

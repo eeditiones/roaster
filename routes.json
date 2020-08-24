@@ -119,6 +119,9 @@
                 "responses": {
                     "200": {
                         "description": "OK"
+                    },
+                    "401": {
+                        "description": "Not authorized to delete resource"
                     }
                 }
             }
