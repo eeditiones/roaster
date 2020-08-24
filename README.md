@@ -2,15 +2,38 @@
 
 Reads an Open API 3.0 specification from JSON and routes requests to XQuery functions.
 
-Currently works as follows: `controller.xql` forwards all requests to `routes.xql`, which knows all the functions to be called as endpoints for a request. It calls `content/router.xql`, which reads the Open API specification JSON file and forwards requests to the corresponding functions.
+Currently works as follows: [controller.xql](controller.xql) forwards all requests to [routes.xql](routes.xql), which knows all the functions to be called as endpoints for a request. It calls [router.xql](content/router.xql), which reads the Open API specification JSON file and forwards requests to the corresponding functions.
 
 Due to limitations in eXist's controller, `routes.xql` needs to be in a separate XQuery. In future versions this code may be directly included in the controller.
 
+## Demo
+
+A demo using the examples contained in this repository is available: [demo](https://teipublisher.com/exist/apps/oas-router/docs.html)
+
 ## Installation
 
-* Create .xar by calling `ant`
-* Install into local eXist
+* Create .xar by calling `ant` and install into local eXist
 * Open http://localhost:8080/exist/apps/oas-router/docs.html
+
+## Writing Request Handlers
+
+This implementation forwards requests to XQuery functions (see [routes.xql](routes.xql)), which should accept a single parameter: `$request`. This is a map with a number of keys:
+
+* _parameters_: a map containing all parameters (path and query) which were defined in the spec. The key is the name of the parameter, the value is the parameter value cast to the defined target type.
+* _body_: the body of the request (if ~requestBody~ was used), cast to the specified media type (currently application/json or application/xml).
+
+If the function returns a value, it is sent to the client with a HTTP status code of 200 (OK). The returned value is converted into the specified target media type (if any, otherwise 
+application/xml is assumed).
+
+If a different HTTP status code should be sent, the function may call `router:response($code as xs:QName, $data as item()*)` as last operation (function execution will be aborted afterwards).
+The following variables are predefined for `$code`:
+
+* $router:CREATED - sends a 201
+* $router:NO_CONTENT - 204
+* $errors:NOT_FOUND - 404
+* $errors:BAD_REQUEST - 400
+* $errors:UNAUTHORIZED - 401
+* $errors:FORBIDDEN - 403
 
 ## Todo
 
@@ -20,6 +43,7 @@ Due to limitations in eXist's controller, `routes.xql` needs to be in a separate
   - [X] *format*: float, double, byte, binary, date, date-time
   - [X] *default* value
   - [ ] checking *required*
+- [ ] parameters from headers and cookies
 - [X] requestBody in POST
   - [X] allow multiple content types
 - [X] error handling

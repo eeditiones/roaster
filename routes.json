@@ -8,7 +8,7 @@
     "servers": [
         {
             "description": "Endpoint for testing on localhost",
-            "url": "http://localhost:8080/exist/apps/oas-router"
+            "url": "/exist/apps/oas-router"
         }
     ],
     "components": {
@@ -32,7 +32,8 @@
                         "schema": {
                             "type": "string"
                         },
-                        "required": true
+                        "required": true,
+                        "example": "tei"
                     },
                     {
                         "name": "password",
@@ -41,7 +42,8 @@
                             "type": "string",
                             "format": "password"
                         },
-                        "required": true
+                        "required": true,
+                        "example": "simple"
                     }
                 ],
                 "responses": {
@@ -172,7 +174,8 @@
                         "schema": {
                             "type": "string"
                         },
-                        "required": true
+                        "required": true,
+                        "example": "a1234"
                     }
                 ],
                 "responses": {
@@ -198,7 +201,8 @@
                         "schema": {
                             "type": "string"
                         },
-                        "required": true
+                        "required": true,
+                        "example": "a1234"
                     }
                 ],
                 "responses": {
