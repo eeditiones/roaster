@@ -81,6 +81,7 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
             let $request := map {
                 "parameters": $parameters,
                 "body": router:request-body($route?config),
+                "headers": router:get-headers(),
                 "loginDomain": $loginDomain
             }
             return (
@@ -111,6 +112,8 @@ declare function router:exec($route as map(*), $request as map(*), $lookup as fu
                     try {
                         $fn($request)
                     } catch * {
+                        (: Catch all errors and add the current route configuration to $err:value,
+                           so we can check it later to format the response :)
                         error($err:code, $err:description, map {
                             "_config": $route,
                             "_response": $err:value
@@ -128,7 +131,7 @@ declare function router:write-response($response, $code as xs:int, $config as ma
     return
         if (exists($content)) then
             (: currently we're only accepting one content type :)
-            let $contentType := head(map:keys($content))
+            let $contentType := router:get-matching-content-type($content)
             return (
                 response:set-status-code($code),
                 response:set-header("Content-Type", $contentType),
@@ -141,6 +144,33 @@ declare function router:write-response($response, $code as xs:int, $config as ma
             util:declare-option("output:method", "xml"),
             $response
         )
+};
+
+(:~
+ : Check the list of content types defined for the response
+ : and compare with the Accept header sent by the client. Use the
+ : first content type if none matches.
+ :)
+declare function router:get-matching-content-type($contentTypes as map(*)) {
+    let $accept := router:accepted-content-types()
+    let $matches := filter($accept, function($type) {
+        map:contains($contentTypes, $type)
+    })
+    return
+        if (exists($matches)) then
+            $matches[1]
+        else
+            head(map:keys($contentTypes))
+};
+
+(:~
+ : Tokenize the accept header and return a sequence of content types.
+ :)
+declare function router:accepted-content-types() {
+    let $header := head((request:get-header("accept"), request:get-header("Accept")))
+    for $type in tokenize($header, "\s*,\s*")
+    return
+        replace($type, "^([^;]+).*$", "$1")
 };
 
 declare function router:method-for-content-type($type) {
@@ -175,10 +205,21 @@ declare function router:map-request-parameters($route as map(*)) {
     return
         if (exists($params)) then
             for $param in $params?*
+            where $param?in != "path"
             let $default := if (exists($param?schema)) then $param?schema?default else ()
-            let $values := request:get-parameter($param?name, $default)
+            let $values := 
+                switch ($param?in)
+                    case "header" return
+                        head((request:get-header($param?name), $default))
+                    case "cookie" return
+                        head((request:get-cookie-value($param?name), $default))
+                    default return
+                        request:get-parameter($param?name, $default)
             return
-                map:entry($param?name, router:cast-parameter($values, $param))
+                if ($param?required and empty($values)) then
+                    error($errors:REQUIRED_PARAM, "Parameter " || $param?name || " is required")
+                else
+                    map:entry($param?name, router:cast-parameter($values, $param))
         else
             ()
 };
@@ -254,6 +295,10 @@ declare function router:request-body($route as map(*)) {
         ()
 };
 
+declare function router:get-headers() {
+    map:merge(request:get-header-names() ! map:entry(lower-case(.), request:get-header(.)))
+};
+
 declare function router:create-regex($path as xs:string) {
     let $components := substring-after($path, "/") => replace("\.", "\\.") => tokenize("/")
     let $regex :=
@@ -299,7 +344,7 @@ declare function router:send($code as xs:integer, $description as xs:string, $va
         else
             map {
                 "description": $description,
-                "details": if (map:contains($value, "_response")) then map:get($value, "_response") else $value
+                "details": if (exists($value) and map:contains($value, "_response")) then map:get($value, "_response") else $value
             }
     )
 };

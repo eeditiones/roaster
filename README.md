@@ -42,8 +42,8 @@ The following variables are predefined for `$code`:
   - [ ] array (check item type)
   - [X] *format*: float, double, byte, binary, date, date-time
   - [X] *default* value
-  - [ ] checking *required*
-- [ ] parameters from headers and cookies
+  - [X] checking *required*
+- [X] parameters from headers and cookies
 - [X] requestBody in POST
   - [X] allow multiple content types
 - [X] error handling
@@ -51,3 +51,5 @@ The following variables are predefined for `$code`:
 - [X] login (securityScheme)
 - [X] allow other responses than 200, e.g. 201
 - [X] respect media-types for errors (if context is known, otherwise use JSON)
+- [ ] support binary response formats
+- [X] if multiple response formats are specified, check Accept request header to determine expected format

@@ -9,13 +9,20 @@ chai.use(chaiResponseValidator(spec));
 
 describe('/posts', function () {
     it('gets posts', async function () {
-
-        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts?start=10&date=2020-08-24');
+        const now = new Date().toISOString();
+        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts?start=10&date=2020-08-24', {
+            headers: {
+                'X-Token': now,
+                'Cookie': `track-me=keep track`
+            }
+        });
 
         expect(res.status).to.equal(200);
-        expect(res.data.posts.length).to.equal(2);
+        expect(res.data.posts).to.have.lengthOf(2);
         expect(res.data.start).to.equal(10);
         expect(res.data.date).to.equal('Montag, 24. August, 2020');
+        expect(res.data['X-Token']).to.equal(now);
+        expect(res.data['track-me']).to.equal('keep track');
         expect(res).to.satisfyApiSpec;
     });
 
@@ -79,10 +86,29 @@ describe('/posts', function () {
 });
 
 describe('/posts/{id}', () => {
-    it('gets post', async function () {
-        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts/a12345');
+    it('gets post as XML', async function () {
+        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts/a12345', {
+            headers: {
+                "accept": "application/xml"
+            }
+        });
 
         expect(res.status).to.equal(200);
+        expect(res.headers['content-type']).to.equal("application/xml");
+        expect(res.data).to.match(/title/);
+        expect(res).to.satisfyApiSpec;
+    });
+
+    it('gets post as HTML', async function () {
+        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts/a12345', {
+            headers: {
+                "accept": "text/html; application/xml"
+            }
+        });
+
+        expect(res.status).to.equal(200);
+        expect(res.headers['content-type']).to.equal("text/html");
+        expect(res.data).to.match(/h1/);
         expect(res).to.satisfyApiSpec;
     });
 });
@@ -101,6 +127,22 @@ describe('/login', () => {
         expect(res.status).to.equal(200);
         expect(res.data.user).to.equal('oas');
         expect(res).to.satisfyApiSpec;
+    });
+
+    it('fails if user is missing', function (done) {
+        axios.request({
+            url: 'http://localhost:8080/exist/apps/oas-router/login',
+            method: 'post',
+            params: {
+                "password": "oas"
+            }
+        })
+        .catch((error) => {
+            expect(error.response.status).to.equal(400);
+            expect(error.response.data.description).to.equal('Parameter user is required');
+            expect(error.response).to.satisfyApiSpec;
+            done();
+        });
     });
 });
 

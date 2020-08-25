@@ -10,6 +10,8 @@ declare function route:list-posts($request as map(*)) {
     map {
         "start": $request?parameters?start,
         "date": format-date($request?parameters?date, '[FNn], [D1o] [MNn], [Y]'),
+        "X-Token": $request?parameters("X-Token"),
+        "track-me": $request?parameters("track-me"),
         "posts":
             [
                 map {
@@ -43,17 +45,30 @@ declare function route:new-post($request as map(*)) {
 };
 
 declare function route:get-post($request as map(*)) {
-    <article xml:id="{$request?parameters?id}">
-        <title>Lorem ipsum</title>
-        <para>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy 
-        eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. 
-        At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, 
-        no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, 
-        consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et 
-        dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo 
-        dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem 
-        ipsum dolor sit amet.</para>
-    </article>
+    if ("text/html" = router:accepted-content-types()) then
+        <div id="{$request?parameters?id}">
+            <h1>Lorem ipsum</h1>
+            <p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy 
+            eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. 
+            At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, 
+            no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, 
+            consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et 
+            dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo 
+            dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem 
+            ipsum dolor sit amet.</p>
+        </div>
+    else
+        <article xml:id="{$request?parameters?id}">
+            <title>Lorem ipsum</title>
+            <para>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy 
+            eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. 
+            At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, 
+            no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, 
+            consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et 
+            dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo 
+            dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem 
+            ipsum dolor sit amet.</para>
+        </article>
 };
 
 declare function route:delete-post($request as map(*)) {

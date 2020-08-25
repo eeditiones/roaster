@@ -56,6 +56,16 @@
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Parameter missing",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -99,7 +109,26 @@
                             "type": "string",
                             "format": "date"
                         },
-                        "example": "2020-08-24+02:00"
+                        "example": "2020-08-24+02:00",
+                        "description": "Test conversion to xs:date"
+                    },
+                    {
+                        "name": "X-Token",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Test passing in a parameter via custom header field",
+                        "example": "b5952610-49ab-4b63-9526-1049ab7b63d5"
+                    },
+                    {
+                        "name": "track-me",
+                        "in": "cookie",
+                        "schema":{
+                            "type": "string"
+                        },
+                        "description": "Test passing a parameter via cookie",
+                        "example": "do not track me"
                     }
                 ],
                 "responses": {
@@ -187,9 +216,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "XML content of the post",
+                        "description": "Content of the post",
                         "content": {
                             "application/xml": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "text/html": {
                                 "schema": {
                                     "type": "string"
                                 }
