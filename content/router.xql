@@ -81,7 +81,6 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
             let $request := map {
                 "parameters": $parameters,
                 "body": router:request-body($route?config),
-                "headers": router:get-headers(),
                 "loginDomain": $loginDomain
             }
             return (
@@ -293,10 +292,6 @@ declare function router:request-body($route as map(*)) {
                     " not allowed")
     else
         ()
-};
-
-declare function router:get-headers() {
-    map:merge(request:get-header-names() ! map:entry(lower-case(.), request:get-header(.)))
 };
 
 declare function router:create-regex($path as xs:string) {
