@@ -264,7 +264,14 @@
                         "description": "OK"
                     },
                     "401": {
-                        "description": "Not authorized to delete resource"
+                        "description": "Not authorized to delete resource",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }

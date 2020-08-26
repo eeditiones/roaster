@@ -29,7 +29,7 @@ declare function route:new-post($request as map(*)) {
     return
         if ($user != "guest") then
             (: To indicate a different status code for the response, call router:response :)
-            router:response(201, (),
+            router:response(201,
                 <metadata xml:id="{util:uuid()}">
                     <title>{
                         if ($request?body instance of map(*)) then 
@@ -41,7 +41,7 @@ declare function route:new-post($request as map(*)) {
                 </metadata>
             )
         else
-            router:response(401, (), <error>Permission denied to create new post</error>)
+            router:response(401, <error>Permission denied to create new post</error>)
 };
 
 declare function route:get-post($request as map(*)) {
@@ -79,7 +79,7 @@ declare function route:delete-post($request as map(*)) {
     let $user := sm:id()//sm:real/sm:username
     return
         if ($user != "guest") then
-            router:response(204, (), ())
+            router:response(204, ())
         else
             (: errors will always return a JSON formatted response :)
             error($errors:UNAUTHORIZED, "You don't have permission to delete the post", map {

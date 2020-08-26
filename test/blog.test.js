@@ -103,6 +103,35 @@ describe('/posts/{id}', () => {
         expect(res.data).to.match(/h1/);
         expect(res).to.satisfyApiSpec;
     });
+
+    it('deletes post', async function() {
+        const res = await axios.request({
+            url: 'http://localhost:8080/exist/apps/oas-router/posts/a12345',
+            method: 'delete',
+            auth: {
+                username: "oas",
+                password: "oas"
+            }
+        });
+        expect(res.status).to.equal(204);
+
+        // Assert that the HTTP response satisfies the OpenAPI spec
+        expect(res).to.satisfyApiSpec;
+    });
+
+    it('refuses to delete', function (done) {
+        const res = axios.request({
+            url: 'http://localhost:8080/exist/apps/oas-router/posts/a12345',
+            method: 'delete'
+        })
+        .catch((error) => {
+            expect(error.response.status).to.equal(401);
+            expect(error.response.data.description).to.equal('You don\'t have permission to delete the post');
+            expect(error.response.data.details.id).to.equal('a12345');
+            expect(error.response).to.satisfyApiSpec;
+            done();
+        });
+    });
 });
 
 describe('/login', () => {
