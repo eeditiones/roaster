@@ -25,15 +25,7 @@ This implementation forwards requests to XQuery functions (see [routes.xql](rout
 If the function returns a value, it is sent to the client with a HTTP status code of 200 (OK). The returned value is converted into the specified target media type (if any, otherwise 
 application/xml is assumed).
 
-If a different HTTP status code should be sent, the function may call `router:response($code as xs:QName, $data as item()*)` as last operation (function execution will be aborted afterwards).
-The following variables are predefined for `$code`:
-
-* $router:CREATED - sends a 201
-* $router:NO_CONTENT - 204
-* $errors:NOT_FOUND - 404
-* $errors:BAD_REQUEST - 400
-* $errors:UNAUTHORIZED - 401
-* $errors:FORBIDDEN - 403
+If a different HTTP status code should be sent, the function may call `router:response($code as xs:int, $mediaType as xs:string?, $data as item()*)` as last operation. You may also skip `$mediaType`, in which case the content type of the response is determined automatically by checking the response definition for the given status code. If a content type cannot be determined, the default, `application/xml` is used.
 
 ## Todo
 
@@ -43,6 +35,7 @@ The following variables are predefined for `$code`:
   - [X] *format*: float, double, byte, binary, date, date-time
   - [X] *default* value
   - [X] checking *required*
+  - [ ] check *enums*
 - [X] parameters from headers and cookies
 - [X] requestBody in POST
   - [X] allow multiple content types

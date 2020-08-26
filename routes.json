@@ -212,6 +212,19 @@
                         },
                         "required": true,
                         "example": "a1234"
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "schema":{
+                            "type": "string",
+                            "enum": [
+                                "xml",
+                                "html"
+                            ],
+                            "default": "xml"
+                        },
+                        "required": true
                     }
                 ],
                 "responses": {

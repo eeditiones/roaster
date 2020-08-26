@@ -87,11 +87,7 @@ describe('/posts', function () {
 
 describe('/posts/{id}', () => {
     it('gets post as XML', async function () {
-        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts/a12345', {
-            headers: {
-                "accept": "application/xml"
-            }
-        });
+        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts/a12345?format=xml');
 
         expect(res.status).to.equal(200);
         expect(res.headers['content-type']).to.equal("application/xml");
@@ -100,11 +96,7 @@ describe('/posts/{id}', () => {
     });
 
     it('gets post as HTML', async function () {
-        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts/a12345', {
-            headers: {
-                "accept": "text/html; application/xml"
-            }
-        });
+        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts/a12345?format=html');
 
         expect(res.status).to.equal(200);
         expect(res.headers['content-type']).to.equal("text/html");

@@ -9,7 +9,15 @@ declare variable $exist:root external;
 response:set-header("Access-Control-Allow-Origin", request:get-header("Origin") => replace("^(\w+://[^/]+).*$", "$1")),
 response:set-header("Access-Control-Allow-Methods", "GET, POST, DELETE"),
 response:set-header("Access-Control-Allow-Headers", "Content-Type"),
-if ($exist:resource = ("docs.html", "routes.json")) then
+if ($exist:path eq '') then
+    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
+        <redirect url="{request:get-uri()}/"/>
+    </dispatch>
+else if ($exist:path = "/") then
+    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
+        <forward url="docs.html"/>
+    </dispatch>
+else if ($exist:resource = ("docs.html", "routes.json")) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
     </dispatch>
 else

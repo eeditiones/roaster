@@ -5,8 +5,9 @@ module namespace router="http://exist-db.org/xquery/router";
 import module namespace errors = "http://exist-db.org/xquery/router/errors" at "errors.xql";
 import module namespace login="http://exist-db.org/xquery/router/login" at "login.xql";
 
-declare variable $router:CREATED := xs:QName("router:CREATED_201");
-declare variable $router:NO_CONTENT := xs:QName("router:NO_CONTENT_204");
+declare variable $router:RESPONSE_CODE := xs:QName("router:RESPONSE_CODE");
+declare variable $router:RESPONSE_TYPE := xs:QName("router:RESPONSE_TYPE");
+declare variable $router:RESPONSE_BODY := xs:QName("router:RESPONSE_BODY");
 
 declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
     try {
@@ -39,11 +40,32 @@ declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
 };
 
 (:~
- : May be called from user code to send a response with a different
- : response code than 200.
+ : May be called from user code to send a response with a particular
+ : response code (other than 200). The media type will be determined by
+ : looking at the response specification for the given status code.
+ :
+ : @param code the response code to return
+ : @param body data to be sent in the body of the response
  :)
-declare function router:response($code as xs:QName, $data as item()*) {
-    error($code, "", $data)
+declare function router:response($code as xs:int, $body as item()*) {
+    router:response($code, (), $body)
+};
+
+(:~
+ : May be called from user code to send a response with a particular
+ : response code (other than 200) or media type.
+ :
+ : @param code the response code to return
+ : @param mediaType the Content-Type for the response; assumes that the provided body can
+ : be converted into the target media type
+ : @param body data to be sent in the body of the response
+ :)
+declare function router:response($code as xs:int, $mediaType as xs:string?, $body as item()*) {
+    map {
+        $router:RESPONSE_CODE : $code,
+        $router:RESPONSE_TYPE : $mediaType,
+        $router:RESPONSE_BODY : $body
+    }
 };
 
 declare function router:match-path($config as map(*), $lookup as function(*)) {
@@ -124,25 +146,43 @@ declare function router:exec($route as map(*), $request as map(*), $lookup as fu
             error($errors:OPERATION, "Operation does not define an operationId")
 };
 
-declare function router:write-response($response, $code as xs:int, $config as map(*)) {
+declare function router:write-response($data, $defaultCode as xs:int, $config as map(*)) {
+    if ($data instance of map(*) and map:contains($data, $router:RESPONSE_CODE)) then
+        let $code := $data($router:RESPONSE_CODE)
+        let $contentType := $data($router:RESPONSE_TYPE)
+        let $contentType := 
+            if (exists($contentType)) then 
+                $contentType
+            else
+                router:get-content-type-for-code($config, $defaultCode, "text/xml")
+        return
+        (
+            response:set-status-code($code),
+            if ($code != 204) then (
+                response:set-header("Content-Type", $contentType),
+                util:declare-option("output:method", router:method-for-content-type($contentType)),
+                $data($router:RESPONSE_BODY)
+            ) else
+                ()
+        )
+    else
+        let $contentType := router:get-content-type-for-code($config, $defaultCode, "text/xml")
+        return (
+            response:set-status-code($defaultCode),
+            response:set-header("Content-Type", $contentType),
+            util:declare-option("output:method", router:method-for-content-type($contentType)),
+            $data
+        )
+};
+
+declare %private function router:get-content-type-for-code($config as map(*), $code as xs:int, $fallback as xs:string) {
     let $respDef := $config?responses?($code)
     let $content := if (exists($respDef)) then $respDef?content else ()
     return
         if (exists($content)) then
-            (: currently we're only accepting one content type :)
-            let $contentType := router:get-matching-content-type($content)
-            return (
-                response:set-status-code($code),
-                response:set-header("Content-Type", $contentType),
-                util:declare-option("output:method", router:method-for-content-type($contentType)),
-                $response
-            )
-        else (
-            response:set-status-code($code),
-            response:set-header("Content-Type", "text/xml"),
-            util:declare-option("output:method", "xml"),
-            $response
-        )
+            router:get-matching-content-type($content)
+        else
+            $fallback
 };
 
 (:~
@@ -150,7 +190,7 @@ declare function router:write-response($response, $code as xs:int, $config as ma
  : and compare with the Accept header sent by the client. Use the
  : first content type if none matches.
  :)
-declare function router:get-matching-content-type($contentTypes as map(*)) {
+declare %private function router:get-matching-content-type($contentTypes as map(*)) {
     let $accept := router:accepted-content-types()
     let $matches := filter($accept, function($type) {
         map:contains($contentTypes, $type)
