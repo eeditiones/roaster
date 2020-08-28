@@ -223,8 +223,8 @@ declare function router:method-for-content-type($type) {
 declare function router:map-path-parameters($route as map(*), $path as xs:string) {
     let $match := analyze-string($route?pattern, "\{([^\}]+)\}")
     let $matchPath := analyze-string($path, $route?regex)
-    for $subst in $match//fn:group
-    let $value := $matchPath//fn:group[@nr=$subst/@nr]/string()
+    for $subst at $pos in $match//fn:group
+    let $value := $matchPath//fn:group[@nr=$pos]/string()
     let $paramConfig := 
         if (exists($route?config?parameters)) then
             array:filter($route?config?parameters, function($param) {
