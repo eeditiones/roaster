@@ -7,6 +7,8 @@ const axios = require('axios');
 const spec = path.resolve("routes.json");
 chai.use(chaiResponseValidator(spec));
 
+axios.defaults.withCredentials = true;
+
 describe('/posts', function () {
     it('gets posts', async function () {
         const now = new Date().toISOString();
@@ -104,6 +106,19 @@ describe('/posts/{id}', () => {
         expect(res).to.satisfyApiSpec;
     });
 
+    it('gets post as HTML because of accept header', async function () {
+        const res = await axios.get('http://localhost:8080/exist/apps/oas-router/posts/a12345', {
+            "headers": {
+                "Accept": "text/html"
+            }
+        });
+
+        expect(res.status).to.equal(200);
+        expect(res.headers['content-type']).to.equal("text/html");
+        expect(res.data).to.match(/h1/);
+        expect(res).to.satisfyApiSpec;
+    });
+
     it('deletes post', async function() {
         const res = await axios.request({
             url: 'http://localhost:8080/exist/apps/oas-router/posts/a12345',
@@ -135,6 +150,23 @@ describe('/posts/{id}', () => {
 });
 
 describe('/login', () => {
+    it('fails with wrong password', function (done) {
+        axios.request({
+            url: 'http://localhost:8080/exist/apps/oas-router/login',
+            method: 'post',
+            params: {
+                "user": "oas",
+                "password": "foobar"
+            },
+            withCredentials: true
+        })
+            .catch((error) => {
+                expect(error.response.status).to.equal(401);
+                expect(error.response).to.satisfyApiSpec;
+                done();
+            });
+    });
+
     it('logs in user', async function () {
         const res = await axios.request({
             url: 'http://localhost:8080/exist/apps/oas-router/login',
@@ -143,37 +175,26 @@ describe('/login', () => {
                 "user": "oas",
                 "password": "oas"
             },
-            withCredentials: true
+            mode: 'no-cors',
+            withCredentials: true,
+            credentials: 'same-origin'
         });
         expect(res.status).to.equal(200);
         expect(res.data.user).to.equal('oas');
         expect(res).to.satisfyApiSpec;
     });
 
-    it('fails if user is missing', function (done) {
-        axios.request({
-            url: 'http://localhost:8080/exist/apps/oas-router/login',
+    it('logs out user', function (done) {
+        axios.request('http://localhost:8080/exist/apps/oas-router/login', {
             method: 'post',
             params: {
-                "password": "oas"
+                "logout": "true"
             }
         })
-        .catch((error) => {
-            expect(error.response.status).to.equal(400);
-            expect(error.response.data.description).to.equal('Parameter user is required');
-            expect(error.response).to.satisfyApiSpec;
-            done();
-        });
-    });
-});
-
-describe('/logout', () => {
-    it('logs out user', function (done) {
-        axios.get('http://localhost:8080/exist/apps/oas-router/logout')
-        .catch((error) => {
-            expect(error.response.status).to.equal(401);
-            expect(error.response).to.satisfyApiSpec;
-            done();
-        });
+            .catch((error) => {
+                expect(error.response.status).to.equal(401);
+                expect(error.response).to.satisfyApiSpec;
+                done();
+            });
     });
 });

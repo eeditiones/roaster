@@ -3,7 +3,7 @@ xquery version "3.1";
 module namespace router="http://exist-db.org/xquery/router";
 
 import module namespace errors = "http://exist-db.org/xquery/router/errors" at "errors.xql";
-import module namespace login="http://exist-db.org/xquery/router/login" at "login.xql";
+import module namespace login="http://exist-db.org/xquery/login" at "resource:org/exist/xquery/modules/persistentlogin/login.xql";
 
 declare variable $router:RESPONSE_CODE := xs:QName("router:RESPONSE_CODE");
 declare variable $router:RESPONSE_TYPE := xs:QName("router:RESPONSE_TYPE");
@@ -30,12 +30,14 @@ declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
     } catch errors:UNAUTHORIZED_401 {
         router:send(401, $err:description, $err:value)
     } catch errors:FORBIDDEN_403 {
-        router:send(401, $err:description, $err:value)
+        router:send(403, $err:description, $err:value)
     } catch errors:REQUIRED_PARAM | errors:OPERATION | errors:BODY_CONTENT_TYPE {
         router:send(400, $err:description, $err:value)
     } catch * {
-        util:log('ERROR', $err:description),
-        router:send(500, $err:description, $err:value)
+        if (contains($err:description, "permission")) then
+            router:send(403, $err:description, $err:value)
+        else
+            router:send(500, $err:description, $err:value)
     }
 };
 
@@ -107,7 +109,7 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
             }
             return (
                 if ($loginDomain) then
-                    login:refresh($request)
+                    login:set-user($loginDomain, (), false())
                 else
                     (),
                 router:exec($route?config, $request, $lookup) => router:write-response(200, $route?config)
@@ -385,21 +387,28 @@ declare function router:send($code as xs:integer, $description as xs:string, $va
 };
 
 declare function router:login($request as map(*)) {
-    login:login($request),
+    if ($request?parameters?user) then
+        login:set-user($request?loginDomain, (), false())
+    else
+        (),
     let $user := request:get-attribute($request?loginDomain || ".user")
     return
-        if ($user and $user = $request?parameters?user) then
+        if (exists($user)) then
             map {
                 "user": $user,
                 "groups": array { sm:get-user-groups($user) },
-                "dba": sm:is-dba($user),
-                "token": request:get-attribute($request?loginDomain || ".token")
+                "dba": sm:is-dba($user)
             }
         else
-            error($errors:UNAUTHORIZED, "Wrong user or password")
+            error($errors:UNAUTHORIZED, "Wrong user or password", map {
+                "user": $user,
+                "domain": $request?loginDomain
+            })
 };
 
 declare function router:logout($request as map(*)) {
-    login:logout($request),
-    error($errors:UNAUTHORIZED, "User logged out")
+    login:set-user($request?loginDomain, (), false()),
+    error($errors:UNAUTHORIZED, "Logged out successfully", map {
+        "user": request:get-attribute($request?loginDomain || ".user")
+    })
 };

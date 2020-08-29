@@ -45,7 +45,7 @@ declare function route:new-post($request as map(*)) {
 };
 
 declare function route:get-post($request as map(*)) {
-    if ($request?parameters?format = 'html') then
+    if ($request?parameters?format = 'html' or router:accepted-content-types() = 'text/html') then
         router:response(200, "text/html",
             <div id="{$request?parameters?id}">
                 <h1>Lorem ipsum</h1>
