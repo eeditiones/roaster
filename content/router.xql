@@ -290,7 +290,7 @@ declare function router:cast-parameter($values as xs:string*, $config as map(*))
                 else
                     number($value)
             case "boolean" return
-                boolean($value)
+                xs:boolean($value)
             case "string" return
                 if ($config?schema?format) then
                     switch ($config?schema?format)
