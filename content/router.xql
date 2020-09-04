@@ -316,7 +316,7 @@ declare function router:cast-parameter($values as xs:string*, $config as map(*))
 declare function router:request-body($route as map(*)) {
     if (exists($route?requestBody) and exists($route?requestBody?content)) then
         let $content := $route?requestBody?content
-        let $contentTypeHeader := request:get-header("Content-Type")
+        let $contentTypeHeader := replace(request:get-header("Content-Type"), "^([^;]+);?.*$", "$1")
         return
             if (map:contains($content, $contentTypeHeader)) then
                 let $contentType := map:get($content, $contentTypeHeader)
@@ -327,6 +327,8 @@ declare function router:request-body($route as map(*)) {
                             parse-json(util:binary-to-string($body))
                         case "text/xml" case "application/xml" return
                             $body
+                        case "multipart/form-data" return
+                            ()
                         default return
                             error($errors:BODY_CONTENT_TYPE, "Unable to handle request body content type " || $contentType)
             else
