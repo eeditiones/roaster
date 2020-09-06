@@ -27,6 +27,41 @@ application/xml is assumed).
 
 If a different HTTP status code should be sent, the function may call `router:response($code as xs:int, $mediaType as xs:string?, $data as item()*)` as last operation. You may also skip `$mediaType`, in which case the content type of the response is determined automatically by checking the response definition for the given status code. If a content type cannot be determined, the default, `application/xml` is used.
 
+## Authentication
+
+Currently basic and key based authentication types are supported. The key based authentication type corresponds to eXist's persistent login mechanism and uses cookies for the key. To enable it, use the following securityScheme declaration:
+
+```json
+"components": {
+    "securitySchemes": {
+        "cookieAuth": {
+            "type": "apiKey",
+            "name": "org.exist.login",
+            "in": "cookie"
+        }
+    }
+}
+```
+
+The security scheme should be named "cookieAuth". The ~name~ property defines the login session name to be used.
+
+## Access Constraints
+
+Certain operations may be restricted to defined users or groups. We use an implementation-specific property, 'x-constraints' for this on the operation level, e.g.:
+
+```json
+"/api/upload/{collection}": {
+  "post": {
+    "summary": "Upload a number of files",
+    "x-constraints": {
+        "group": "tei"
+    }
+  }
+}
+```
+
+requires that the *real user* running the operation belongs to the "tei" group. Note that the *real user* is the user who logged in and may be different from the *effective user* under which the query runs.
+
 ## Todo
 
 - [ ] Parameter type conversion

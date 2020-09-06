@@ -108,10 +108,14 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
                 "loginDomain": $loginDomain
             }
             return (
-                if ($loginDomain) then
+                if ($loginDomain) then (
                     login:set-user($loginDomain, (), false())
-                else
+                ) else
                     (),
+                if (router:check-login($route?config)) then
+                        util:log('INFO', sm:id())
+                else
+                    error($errors:UNAUTHORIZED, "Access denied"),
                 router:exec($route?config, $request, $lookup) => router:write-response(200, $route?config)
             )
 };
@@ -350,18 +354,47 @@ declare function router:create-regex($path as xs:string) {
 };
 
 declare function router:login-domain($config as map(*)) {
+    router:do-resolve-pointer($config, ("components", "securitySchemes", "cookieAuth", "name"))
+};
+
+declare function router:resolve-pointer($config as map(*), $ref as xs:string) {
+    router:do-resolve-pointer($config, tokenize($ref, "/"))
+};
+
+declare function router:login-constraints($config as map(*)) {
     if (exists($config?security)) then
-        let $key := 
-            for $entry in $config?security?*
-            return
-                $entry?cookieAuth
+        for $entry in $config?security?*
+        for $method in map:keys($entry)
         return
-            if (exists($key)) then
-                $key?1
-            else
-                ()
+            router:do-resolve-pointer($config, ("components", "securitySchemes", $method, "x-constraints"))
     else
         ()
+};
+
+declare function router:check-login($config as map(*)) {
+    let $realUser := sm:id()//sm:real
+    let $constraints := $config('x-constraints')
+    return
+        if (exists($constraints?group)) then
+            $realUser/sm:groups/sm:group = $constraints?group
+        else if (exists($constraints?user)) then
+            $realUser/sm:groups/sm:username = $constraints?user
+        else
+            true()
+};
+
+declare %private function router:do-resolve-pointer($config as map(*), $refs as xs:string*) {
+    if (empty($refs) or (count($refs) = 1 and $refs[1] = "")) then
+        $config
+    else if (head($refs) = "#") then
+        router:do-resolve-pointer($config, tail($refs))
+    else 
+        let $object := $config(head($refs))
+        return
+            if (exists($object) and $object instance of map(*)) then
+                router:do-resolve-pointer($object, tail($refs))
+            else
+                $object
 };
 
 (:~
