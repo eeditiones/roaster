@@ -137,7 +137,7 @@ declare function router:exec($route as map(*), $request as map(*), $lookup as fu
                     } catch * {
                         (: Catch all errors and add the current route configuration to $err:value,
                            so we can check it later to format the response :)
-                        error($err:code, $err:description, map {
+                        error($err:code, if ($err:description) then $err:description else '', map {
                             "_config": $route,
                             "_response": $err:value
                         })
@@ -178,7 +178,7 @@ declare function router:write-response($data, $defaultCode as xs:int, $config as
 };
 
 declare %private function router:get-content-type-for-code($config as map(*), $code as xs:int, $fallback as xs:string) {
-    let $respDef := $config?responses?($code)
+    let $respDef := head(($config?responses?($code), $config?responses?default))
     let $content := if (exists($respDef)) then $respDef?content else ()
     return
         if (exists($content)) then
