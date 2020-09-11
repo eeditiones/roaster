@@ -6,18 +6,17 @@ Currently works as follows: [controller.xql](controller.xql) forwards all reques
 
 Due to limitations in eXist's controller, `routes.xql` needs to be in a separate XQuery. In future versions this code may be directly included in the controller.
 
-## Demo
-
-A demo using the examples contained in this repository is available: [demo](https://teipublisher.com/exist/apps/oas-router/docs.html)
-
 ## Installation
 
-* Create .xar by calling `ant` and install into local eXist
-* Open http://localhost:8080/exist/apps/oas-router/docs.html
+Create .xar by calling `ant` and install into local eXist.
+
+## Testing
+
+Extensive tests for this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app/tree/feature/open-api/test) repository.
 
 ## Writing Request Handlers
 
-This implementation forwards requests to XQuery functions (see [routes.xql](routes.xql)). The name of the function is taken from the Open API property `operationId` associated with each request method. Each function should accept a single parameter: `$request`. This is a map with a number of keys:
+This implementation forwards requests to XQuery functions. The name of the function is taken from the Open API property `operationId` associated with each request method. Each function should accept a single parameter: `$request`. This is a map with a number of keys:
 
 * _parameters_: a map containing all parameters (path and query) which were defined in the spec. The key is the name of the parameter, the value is the parameter value cast to the defined target type.
 * _body_: the body of the request (if ~requestBody~ was used), cast to the specified media type (currently application/json or application/xml).

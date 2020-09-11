@@ -2,7 +2,7 @@ xquery version "3.1";
 
 module namespace router="http://exist-db.org/xquery/router";
 
-import module namespace errors = "http://exist-db.org/xquery/router/errors" at "errors.xql";
+import module namespace errors = "http://exist-db.org/xquery/router/errors";
 import module namespace login="http://exist-db.org/xquery/login" at "resource:org/exist/xquery/modules/persistentlogin/login.xql";
 
 declare variable $router:RESPONSE_CODE := xs:QName("router:RESPONSE_CODE");
@@ -113,7 +113,7 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
                 ) else
                     (),
                 if (router:check-login($route?config)) then
-                        util:log('INFO', sm:id())
+                    ()
                 else
                     error($errors:UNAUTHORIZED, "Access denied"),
                 router:exec($route?config, $request, $lookup) => router:write-response(200, $route?config)
