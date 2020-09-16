@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://expath.org/ns/pkg" name="http://exist-db.org/open-api/router" abbrev="oas-router" version="0.2.0" spec="1.0">
     <title>Open API Router for eXist</title>
-    <dependency package="http://exist-db.org/apps/shared"/>
     <xquery>
         <namespace>http://exist-db.org/xquery/router</namespace>
         <file>router.xql</file>
