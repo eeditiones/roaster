@@ -105,7 +105,8 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
             let $request := map {
                 "parameters": $parameters,
                 "body": router:request-body($route?config),
-                "loginDomain": $loginDomain
+                "loginDomain": $loginDomain,
+                "info": $config?info
             }
             return (
                 if ($loginDomain) then (
