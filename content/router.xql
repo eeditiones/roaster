@@ -346,11 +346,16 @@ declare function router:request-body($route as map(*)) {
 
 declare function router:create-regex($path as xs:string) {
     let $components := substring-after($path, "/") => replace("\.", "\\.") => tokenize("/")
-    let $regex :=
-        for $component at $p in $components
+    let $regex := (
+        for $component in subsequence($components, 1, count($components) - 1)
         return
             (: replace($component, "\{[^\}]+\}", if ($p = 1) then "(.+?)" else "([^/]+)") :)
-            replace($component, "\{[^\}]+\}", "([^/]+)")
+            replace($component, "\{[^\}]+\}", "([^/]+)"),
+        if (ends-with($components[last()], "}")) then
+            replace($components[last()], "\{[^\}]+\}", "([^/]+)")
+        else
+            replace($components[last()], "\{[^\}]+\}", "(.+)")
+    )
     return
         "/" || string-join($regex, "/")
 };
