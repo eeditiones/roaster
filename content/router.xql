@@ -9,9 +9,10 @@ declare variable $router:RESPONSE_CODE := xs:QName("router:RESPONSE_CODE");
 declare variable $router:RESPONSE_TYPE := xs:QName("router:RESPONSE_TYPE");
 declare variable $router:RESPONSE_BODY := xs:QName("router:RESPONSE_BODY");
 
-declare function router:route($jsonPath as xs:string, $lookup as function(*)) {
+declare function router:route($jsonPaths as xs:string+, $lookup as function(*)) {
     try {
         let $controller := request:get-attribute("$exist:controller")
+        for $jsonPath in $jsonPaths
         let $json := replace(``[`{repo:get-root()}`/`{$controller}`/`{$jsonPath}`]``, "/+", "/")
         let $config := json-doc($json)
         return
@@ -107,7 +108,8 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
                 "parameters": $parameters,
                 "body": router:request-body($route?config),
                 "loginDomain": $loginDomain,
-                "info": $info
+                "info": $info,
+                "config": $route
             }
             return (
                 if ($loginDomain) then (
@@ -352,9 +354,9 @@ declare function router:create-regex($path as xs:string) {
             (: replace($component, "\{[^\}]+\}", if ($p = 1) then "(.+?)" else "([^/]+)") :)
             replace($component, "\{[^\}]+\}", "([^/]+)"),
         if (ends-with($components[last()], "}")) then
-            replace($components[last()], "\{[^\}]+\}", "([^/]+)")
-        else
             replace($components[last()], "\{[^\}]+\}", "(.+)")
+        else
+            replace($components[last()], "\{[^\}]+\}", "([^/]+)")
     )
     return
         "/" || string-join($regex, "/")
@@ -453,4 +455,21 @@ declare function router:logout($request as map(*)) {
     error($errors:UNAUTHORIZED, "Logged out successfully", map {
         "user": request:get-attribute($request?loginDomain || ".user")
     })
+};
+
+declare function router:debug($request as map(*)) {
+    router:response(200, "application/json",
+        map {
+            "parameters":
+                map:merge(
+                    map:for-each($request?parameters, function($key, $value) {
+                        map {
+                            $key: $value
+                        }
+                    })
+                ),
+            "body": $request?body,
+            "config": $request?config
+        }
+    )
 };
