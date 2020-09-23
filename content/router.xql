@@ -353,10 +353,7 @@ declare function router:create-regex($path as xs:string) {
         return
             (: replace($component, "\{[^\}]+\}", if ($p = 1) then "(.+?)" else "([^/]+)") :)
             replace($component, "\{[^\}]+\}", "([^/]+)"),
-        if (ends-with($components[last()], "}")) then
             replace($components[last()], "\{[^\}]+\}", "(.+)")
-        else
-            replace($components[last()], "\{[^\}]+\}", "([^/]+)")
     )
     return
         "/" || string-join($regex, "/")
