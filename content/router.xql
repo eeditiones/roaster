@@ -12,14 +12,20 @@ declare variable $router:RESPONSE_BODY := xs:QName("router:RESPONSE_BODY");
 declare function router:route($jsonPaths as xs:string+, $lookup as function(*)) {
     try {
         let $controller := request:get-attribute("$exist:controller")
-        for $jsonPath in $jsonPaths
-        let $json := replace(``[`{repo:get-root()}`/`{$controller}`/`{$jsonPath}`]``, "/+", "/")
-        let $config := json-doc($json)
+        let $routes :=
+            for $jsonPath in $jsonPaths
+            let $json := replace(``[`{repo:get-root()}`/`{$controller}`/`{$jsonPath}`]``, "/+", "/")
+            let $config := json-doc($json)
+            return
+                if (exists($config)) then
+                    router:match-path($config)
+                else
+                    error($errors:NOT_FOUND, "Failed to load JSON file from " || $json)
         return
-            if (exists($config)) then
-                router:match-path($config, $lookup)
+            if (empty($routes)) then
+                error(errors:NOT_FOUND_404, "No route matches pattern: " || request:get-attribute("$exist:path"))
             else
-                error($errors:NOT_FOUND, "Failed to load JSON file from " || $json)
+                router:process($routes, $lookup)
     } catch router:CREATED_201 {
         router:send(201, $err:description, $err:value)
     } catch router:NO_CONTENT_204 {
@@ -71,7 +77,7 @@ declare function router:response($code as xs:int, $mediaType as xs:string?, $bod
     }
 };
 
-declare function router:match-path($config as map(*), $lookup as function(*)) {
+declare function router:match-path($config as map(*)) {
     let $method := request:get-method() => lower-case()
     let $path := request:get-attribute("$exist:path")
     (: find matching route by checking each path pattern :)
@@ -81,9 +87,11 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
             return
                 if (matches($path, $regex)) then
                     map {
+                        "path": $path,
                         "pattern": $pattern,
                         "config": $route($method),
-                        "regex": $regex
+                        "regex": $regex,
+                        "spec": $config
                     }
                 else
                     ()
@@ -92,36 +100,40 @@ declare function router:match-path($config as map(*), $lookup as function(*)) {
     })
     return
         if (empty($routes)) then
-            response:set-status-code(404)
+            ()
         else
-            (: if there are multiple matches, prefer the one matching the longest pattern :)
-            let $route := sort($routes, (), function($route) {
-                string-length($route?pattern)
-            }) => reverse() => head()
-            let $loginDomain := router:login-domain($config)
-            let $parameters := map:merge((
-                router:map-request-parameters($route?config),
-                router:map-path-parameters($route, $path)
-            ))
-            let $info := $config?info
-            let $request := map {
-                "parameters": $parameters,
-                "body": router:request-body($route?config),
-                "loginDomain": $loginDomain,
-                "info": $info,
-                "config": $route
-            }
-            return (
-                if ($loginDomain) then (
-                    login:set-user($loginDomain, (), false())
-                ) else
-                    (),
-                if (router:check-login($route?config)) then
-                    ()
-                else
-                    error($errors:UNAUTHORIZED, "Access denied"),
-                router:exec($route?config, $request, $lookup) => router:write-response(200, $route?config)
-            )
+            $routes
+};
+
+declare function router:process($routes as map(*)*, $lookup as function(*)) {
+    (: if there are multiple matches, prefer the one matching the longest pattern :)
+    let $route := sort($routes, (), function($route) {
+            string-length(replace($route?pattern, "\{[^\}]+\}", "?"))
+        }) => reverse() => head()
+    let $loginDomain := router:login-domain($route?spec)
+    let $parameters := map:merge((
+        router:map-request-parameters($route?config),
+        router:map-path-parameters($route, $route?path)
+    ))
+    let $info := $route?spec?info
+    let $request := map {
+        "parameters": $parameters,
+        "body": router:request-body($route?config),
+        "loginDomain": $loginDomain,
+        "info": $info,
+        "config": $route
+    }
+    return (
+        if ($loginDomain) then (
+            login:set-user($loginDomain, (), false())
+        ) else
+            (),
+        if (router:check-login($route?config)) then
+            ()
+        else
+            error($errors:UNAUTHORIZED, "Access denied"),
+        router:exec($route?config, $request, $lookup) => router:write-response(200, $route?config)
+    )
 };
 
 (:~
