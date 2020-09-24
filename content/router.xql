@@ -27,24 +27,24 @@ declare function router:route($jsonPaths as xs:string+, $lookup as function(*)) 
             else
                 router:process($routes, $lookup)
     } catch router:CREATED_201 {
-        router:send(201, $err:description, $err:value)
+        router:send(201, $err:description, $err:value, $lookup)
     } catch router:NO_CONTENT_204 {
-        router:send(204, $err:description, $err:value)
+        router:send(204, $err:description, $err:value, $lookup)
     } catch errors:NOT_FOUND_404 {
-        router:send(404, $err:description, $err:value)
+        router:send(404, $err:description, $err:value, $lookup)
     } catch errors:BAD_REQUEST_400 {
-        router:send(400, $err:description, $err:value)
+        router:send(400, $err:description, $err:value, $lookup)
     } catch errors:UNAUTHORIZED_401 {
-        router:send(401, $err:description, $err:value)
+        router:send(401, $err:description, $err:value, $lookup)
     } catch errors:FORBIDDEN_403 {
-        router:send(403, $err:description, $err:value)
+        router:send(403, $err:description, $err:value, $lookup)
     } catch errors:REQUIRED_PARAM | errors:OPERATION | errors:BODY_CONTENT_TYPE {
-        router:send(400, $err:description, $err:value)
+        router:send(400, $err:description, $err:value, $lookup)
     } catch * {
         if (contains($err:description, "permission")) then
-            router:send(403, $err:description, $err:value)
+            router:send(403, $err:description, $err:value, $lookup)
         else
-            router:send(500, $err:description, $err:value)
+            router:send(500, $err:description, $err:value, $lookup)
     }
 };
 
@@ -157,10 +157,16 @@ declare function router:exec($route as map(*), $request as map(*), $lookup as fu
                     } catch * {
                         (: Catch all errors and add the current route configuration to $err:value,
                            so we can check it later to format the response :)
-                        error($err:code, if ($err:description) then $err:description else '', map {
-                            "_config": $route,
-                            "_response": $err:value
-                        })
+                        if (exists($route('x-error-handler'))) then
+                            error($err:code, '', map {
+                                "_config": $route,
+                                "_response": if (exists($err:value)) then $err:value else $err:description
+                            })
+                        else
+                            error($err:code, $err:description, map {
+                                "_config": $route,
+                                "_response": $err:value
+                            })
                     }
                 else
                     error($errors:OPERATION, "Function " || $operationId || " could not be resolved")
@@ -422,9 +428,34 @@ declare %private function router:do-resolve-pointer($config as map(*), $refs as 
  : oas configuration for the route and "_response" is the response data provided by the user function
  : in the third argument of error().
  :)
-declare function router:send($code as xs:integer, $description as xs:string, $value as item()*) {
+declare function router:send($code as xs:integer, $description as xs:string, $value as item()*, $lookup as function(*)) {
     if ($description = "" and count($value) = 1 and $value instance of map(*) and map:contains($value, "_config")) then
-        router:write-response(map:get($value, "_response"), $code, map:get($value, "_config"))
+        let $route := map:get($value, "_config")
+        let $errorHandler := $route('x-error-handler')
+        return
+            (: if an error handler is defined, call it instead of returning the error directly :)
+            if (exists($errorHandler)) then
+                let $fn :=
+                    try {
+                        $lookup($errorHandler)
+                    } catch * {
+                        error($errors:OPERATION, "Error handler function " || $errorHandler || " could not be resolved")
+                    }
+                return
+                    if (exists($fn)) then
+                        try {
+                            let $response := $fn(map:get($value, "_response"))
+                            return
+                                router:write-response($response, $code, $route)
+                        } catch * {
+                            (: Catch all errors and add the current route configuration to $err:value,
+                            so we can check it later to format the response :)
+                            error($errors:OPERATION, "Failed to execute error handler " || $errorHandler)
+                        }
+                    else
+                        error($errors:OPERATION, "Error handler function " || $errorHandler || " could not be resolved")
+            else
+                router:write-response(map:get($value, "_response"), $code, $route)
     else (
         response:set-status-code($code),
         response:set-header("Content-Type", "application/json"),
