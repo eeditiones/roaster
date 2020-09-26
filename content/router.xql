@@ -23,7 +23,7 @@ declare function router:route($jsonPaths as xs:string+, $lookup as function(*)) 
                     error($errors:NOT_FOUND, "Failed to load JSON file from " || $json)
         return
             if (empty($routes)) then
-                error(errors:NOT_FOUND_404, "No route matches pattern: " || request:get-attribute("$exist:path"))
+                error($errors:NOT_FOUND, "No route matches pattern: " || request:get-attribute("$exist:path"))
             else
                 router:process($routes, $lookup)
     } catch router:CREATED_201 {
