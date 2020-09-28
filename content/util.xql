@@ -47,7 +47,10 @@ declare function rutil:debug($request as map(*)) {
                     })
                 ),
             "body": $request?body,
-            "config": $request?config
+            "pattern": $request?config?pattern,
+            "path": $request?config?path,
+            "regex": $request?config?regex,
+            "priority": $request?config?priority
         }
     )
 };

@@ -13,12 +13,12 @@ declare function router:route($jsonPaths as xs:string+, $lookup as function(*)) 
     try {
         let $controller := request:get-attribute("$exist:controller")
         let $routes :=
-            for $jsonPath in $jsonPaths
+            for $jsonPath at $pos in $jsonPaths
             let $json := replace(``[`{repo:get-root()}`/`{$controller}`/`{$jsonPath}`]``, "/+", "/")
             let $config := json-doc($json)
             return
                 if (exists($config)) then
-                    router:match-path($config)
+                    router:match-path($config, count($jsonPaths) - $pos)
                 else
                     error($errors:NOT_FOUND, "Failed to load JSON file from " || $json)
         return
@@ -77,7 +77,7 @@ declare function router:response($code as xs:int, $mediaType as xs:string?, $bod
     }
 };
 
-declare function router:match-path($config as map(*)) {
+declare function router:match-path($config as map(*), $priority as xs:int) {
     let $method := request:get-method() => lower-case()
     let $path := request:get-attribute("$exist:path")
     (: find matching route by checking each path pattern :)
@@ -91,7 +91,8 @@ declare function router:match-path($config as map(*)) {
                         "pattern": $pattern,
                         "config": $route($method),
                         "regex": $regex,
-                        "spec": $config
+                        "spec": $config,
+                        "priority": $priority
                     }
                 else
                     ()
@@ -108,7 +109,7 @@ declare function router:match-path($config as map(*)) {
 declare function router:process($routes as map(*)*, $lookup as function(*)) {
     (: if there are multiple matches, prefer the one matching the longest pattern :)
     let $route := sort($routes, (), function($route) {
-            string-length(replace($route?pattern, "\{[^\}]+\}", "?"))
+            string-length(replace($route?pattern, "\{[^\}]+\}", "?")) + $route?priority
         }) => reverse() => head()
     let $loginDomain := router:login-domain($route?spec)
     let $parameters := map:merge((
