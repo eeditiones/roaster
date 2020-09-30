@@ -7,7 +7,7 @@ This repository contains the routing library used by TEI Publisher 7. It is gene
 ## How it works
 
 eXist applications usually have a controller as main entry point. The 
-[controller.xql](controller.xql) in TEI Publisher only handles requests to static resources, but forwards all other requests to an XQuery script [api.xql](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/lib/api.xql). This script imports the Open API Router module and calls `router:route`, passing it one or more Open API specifications in JSON format.
+[controller.xql](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/controller.xql) in TEI Publisher only handles requests to static resources, but forwards all other requests to an XQuery script [api.xql](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/lib/api.xql). This script imports the Open API Router module and calls `router:route`, passing it one or more Open API specifications in JSON format.
 
 TEI Publisher uses two specifications: [api.json](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/lib/api.json) and [custom-api.json](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/custom-api.json). This is done to make it easier for users to extend the default API. It is also possible to overwrite a route from `api.json` by placing it into `custom-api.json`.
 

@@ -28,7 +28,7 @@ declare variable $router:RESPONSE_CODE := xs:QName("router:RESPONSE_CODE");
 declare variable $router:RESPONSE_TYPE := xs:QName("router:RESPONSE_TYPE");
 declare variable $router:RESPONSE_BODY := xs:QName("router:RESPONSE_BODY");
 
-declare function router:route($jsonPaths as xs:string+, $lookup as function(*)) {
+declare function router:route($jsonPaths as xs:string+, $lookup as function(xs:string, xs:integer) as function(*)?) {
     try {
         let $controller := request:get-attribute("$exist:controller")
         let $routes :=
@@ -160,13 +160,13 @@ declare function router:process($routes as map(*)*, $lookup as function(*)) {
  : Look up the XQuery function whose name matches property "operationId". If found,
  : call it and pass the request map as single parameter.
  :)
-declare function router:exec($route as map(*), $request as map(*), $lookup as function(*)) {
+declare function router:exec($route as map(*), $request as map(*), $lookup as function(xs:string, xs:integer) as function(*)?) {
     let $operationId := $route?operationId
     return
         if (exists($operationId)) then
             let $fn :=
                 try {
-                    $lookup($operationId)
+                    $lookup($operationId, 1)
                 } catch * {
                     error($errors:OPERATION, "Function " || $operationId || " could not be resolved")
                 }
@@ -448,7 +448,7 @@ declare %private function router:do-resolve-pointer($config as map(*), $refs as 
  : oas configuration for the route and "_response" is the response data provided by the user function
  : in the third argument of error().
  :)
-declare function router:send($code as xs:integer, $description as xs:string, $value as item()*, $lookup as function(*)) {
+declare function router:send($code as xs:integer, $description as xs:string, $value as item()*, $lookup as function(xs:string, xs:integer) as function(*)?) {
     if ($description = "" and count($value) = 1 and $value instance of map(*) and map:contains($value, "_config")) then
         let $route := map:get($value, "_config")
         let $errorHandler := $route('x-error-handler')
@@ -457,7 +457,7 @@ declare function router:send($code as xs:integer, $description as xs:string, $va
             if (exists($errorHandler)) then
                 let $fn :=
                     try {
-                        $lookup($errorHandler)
+                        $lookup($errorHandler, 1)
                     } catch * {
                         error($errors:OPERATION, "Error handler function " || $errorHandler || " could not be resolved")
                     }
