@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <meta xmlns="http://exist-db.org/xquery/repo">
-    <description>Open API Router for eXist: reads Open API JSON specification and routes requests accordingly</description>
+    <description>Open API Router library for eXist: reads an Open API JSON specification and routes requests accordingly.
+        See the README for more information.</description>
     <author>Wolfgang Meier</author>
     <website>https://github.com/eeditiones/oas-router</website>
-    <status>beta</status>
+    <status>stable</status>
     <license>GPLv3</license>
     <copyright>true</copyright>
     <type>library</type>
