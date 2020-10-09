@@ -183,7 +183,7 @@ declare function router:exec($route as map(*), $request as map(*), $lookup as fu
                                 "_response": if (exists($err:value)) then $err:value else $err:description
                             })
                         else
-                            error($err:code, $err:description, map {
+                            error($err:code, if ($err:description) then $err:description else '', map {
                                 "_config": $route,
                                 "_response": $err:value
                             })
