@@ -4,6 +4,8 @@ Reads an Open API 3.0 specification from JSON and routes requests to handler fun
 
 This repository contains the routing library used by TEI Publisher 7. It is generic though and can be integrated into any application. In the following TEI Publisher is only used as an example.
 
+![TEI Publisher API](https://teipublisher.com/exist/apps/tei-publisher/doc/api-spec.png)
+
 ## How it works
 
 eXist applications usually have a controller as main entry point. The 
