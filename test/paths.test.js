@@ -19,9 +19,9 @@ describe('Path parameters', function () {
 
         // expect(res).to.satisfyApiSpec;
     });
-    // it('handles path including $', async function () {
-    //     const res = await util.axios.get('api/$operation');
-    //     expect(res.status).to.equal(200);
-    //     // expect(res).to.satisfyApiSpec;
-    // });
+    it('handles path including $', async function () {
+        const res = await util.axios.get('api/$operation');
+        expect(res.status).to.equal(200);
+        // expect(res).to.satisfyApiSpec;
+    });
 });

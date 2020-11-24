@@ -88,7 +88,7 @@ Create .xar by calling `ant` and install into local eXist.
 
 ## Testing
 
-To run the local test suite you need an instance of eXist running on `localhost:8080`. To test against a different port, edit `test/util.js` and change
+To run the local test suite you need an instance of eXist running on `localhost:8080` and `ant` to be available in your path. To test against a different port, edit `test/util.js` and change
 
 ```
 const server = 'http://localhost:8080';

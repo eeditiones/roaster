@@ -56,7 +56,7 @@
         },
         "/api/$operation":{
             "get": {
-                "summary": "Parameter specified in last path component",
+                "summary": "Path using a $ character",
                 "operationId": "rutil:debug",
                 "responses": {
                     "200":{
