@@ -54,7 +54,7 @@
             }
             
         },
-        "/api/$operation":{
+        "/api/$op-er+ation*!":{
             "get": {
                 "summary": "Path using a $ character",
                 "operationId": "rutil:debug",
@@ -71,7 +71,6 @@
                     }
                 }
             }
-            
         }
     },
     "security": [
