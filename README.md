@@ -88,7 +88,20 @@ Create .xar by calling `ant` and install into local eXist.
 
 ## Testing
 
-Extensive tests for this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app/tree/feature/open-api/test) repository.
+To run the local test suite you need an instance of eXist running on `localhost:8080`. To test against a different port, edit `test/util.js` and change
+
+```
+const server = 'http://localhost:8080';
+```
+
+Run the test suite with
+
+```
+npm install
+npm test
+```
+
+More extensive tests for this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app/tree/feature/open-api/test) repository.
 
 # Limitations
 

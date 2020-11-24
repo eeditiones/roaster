@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="all" name="oas-test">
+  <description>Open API Router Test Application</description>
+  <xmlproperty file="expath-pkg.xml"/>
+  <property name="project.version" value="${package(version)}"/>
+  <property name="project.app" value="oas-test"/>
+  <property name="build.dir" value="build"/>
+  <!-- Start it -->
+  <target name="init" description="create build directory">
+    <tstamp/>
+    <mkdir dir="${build.dir}"/>
+  </target>
+  <!-- Dev build (includes everything unoptimized) -->
+  <target name="all" depends="init" description="compile all source files">
+    <zip basedir="." destfile="${build.dir}/${project.app}-${project.version}.xar" excludes="**/${build.dir}/**, **/node_modules/**"/>
+  </target>
+</project>

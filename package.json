@@ -1,0 +1,28 @@
+{
+  "name": "oas-router",
+  "version": "0.5.0",
+  "description": "Open API Router for eXist",
+  "scripts": {
+    "test": "npm run test:build && mocha --exit",
+    "test-watch": "npm run test:build && mocha --watch",
+    "test:build": "cd test/app && ant"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eeditiones/oas-router.git"
+  },
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "axios": "^0.20.0",
+    "chai": "^4.2.0",
+    "chai-openapi-response-validator": "^0.9.4",
+    "form-data": "^3.0.0",
+    "jsdom": "^16.4.0",
+    "mocha": "^8.1.3",
+    "tmp": "^0.2.1"
+  },
+  "mocha": {
+    "timeout": 10000,
+    "slow": 1000
+  }
+}
