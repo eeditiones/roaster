@@ -25,6 +25,10 @@ declare function api:error-explicit($request as map(*)) {
     router:response(403, "application/xml", <forbidden/>)
 };
 
+declare function api:handle-error($response) {
+    <p>{$response}</p>
+};
+
 let $lookup := function($name as xs:string, $arity as xs:integer) {
     try {
         function-lookup(xs:QName($name), $arity)

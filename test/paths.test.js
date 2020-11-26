@@ -124,4 +124,14 @@ describe('Error reporting', function() {
                 done();
             });
     });
+
+    it('calls error handler', function(done) {
+        util.axios.get('api/errors/handle')
+            .catch(function(error) {
+                expect(error.response.status).to.equal(500);
+                expect(error.response.headers['content-type']).to.equal('text/html');
+                expect(error.response.data).to.contain('$undefined');
+                done();
+            });
+    });
 });

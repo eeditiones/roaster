@@ -297,6 +297,25 @@
                     }
                 }
             }
+        },
+        "/api/errors/handle": {
+            "get": {
+                "summary": "Test error handler",
+                "operationId": "api:error-dynamic",
+                "x-error-handler": "api:handle-error",
+                "responses": {
+                    "500": {
+                        "description": "XQuery error",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "security": [
