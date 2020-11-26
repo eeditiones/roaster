@@ -247,6 +247,56 @@
                     }
                 }
             }
+        },
+        "/api/errors": {
+            "get": {
+                "summary": "Reports an error via fn:error function",
+                "operationId": "api:error-triggered",
+                "responses": {
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json":{
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Reports a dynamic XQuery error",
+                "operationId": "api:error-dynamic",
+                "responses": {
+                    "500": {
+                        "description": "XQuery error",
+                        "content": {
+                            "application/json":{
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Reports an explicit error",
+                "operationId": "api:error-explicit",
+                "responses": {
+                    "500": {
+                        "description": "XQuery error",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "security": [

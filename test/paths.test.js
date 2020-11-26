@@ -45,7 +45,6 @@ describe('Query parameters', function () {
             }
         });
         expect(res.status).to.equal(200);
-        console.log(res.data.parameters);
         expect(res.data.parameters.num).to.be.a('number');
         expect(res.data.parameters.num).to.equal(165.75);
         expect(res.data.parameters.bool).to.be.a('boolean');
@@ -72,7 +71,6 @@ describe('Query parameters', function () {
             }
         });
         expect(res.status).to.equal(200);
-        console.log(res.data);
         expect(res.data.method).to.equal('POST');
         expect(res.data.parameters.num).to.be.a('number');
         expect(res.data.parameters.num).to.equal(165.75);
@@ -94,5 +92,36 @@ describe('Query parameters', function () {
         });
         expect(res.status).to.equal(200);
         expect(res.data).to.be.true;
+    });
+});
+
+describe('Error reporting', function() {
+    it('receives error report', function(done) {
+        util.axios.get('api/errors')
+            .catch(function(error) {
+                expect(error.response.status).to.equal(404);
+                expect(error.response.data.description).to.equal('document not found');
+                expect(error.response.data.details).to.equal('error details');
+                done();
+            });
+    });
+
+    it('receives dynamic XQuery error', function(done) {
+        util.axios.post('api/errors')
+            .catch(function(error) {
+                expect(error.response.status).to.equal(500);
+                expect(error.response.data.description).to.contain('$undefined');
+                done();
+            });
+    });
+
+    it('receives explicit error', function(done) {
+        util.axios.delete('api/errors')
+            .catch(function(error) {
+                expect(error.response.status).to.equal(403);
+                expect(error.response.headers['content-type']).to.equal('application/xml');
+                expect(error.response.data).to.equal('<forbidden/>');
+                done();
+            });
     });
 });

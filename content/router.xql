@@ -202,7 +202,7 @@ declare function router:write-response($data, $defaultCode as xs:int, $config as
             if (exists($contentType)) then 
                 $contentType
             else
-                router:get-content-type-for-code($config, $defaultCode, "text/xml")
+                router:get-content-type-for-code($config, $defaultCode, "application/xml")
         return
         (
             response:set-status-code($code),
@@ -214,7 +214,7 @@ declare function router:write-response($data, $defaultCode as xs:int, $config as
                 ()
         )
     else
-        let $contentType := router:get-content-type-for-code($config, $defaultCode, "text/xml")
+        let $contentType := router:get-content-type-for-code($config, $defaultCode, "application/xml")
         return (
             response:set-status-code($defaultCode),
             response:set-header("Content-Type", $contentType),
