@@ -25,6 +25,166 @@
         }
     },
     "paths": {
+        "/api/parameters": {
+            "get": {
+                "summary": "Test various parameter types passed in a GET",
+                "operationId": "rutil:debug",
+                "parameters": [
+                    {
+                        "name": "num",
+                        "in": "query",
+                        "schema":{
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "int",
+                        "in": "query",
+                        "schema":{
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "bool",
+                        "in": "query",
+                        "schema":{
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "string",
+                        "in": "query",
+                        "schema":{
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "defaultParam",
+                        "in": "query",
+                        "schema":{
+                            "type": "string",
+                            "default": "abcdefg"
+                        }
+                    },
+                    {
+                        "name": "X-start",
+                        "in": "header",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Test various parameter types passed in a POST",
+                "operationId": "rutil:debug",
+                "parameters": [
+                    {
+                        "name": "num",
+                        "in": "query",
+                        "schema":{
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "int",
+                        "in": "query",
+                        "schema":{
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "bool",
+                        "in": "query",
+                        "schema":{
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "string",
+                        "in": "query",
+                        "schema":{
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "defaultParam",
+                        "in": "query",
+                        "schema":{
+                            "type": "string",
+                            "default": "abcdefg"
+                        }
+                    },
+                    {
+                        "name": "X-start",
+                        "in": "header",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/dates": {
+            "get": {
+                "summary": "Parameters sent with GET request",
+                "operationId": "api:date",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "schema":{
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "dateTime",
+                        "in": "query",
+                        "schema":{
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/paths/{path}":{
             "get": {
                 "summary": "Parameter specified in last path component",
@@ -56,7 +216,23 @@
         },
         "/api/$op-er+ation*!":{
             "get": {
-                "summary": "Path using a $ character",
+                "summary": "Get path using a $ character",
+                "operationId": "rutil:debug",
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Post to path using a $ character",
                 "operationId": "rutil:debug",
                 "responses": {
                     "200":{

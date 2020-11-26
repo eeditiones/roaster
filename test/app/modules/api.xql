@@ -7,6 +7,11 @@ declare namespace tei="http://www.tei-c.org/ns/1.0";
 import module namespace router="http://exist-db.org/xquery/router";
 import module namespace rutil="http://exist-db.org/xquery/router/util";
 
+declare function api:date($request as map(*)) {
+    $request?parameters?date instance of xs:date and
+    $request?parameters?dateTime instance of xs:dateTime
+};
+
 let $lookup := function($name as xs:string, $arity as xs:integer) {
     try {
         function-lookup(xs:QName($name), $arity)

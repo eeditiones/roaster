@@ -66,6 +66,7 @@ declare function rutil:debug($request as map(*)) {
                     })
                 ),
             "body": $request?body,
+            "method": request:get-method(),
             "pattern": $request?config?pattern,
             "path": $request?config?path,
             "regex": $request?config?regex,
