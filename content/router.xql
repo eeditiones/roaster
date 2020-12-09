@@ -51,13 +51,11 @@ declare function router:route($jsonPaths as xs:string+, $lookup as function(xs:s
         router:send(204, $err:description, $err:value, $lookup)
     } catch errors:NOT_FOUND_404 {
         router:send(404, $err:description, $err:value, $lookup)
-    } catch errors:BAD_REQUEST_400 {
-        router:send(400, $err:description, $err:value, $lookup)
     } catch errors:UNAUTHORIZED_401 {
         router:send(401, $err:description, $err:value, $lookup)
     } catch errors:FORBIDDEN_403 {
         router:send(403, $err:description, $err:value, $lookup)
-    } catch errors:REQUIRED_PARAM | errors:OPERATION | errors:BODY_CONTENT_TYPE {
+    } catch errors:BAD_REQUEST_400 | errors:REQUIRED_PARAM | errors:OPERATION | errors:BODY_CONTENT_TYPE {
         router:send(400, $err:description, $err:value, $lookup)
     } catch * {
         if (contains($err:description, "permission")) then
