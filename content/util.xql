@@ -49,6 +49,40 @@ declare function rutil:login($request as map(*)) {
             })
 };
 
+declare function rutil:cookie-auth($config as map(*), $parameters as map(*)) {
+    let $login-domain := router:login-domain($config?spec)
+    return (
+        if ($login-domain)
+        then (
+            let $login := login:set-user($login-domain, (), false())
+            return rutil:getDBUser()
+        )
+        else ()
+    )
+};
+
+(:~
+ : Basic authentication is handled by Jetty
+ : the user is already authenticated in the database and we just need to
+ : retrieve the information here
+ :)
+declare function rutil:basic-auth($spec as map(*), $parameters as map(*)) {
+    rutil:getDBUser()
+};
+
+declare function rutil:getDBUser() as map(*) {
+    let $smid := sm:id()/sm:id
+    (: unsure if sm:effective should ever be exposed by this :)
+    (: let $user := ($smid/sm:effective, $smid/sm:real)[1] :)
+    let $user := $smid/sm:real
+    let $name := $user/sm:username/text()
+    return map {
+        "name": $name,
+        "groups": array { $user//sm:group/text() },
+        "dba" : sm:is-dba($name)
+    }
+};
+
 (:~
  : Return a JSON representation of the current request, showing the
  : parameters, configuration and request body which would be available
