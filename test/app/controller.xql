@@ -6,7 +6,7 @@ declare variable $exist:controller external;
 declare variable $exist:prefix external;
 declare variable $exist:root external;
 
-if ($exist:path eq '') then
+if ($exist:path eq "") then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
         <redirect url="{request:get-uri()}/"/>
     </dispatch>
@@ -18,7 +18,7 @@ else if ($exist:path eq "/") then
     </dispatch>
 
 (: static HTML page for API documentation should be served directly to make sure it is always accessible :)
-else if ($exist:path eq '/api.html' or ends-with($exist:resource, "json")) then
+else if ($exist:path eq "/api.html" or ends-with($exist:resource, "json")) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
     </dispatch>
 
@@ -37,8 +37,7 @@ else
             <set-header name="Access-Control-Allow-Origin" value="*"/>
             <set-header name="Access-Control-Allow-Credentials" value="true"/>
             <set-header name="Access-Control-Allow-Methods" value="GET, POST, DELETE, PUT, PATCH, OPTIONS"/>
-            <set-header name="Access-Control-Allow-Headers" value="Content-Type, api_key, Authorization"/>
-            <set-header name="Access-Control-Expose-Headers" value="pb-start, pb-total"/>
+            <set-header name="Access-Control-Allow-Headers" value="Accept, Content-Type, Authorization, X-Auth-Token"/>
             <set-header name="Cache-Control" value="no-cache"/>
         </forward>
     </dispatch>
