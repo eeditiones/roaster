@@ -57,14 +57,7 @@ declare function rutil:login($request as map(*)) {
 declare function rutil:debug($request as map(*)) {
     router:response(200, "application/json",
         map {
-            "parameters":
-                map:merge(
-                    map:for-each($request?parameters, function($key, $value) {
-                        map {
-                            $key: $value
-                        }
-                    })
-                ),
+            "parameters": $request?parameters,
             "body": $request?body,
             "method": request:get-method(),
             "pattern": $request?config?pattern,
