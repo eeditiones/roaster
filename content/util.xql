@@ -72,9 +72,12 @@ declare function rutil:basic-auth($spec as map(*), $parameters as map(*)) {
 
 declare function rutil:getDBUser() as map(*) {
     let $smid := sm:id()/sm:id
-    (: unsure if sm:effective should ever be exposed by this :)
-    (: let $user := ($smid/sm:effective, $smid/sm:real)[1] :)
-    let $user := $smid/sm:real
+    (: 
+     : TODO unsure if sm:effective should ever be exposed by this
+     : but this is the only way to reliable get token issue request work
+     : xmldb:login seems to set sm:effective instead of sm:real
+     :)
+    let $user := ($smid/sm:effective, $smid/sm:real)[1]
     let $name := $user/sm:username/text()
     return map {
         "name": $name,
