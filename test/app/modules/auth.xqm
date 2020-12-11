@@ -3,7 +3,7 @@ xquery version "3.1";
 (:~
  : example implementation to use exist-JWT in combination with OAS-router
  :)
-module namespace auth="https://e-editiones.com/oas-router/xquery/jwt-auth";
+module namespace auth="https://e-editiones.org/oas-router/xquery/jwt-auth";
 
 
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";

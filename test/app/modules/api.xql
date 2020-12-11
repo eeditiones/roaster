@@ -1,12 +1,12 @@
 xquery version "3.1";
 
-declare namespace api="https://e-editiones.com/oas-router/xquery/test-api";
+declare namespace api="https://e-editiones.org/oas-router/xquery/test-api";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 
 import module namespace router="http://exist-db.org/xquery/router";
 import module namespace rutil="http://exist-db.org/xquery/router/util";
 import module namespace errors = "http://exist-db.org/xquery/router/errors";
-(: import module namespace auth = "https://e-editiones.com/oas-router/xquery/jwt-auth" at "auth.xqm"; :)
+(: import module namespace auth = "https://e-editiones.org/oas-router/xquery/jwt-auth" at "auth.xqm"; :)
 
 (:~
  : list of definition files to use
