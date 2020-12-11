@@ -7,12 +7,21 @@
     </head>
     <body>
         <div id="swagger"></div>
-        <div id="custom"></div>
+        <!-- <div id="custom"></div> -->
         <script>
             window.onload = function() {
                 SwaggerUIBundle({
-                    url: "api.json",
+                    url: 'api.json',
                     dom_id: '#swagger',
+                    displayOperationId: true,
+                    displayRequestDuration: true,
+                    showExtensions: true,
+                    withCredentials: true
+                });
+                if (!document.getElementById('custom')) { return; }
+                SwaggerUIBundle({
+                    url: 'api-jwt.json',
+                    dom_id: '#custom',
                     displayOperationId: true,
                     displayRequestDuration: true,
                     showExtensions: true,

@@ -6,10 +6,13 @@ declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 import module namespace router="http://exist-db.org/xquery/router";
 import module namespace rutil="http://exist-db.org/xquery/router/util";
 import module namespace errors = "http://exist-db.org/xquery/router/errors";
+(: import module namespace auth = "https://e-editiones.com/oas-router/xquery/jwt-auth" at "auth.xqm"; :)
+
 (:~
  : list of definition files to use
  :)
 declare variable $api:definitions := (
+    (: "api-jwt.json", :)
     "api.json"
 );
 
@@ -21,6 +24,7 @@ declare variable $api:definitions := (
  : Otherwise the router will throw an error. 
  :)
 declare variable $api:AUTH_STRATEGIES := map {
+    (: $auth:METHOD : auth:bearer-auth#2, :)
     "cookieAuth": rutil:cookie-auth#2,
     "basicAuth": rutil:basic-auth#2
 };
