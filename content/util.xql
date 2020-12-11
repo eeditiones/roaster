@@ -97,7 +97,8 @@ declare function rutil:debug($request as map(*)) {
             "pattern": $request?config?pattern,
             "path": $request?config?path,
             "regex": $request?config?regex,
-            "priority": $request?config?priority
+            "priority": $request?config?priority,
+            "user": $request?user
         }
     )
 };

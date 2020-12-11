@@ -6,6 +6,24 @@ declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 import module namespace router="http://exist-db.org/xquery/router";
 import module namespace rutil="http://exist-db.org/xquery/router/util";
 import module namespace errors = "http://exist-db.org/xquery/router/errors";
+(:~
+ : list of definition files to use
+ :)
+declare variable $api:definitions := (
+    "api.json"
+);
+
+(:~
+ : Define authentication/authorization handlers
+ : 
+ : All securitySchemes in any api definition that is
+ : included MUST have an entry in this map.
+ : Otherwise the router will throw an error. 
+ :)
+declare variable $api:AUTH_STRATEGIES := map {
+    "cookieAuth": rutil:cookie-auth#2,
+    "basicAuth": rutil:basic-auth#2
+};
 
 (:~
  : You can add application specific route handlers here.
@@ -50,13 +68,15 @@ declare function api:binary-upload($request as map(*)) {
     util:binary-to-string($request?body)
 };
 
-let $lookup := function($name as xs:string, $arity as xs:integer) {
-    try {
-        function-lookup(xs:QName($name), $arity)
-    } catch * {
-        ()
-    }
-}
-let $resp := router:route("api.json", $lookup)
-return
-    $resp
+(: end of route handlers :)
+
+(:~
+ : This function "knows" all modules and their functions
+ : that are imported here 
+ : You can leave it as it is, but it has to be here
+ :)
+declare function api:lookup ($name as xs:string) {
+    xs:QName($name) => fn:function-lookup(1)
+};
+
+router:route($api:definitions, api:lookup#1, $api:AUTH_STRATEGIES)
