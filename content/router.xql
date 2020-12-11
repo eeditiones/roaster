@@ -116,7 +116,7 @@ declare function router:route($api-files as xs:string+, $lookup as function(xs:s
 
 declare function router:log-error($request as map(*), $data as map(*)) {
     util:log("error", 
-        ``[[`{$request?id}`] `{$request?method}` `{$request?path}`: `{serialize($data, map{"method": "adaptive"})}`]``)
+        ``[[`{$request?id}`] `{$request?method}` `{$request?path}`: `{serialize(map:remove($data, "_config"), map{"method": "adaptive"})}`]``)
 };
 
 
