@@ -63,7 +63,8 @@ declare function auth:issue-token($request as map(*)) {
 
 declare function auth:bearer-auth ($spec as map(*), $parameters as map(*)) as map(*)? {
     try {
-        let $token := $parameters($auth:AUTH_HEADER)
+        (: need to access request header directly because it will not be part of parameters :)
+        let $token := request:get-header($auth:AUTH_HEADER)
         return
             if (exists($token))
             then (
