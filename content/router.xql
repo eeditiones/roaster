@@ -218,8 +218,15 @@ declare function router:is-public-route ($constraints as map(*)?) as xs:boolean 
 };
 
 declare function router:is-authorized($constraints as map(*), $user as map(*)?) {
-    (exists($constraints?groups) and $user?groups = $constraints?groups?*) or
-    (exists($constraints?user) and $user?name = $constraints?user)
+    exists($user) and 
+    (
+        not(exists($constraints?groups)) or 
+        $user?groups?* = $constraints?groups?* (: is member of at least one required group :)
+    ) and
+    (
+        not(exists($constraints?user)) or 
+        $user?name eq $constraints?user (: is the required user :)
+    )
 };
 
 (:~
