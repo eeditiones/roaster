@@ -18,7 +18,7 @@ declare function api:error-triggered($request as map(*)) {
 };
 
 declare function api:error-dynamic($request as map(*)) {
-    $undefined
+    util:eval('1 + $undefined')
 };
 
 declare function api:error-explicit($request as map(*)) {

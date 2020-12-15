@@ -61,9 +61,9 @@ declare function router:route($jsonPaths as xs:string+, $lookup as function(xs:s
         router:send(400, $err:description, $err:value, $lookup)
     } catch * {
         if (contains($err:description, "permission")) then
-            router:send(403, $err:description, $err:value, $lookup)
+            router:send(403, router:error-description($err:description, $err:line-number, $err:module, $err:value), $err:value, $lookup)
         else
-            router:send(500, $err:description, $err:value, $lookup)
+            router:send(500, router:error-description($err:description, $err:line-number, $err:module, $err:value), $err:value, $lookup)
     }
 };
 
@@ -183,10 +183,16 @@ declare function router:exec($route as map(*), $request as map(*), $lookup as fu
                                 "_response": if (exists($err:value)) then $err:value else $err:description
                             })
                         else
-                            error($err:code, if ($err:description) then $err:description else '', map {
-                                "_config": $route,
-                                "_response": $err:value
-                            })
+                            error($err:code, 
+                                if ($err:description) then 
+                                    router:error-description($err:description, $err:line-number, $err:module, ()) 
+                                else 
+                                    '', 
+                                map {
+                                    "_config": $route,
+                                    "_response": $err:value
+                                }
+                            )
                     }
                 else
                     error($errors:OPERATION, "Function " || $operationId || " could not be resolved")
@@ -439,6 +445,17 @@ declare %private function router:do-resolve-pointer($config as map(*), $refs as 
                 router:do-resolve-pointer($object, tail($refs))
             else
                 $object
+};
+
+(:~
+ : Add line and source info to error description. To avoid outputting multiple locations
+ : for rethrown errors, check if $value is set.
+ :)
+declare function router:error-description($description as xs:string, $line as xs:integer?, $module as xs:string?, $value) {
+    if ($line and $line > 0 and empty($value)) then
+        ``[`{$description}` [at line `{$line}` of `{($module, 'unknown')[1]}`]]``
+    else
+        $description
 };
 
 (:~

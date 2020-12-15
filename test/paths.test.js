@@ -100,7 +100,8 @@ describe('Error reporting', function() {
         util.axios.get('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(404);
-                expect(error.response.data.description).to.equal('document not found');
+                expect(error.response.data.description).to.contain('document not found');
+                expect(error.response.data.description).to.match(/\[at line \d+ of.*api\.xql\]/);
                 expect(error.response.data.details).to.equal('error details');
                 done();
             });
@@ -110,6 +111,7 @@ describe('Error reporting', function() {
         util.axios.post('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(500);
+                expect(error.response.data.description).to.match(/\[at line \d+ of.*\]/);
                 expect(error.response.data.description).to.contain('$undefined');
                 done();
             });
