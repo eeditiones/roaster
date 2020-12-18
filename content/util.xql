@@ -21,54 +21,7 @@ xquery version "3.1";
  :)
 module namespace rutil="http://exist-db.org/xquery/router/util";
 
-import module namespace errors="http://exist-db.org/xquery/router/errors";
 import module namespace router="http://exist-db.org/xquery/router";
-import module namespace login="http://exist-db.org/xquery/login" at "resource:org/exist/xquery/modules/persistentlogin/login.xql";
-
-(:~
- : Either login a user (if parameter `user` is specified) or check if the current user is logged in.
- : Setting parameter `logout` to any value will log out the current user.
- :)
-declare function rutil:login($request as map(*)) {
-    if ($request?parameters?user) then
-        login:set-user($request?loginDomain, (), false())
-    else
-        (),
-    let $user := request:get-attribute($request?loginDomain || ".user")
-    return
-        if (exists($user)) then
-            map {
-                "user": $user,
-                "groups": array { sm:get-user-groups($user) },
-                "dba": sm:is-dba($user)
-            }
-        else
-            error($errors:UNAUTHORIZED, "Wrong user or password", map {
-                "user": $user,
-                "domain": $request?loginDomain
-            })
-};
-
-declare function rutil:cookie-auth($config as map(*), $parameters as map(*)) {
-    let $login-domain := router:login-domain($config?spec)
-    return (
-        if ($login-domain)
-        then (
-            let $login := login:set-user($login-domain, (), false())
-            return rutil:getDBUser()
-        )
-        else ()
-    )
-};
-
-(:~
- : Basic authentication is handled by Jetty
- : the user is already authenticated in the database and we just need to
- : retrieve the information here
- :)
-declare function rutil:basic-auth($spec as map(*), $parameters as map(*)) {
-    rutil:getDBUser()
-};
 
 declare function rutil:getDBUser() as map(*) {
     let $smid := sm:id()/sm:id
@@ -80,7 +33,7 @@ declare function rutil:getDBUser() as map(*) {
     let $user := ($smid/sm:effective, $smid/sm:real)[1]
     let $name := $user/sm:username/text()
     return map {
-        "name": $name,
+        "user": $name,
         "groups": array { $user//sm:group/text() },
         "dba" : sm:is-dba($name)
     }

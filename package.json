@@ -5,7 +5,8 @@
   "scripts": {
     "test": "npm run test:build && mocha --exit",
     "test-watch": "npm run test:build && mocha --watch",
-    "test:build": "cd test/app && ant"
+    "test:build": "cd test/app && ant",
+    "build:all": "ant && npm run test:build"
   },
   "repository": {
     "type": "git",
@@ -13,9 +14,15 @@
   },
   "license": "GPL-3.0",
   "devDependencies": {
+    "@existdb/gulp-exist": "^4.0.0",
     "axios": "^0.20.0",
     "chai": "^4.2.0",
     "chai-openapi-response-validator": "^0.9.4",
+    "delete": "^1.1.0",
+    "gulp": "^4.0.2",
+    "gulp-rename": "^2.0.0",
+    "gulp-replace": "^1.0.0",
+    "gulp-zip": "^5.0.2",
     "form-data": "^3.0.0",
     "jsdom": "^16.4.0",
     "mocha": "^8.1.3",

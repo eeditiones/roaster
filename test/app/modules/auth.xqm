@@ -61,7 +61,7 @@ declare function auth:issue-token($request as map(*)) {
         error($errors:BAD_REQUEST, "Missing parameters 'username' and/or 'password'")
 };
 
-declare function auth:bearer-auth ($spec as map(*), $parameters as map(*)) as map(*)? {
+declare function auth:bearer-auth ($request as map(*)) as map(*)? {
     try {
         (: need to access request header directly because it will not be part of parameters :)
         let $token := request:get-header($auth:AUTH_HEADER)

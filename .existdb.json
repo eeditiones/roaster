@@ -17,5 +17,15 @@
             "package*.json",
             ".vscode/**"
         ]
+    },
+    "package": {
+        "author": "Wolfgang Meier",
+        "target": "oas-router",
+        "description": "Open API Router library for eXist: reads an Open API JSON specification and routes requests accordingly. See the README for more information.",
+        "namespace": "http://exist-db.org/open-api/router",
+        "website": "https://github.com/eeditiones/oas-router",
+        "status": "stable",
+        "title": "Open API Router library for eXist",
+        "license": "GPLv3"
     }
 }

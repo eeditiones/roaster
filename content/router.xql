@@ -21,219 +21,233 @@ xquery version "3.1";
  :)
 module namespace router="http://exist-db.org/xquery/router";
 
-import module namespace errors = "http://exist-db.org/xquery/router/errors";
+import module namespace errors="http://exist-db.org/xquery/router/errors";
+import module namespace parameters="http://exist-db.org/xquery/router/parameters";
 
 declare variable $router:RESPONSE_CODE := xs:QName("router:RESPONSE_CODE");
 declare variable $router:RESPONSE_TYPE := xs:QName("router:RESPONSE_TYPE");
 declare variable $router:RESPONSE_BODY := xs:QName("router:RESPONSE_BODY");
 
-declare variable $router:path-parameter-matcher := "\{[^\}]+\}";
+(:~
+ : May be called from user code to send a response with a particular
+ : response code (other than 200). The media type will be determined by
+ : looking at the response specification for the given status code.
+ :
+ : @param code the response code to return
+ : @param body data to be sent in the body of the response
+ :)
+declare function router:response($code as xs:integer, $body as item()*) {
+    router:response($code, (), $body)
+};
 
-declare function router:route($api-files as xs:string+, $lookup as function(xs:string) as function(*)?, $strategies as map(xs:string, function(*))) {
-    let $request-id := util:uuid()
+(:~
+ : May be called from user code to send a response with a particular
+ : response code (other than 200) or media type.
+ :
+ : @param $code the response code to return
+ : @param $mediaType the Content-Type for the response; assumes that the provided body can
+ : be converted into the target media type
+ : @param $body data to be sent in the body of the response
+ :)
+declare function router:response($code as xs:integer, $media-type as xs:string?, $body as item()*) {
+    map {
+        $router:RESPONSE_CODE : $code,
+        $router:RESPONSE_TYPE : $media-type,
+        $router:RESPONSE_BODY : $body
+    }
+};
+
+(:~
+ : resolve pointer to information in API definition
+ :
+ : @param $config the API definition
+ : @param $ref either a single string from $ref or a sequence of strings 
+ :)
+declare function router:resolve-pointer($config as map(*), $ref as xs:string*) {
+    let $parts := 
+        if (starts-with($ref, "#/")) then
+            tokenize($ref, "/") (: this is a $ref in the document :)
+        else
+            $ref (: internal spec lookup :)
+
+    return router:resolve-ref($config, $parts)
+};
+
+(:~
+ : Maps a request to the configured handler 
+ : Loads API definitions, matches routes
+ : Calls route handler function returned by $lookup function
+ :
+ : Route specificity rules:
+ : 1. normalize patterns: replace placeholders with "?"
+ : 2. use the matching route with the longest normalized pattern
+ : 3. If two paths have the same (normalized) length, prioritize by appearance in API files, first one wins
+ :)
+declare function router:route($api-files as xs:string+, $lookup as function(xs:string) as function(*)?, $middlewares as function(*)*) {
     let $controller := request:get-attribute("$exist:controller")
-    let $path := request:get-attribute("$exist:path")
-    let $method := request:get-method() => lower-case()
     let $base-collection := ``[`{repo:get-root()}`/`{$controller}`/]``
-    let $number-of-api-files := count($api-files)
-    let $log-data := map { "id": $request-id, "method": $method, "path": $path }
+
+    let $request-data := map { 
+        "id": util:uuid(),
+        "method": request:get-method() => lower-case(),
+        "path": request:get-attribute("$exist:path")
+    }
+
+    let $handle-error := router:error(?, ?, $request-data, $lookup)
 
     return (
-        util:log("info", ``[[`{$request-id}`] `{$method}` `{$path}`]``),
+        util:log("info", ``[[`{$request-data?id}`] request `{$request-data?method}` `{$request-data?path}`]``),
         try {
             (: load router definitions :)
-            let $route-definitions := 
+            let $specs := 
                 for $api-file in $api-files
                 let $file-path := concat($base-collection, $api-file)
-                let $config := json-doc($file-path)
+                let $spec := json-doc($file-path)
                 return 
-                    if (exists($config))
-                    then ($config)
+                    if (exists($spec))
+                    then ($spec)
                     else error($errors:OPERATION, "Failed to load JSON file from " || $file-path)
 
             (: find all matching routes :)
             let $matching-routes :=
-                for $config at $pos in $route-definitions
-                let $priority := $number-of-api-files - $pos
+                for $spec at $pos in $specs
+                let $priority := $pos
                 return
-                    router:match-route(map { 
-                        "method": $method,
-                        "path": $path,
-                        "spec": $config,
-                        "priority": $priority
-                    })
+                    router:match-route($request-data, $spec, $priority)
 
             let $first-match :=
                 if (empty($matching-routes)) then
-                    error($errors:NOT_FOUND, "No route matches pattern: " || $path)
+                    error($errors:NOT_FOUND, "No route matches pattern: " || $request-data?path)
                 else if (count($matching-routes) eq 1) then
                     $matching-routes
                 else (
                     (: if there are multiple matches, prefer the one matching the longest pattern and the highest priority :)
-                    util:log("warn", "ambigous route: " || $path),
+                    util:log("warn", "ambigous route: " || $request-data?path),
                     head(sort($matching-routes, (), router:route-specificity#1))
                 )
 
             return (
-                router:process($first-match, $lookup, $strategies),
-                util:log("info", ``[[`{$request-id}`] `{$method}` `{$path}`: OK]``)
+                router:process-request($first-match, $lookup, $middlewares),
+                util:log("info", ``[[`{$request-data?id}`] `{$request-data?method}` `{$request-data?path}`: OK]``)
             )
 
         } catch errors:BAD_REQUEST_400 | errors:REQUIRED_PARAM | errors:BODY_CONTENT_TYPE {
-            router:log-error($log-data,
-                map { "code": $err:code, "description": $err:description, "value": $err:value}),
-            router:send(400, $err:description, $err:value, $lookup)
+            $handle-error(400, map {"code": $err:code, "description": $err:description, "value": $err:value})
         } catch errors:UNAUTHORIZED_401 {
-            router:log-error($log-data,
-                map { "code": $err:code, "description": $err:description, "value": $err:value}),
-            router:send(401, $err:description, $err:value, $lookup)
+            $handle-error(401, map {"code": $err:code, "description": $err:description, "value": $err:value})
         } catch errors:FORBIDDEN_403 {
-            router:log-error($log-data,
-                map { "code": $err:code, "description": $err:description, "value": $err:value}),
-            router:send(403, $err:description, $err:value, $lookup)
+            $handle-error(403, map {"code": $err:code, "description": $err:description, "value": $err:value})
         } catch errors:NOT_FOUND_404 {
-            router:log-error($log-data,
-                map { "code": $err:code, "description": $err:description, "value": $err:value}),
-            router:send(404, $err:description, $err:value, $lookup)
+            $handle-error(404, map {"code": $err:code, "description": $err:description, "value": $err:value})
         } catch errors:METHOD_NOT_ALLOWED_405 {
-            router:log-error($log-data,
-                map { "code": $err:code, "description": $err:description, "value": $err:value}),
-            router:send(405, $err:description, $err:value, $lookup)
+            $handle-error(405, map {"code": $err:code, "description": $err:description, "value": $err:value})
         } catch * {
-            router:log-error($log-data, map {
+            (: add line and column for server errors, java exceptions and the like for debugging  :)
+            let $error := map {
                 "code": $err:code, "description": $err:description, "value": $err:value, 
                 "line": $err:line-number, "column": $err:column-number
-            })
-            ,
-            if (contains($err:description, "permission")) then
-                router:send(403, $err:description, $err:value, $lookup)
-            else (
-                router:send(500, $err:description, $err:value, $lookup)
-            )
+            }
+            return
+                if (contains($err:description, "permission")) then
+                    $handle-error(403, $error)
+                else
+                    $handle-error(500, $error)
         }
     )
 };
 
-declare function router:log-error($request as map(*), $data as map(*)) {
-    util:log("error", 
-        ``[[`{$request?id}`] `{$request?method}` `{$request?path}`: `{serialize(map:remove($data, "_config"), map{"method": "adaptive"})}`]``)
-};
-
-
-(: find matching route by checking each path pattern :)
-declare function router:match-route($info as map(*)) {
-    map:for-each($info?spec?paths, function ($route-pattern as xs:string, $route-config as map(*)) {
+(:~
+ : find matching route by checking each path pattern
+ :)
+declare %private function router:match-route($request as map(*), $spec as map(*), $priority as xs:integer) {
+    map:for-each($spec?paths, function ($route-pattern as xs:string, $route-config as map(*)) {
         let $regex := router:create-regex($route-pattern)
-        let $match := matches($info?path, $regex)
 
         return
-            if (not($match)) then ()
-            else if (map:contains($route-config, $info?method)) then (
-                map:merge(($info, map {
+            if (matches($request?path, $regex)) then
+                map:merge(($request, map {
                     "pattern": $route-pattern,
-                    "config": $route-config($info?method),
-                    "regex": $regex
+                    "config": $route-config,
+                    "regex": $regex,
+                    "spec": $spec,
+                    "priority": $priority
                 }))
-            )
-            else (
-                error($errors:METHOD_NOT_ALLOWED, 
-                    "The method "|| $info?method || " is not supported for " || $info?path))
+            else 
+                ()
     })
 };
 
-declare function router:use-first-matching-auth-method ($user as map(*)?, $method as function(*)) as map(*)? {
-    if (exists($user))
-    then $user
-    else $method()
-};
+declare %private variable $router:path-parameter-matcher := "\{[^\}]+\}";
 
-declare function router:auth ($route as map(*), $strategies as map(*), $parameters as map(*)) as map(*)? {
-    let $allowed-auth-methods := 
-        if (exists($route?config?security))
-        then ($route?config?security)
-        else if (exists($route?spec?security))
-        then ($route?spec?security)
-        else ()
+declare %private function router:create-regex($path as xs:string) as xs:string {
+    let $components := 
+        substring-after($path, "/") (: cut-off first slash :)
+        => replace("(\.|\$|\^|\+|\*)", "\\$1") (: escape special characters :)
+        => tokenize("/") (: split into components :)
 
-    let $allowed-method-names := $allowed-auth-methods 
-        => array:for-each(function ($method-config as map(*)) {
-            let $method-name := map:keys($method-config)
-            (: let $method-parameters := $method-config?($method-name) :)
-            
-            return
-                if (map:contains($strategies, $method-name))
-                then (
-                    let $auth-method := $strategies($method-name)
-                    return function () { $auth-method($route, $parameters) }
-                )
-                else error(
-                    $errors:OPERATION,
-                    "No strategy found for : '" || $method-name || "'", ($method-config, $strategies)
-                )
-        })
+    let $length := count($components)
 
-    return array:fold-left(
-        $allowed-method-names, (),
-        router:use-first-matching-auth-method#2)
-};
-
-declare function router:process($route as map(*), $lookup as function(*), $strategies as map(xs:string, function(*))) {
-    let $parameters := map:merge((
-        router:map-request-parameters($route?config),
-        router:map-path-parameters($route, $route?path)
-    ))
-
-    let $request := map {
-        "parameters": $parameters,
-        "body": router:request-body($route?config?requestBody),
-        (: "loginDomain": $loginDomain, :)
-        "info": $route?spec?info,
-        "config": $route,
-        "user": router:auth($route, $strategies, $parameters)
-    }
-    let $constraints := $route?config?("x-constraints")
-
-    return 
-        if (
-            router:is-public-route($constraints) or 
-            router:is-authorized($constraints, $request?user)
-        )
-        then (
-            let $response := router:exec($route?config, $request, $lookup)
-            return router:write-response(200, $response, $route?config)
-        )
-        else error($errors:UNAUTHORIZED, "Access denied")
-};
-
-declare %private function router:route-specificity ($route as map(*)) as xs:integer+ {
-    replace($route?pattern, $router:path-parameter-matcher, "?") (: normalize route specificity by replacing path params :)
-    => string-length() (: the longer the more specific :)
-    => (function ($a) { -$a })() (: sort descending :)
-    ,
-    -$route?priority (: sort descending :)
-};
-
-declare function router:is-public-route ($constraints as map(*)?) as xs:boolean {
-    not(exists($constraints))
-};
-
-declare function router:is-authorized($constraints as map(*), $user as map(*)?) {
-    exists($user) and 
-    (
-        not(exists($constraints?groups)) or 
-        $user?groups?* = $constraints?groups?* (: is member of at least one required group :)
-    ) and
-    (
-        not(exists($constraints?user)) or 
-        $user?name eq $constraints?user (: is the required user :)
-    )
+    let $replaced :=
+        for $component at $index in $components
+        let $replacement := 
+            if ($index = $length)
+            then "(.+)"
+            else "([^/]+)"
+        return replace($component, $router:path-parameter-matcher, $replacement)
+    
+    return
+        "/" || string-join($replaced, "/")
 };
 
 (:~
- : Look up the XQuery function whose name matches property "operationId". If found,
- : call it and pass the request map as single parameter.
+ : Sort routes by specificity
  :)
-declare function router:exec($route as map(*), $request as map(*), $lookup as function(xs:string) as function(*)?) {
+declare %private function router:route-specificity ($route as map(*)) as xs:integer+ {
+    replace($route?pattern, $router:path-parameter-matcher, "?") (: normalize route specificity by replacing path params :)
+        => (function ($np as xs:string) { - string-length($np) })() (: sort descending :) (: the longer the more specific :)
+    ,
+    $route?priority (: sort ascending :)
+};
+
+declare %private function router:process-request($pattern-map as map(*), $lookup as function(*), $middlewares as function(*)*) {
+    let $route :=
+        if (map:contains($pattern-map?config, $pattern-map?method)) then 
+            $pattern-map?config?($pattern-map?method)
+        else 
+            error($errors:METHOD_NOT_ALLOWED, 
+                "The method "|| $pattern-map?method || " is not supported for " || $pattern-map?path)
+
+    let $parameters := map:merge((
+        parameters:in-request($route),
+        parameters:in-path($pattern-map, $route)
+    ))
+
+    let $base-request := map {
+        "id": $pattern-map?id,
+        "path": $pattern-map?path,
+        "method": $pattern-map?method,
+        "spec": $pattern-map?spec,
+        "parameters": $parameters,
+        "body": parameters:body($route?requestBody),
+        "config": $route
+    }
+
+    (: enable arbitrary middleware configuration :)
+    let $extended-request :=
+        fold-left($middlewares, $base-request, function ($request, $next-middleware) {
+            $next-middleware($request)
+        })
+
+    let $response := router:execute-handler($route, $extended-request, $lookup)
+
+    return router:write-response(200, $response, $route)
+};
+
+(:~
+ : Look up the XQuery function whose name matches property "operationId".
+ : If found, call it and pass the request map as single parameter.
+ :)
+declare %private function router:execute-handler ($route as map(*), $request as map(*), $lookup as function(xs:string) as function(*)?) {
     let $operation-id := $route?operationId
     let $error-handler := $route?('x-error-handler')
 
@@ -261,67 +275,9 @@ declare function router:exec($route as map(*), $request as map(*), $lookup as fu
             }
 };
 
-(:~
- : May be called from user code to send a response with a particular
- : response code (other than 200). The media type will be determined by
- : looking at the response specification for the given status code.
- :
- : @param code the response code to return
- : @param body data to be sent in the body of the response
- :)
-declare function router:response($code as xs:integer, $body as item()*) {
-    router:response($code, (), $body)
-};
+(: content types :)
 
-(:~
- : May be called from user code to send a response with a particular
- : response code (other than 200) or media type.
- :
- : @param code the response code to return
- : @param mediaType the Content-Type for the response; assumes that the provided body can
- : be converted into the target media type
- : @param body data to be sent in the body of the response
- :)
-declare function router:response($code as xs:integer, $media-type as xs:string?, $body as item()*) {
-    map {
-        $router:RESPONSE_CODE : $code,
-        $router:RESPONSE_TYPE : $media-type,
-        $router:RESPONSE_BODY : $body
-    }
-};
-
-declare function router:write-response($default-code as xs:integer, $data as item()?, $config as map(*)) {
-    if ($data instance of map(*) and map:contains($data, $router:RESPONSE_CODE))
-    then (
-        let $code := head(($data?($router:RESPONSE_CODE), $default-code))
-        let $content-type := 
-            if (exists($data?($router:RESPONSE_TYPE)))
-            then $data($router:RESPONSE_TYPE)
-            else router:get-content-type-for-code($config, $code, "application/xml")
-
-        return (
-            response:set-status-code($code),
-            if ($code = 204)
-            then ()
-            else (
-                response:set-header("Content-Type", $content-type),
-                util:declare-option("output:method", router:method-for-content-type($content-type)),
-                $data?($router:RESPONSE_BODY)
-            )
-        )
-    )
-    else (
-        let $content-type := router:get-content-type-for-code($config, $default-code, "application/xml")
-        return (
-            response:set-status-code($default-code),
-            response:set-header("Content-Type", $content-type),
-            util:declare-option("output:method", router:method-for-content-type($content-type)),
-            $data
-        )
-    )
-};
-
-declare %private function router:get-content-type-for-code($config as map(*), $code as xs:integer, $fallback as xs:string) {
+declare %private function router:get-content-type-for-code ($config as map(*), $code as xs:integer, $fallback as xs:string) as xs:string {
     let $response-definition := head(($config?responses?($code), $config?responses?default))
     let $content := 
         if (exists($response-definition) and $response-definition instance of map(*))
@@ -362,7 +318,7 @@ declare function router:accepted-content-types() as xs:string* {
 (:~
  : Q: binary types?
  :)
-declare function router:method-for-content-type($type) {
+declare %private function router:method-for-content-type ($type as xs:string) as xs:string {
     switch($type)
         case "application/json" return "json"
         case "text/html" return "html5"
@@ -370,170 +326,19 @@ declare function router:method-for-content-type($type) {
         default return "xml"
 };
 
-declare function router:map-path-parameters($route as map(*), $path as xs:string) {
-    let $substitutions := analyze-string($route?pattern, "\{([^\}]+)\}")
-    let $match-path := analyze-string($path, $route?regex)
-
-    for $substitution at $pos in $substitutions//fn:group
-    let $value := $match-path//fn:group[@nr=$pos]/string()
-    let $param-config :=
-        if ($route?config?parameters instance of array(*))
-        then
-            filter($route?config?parameters?*, function($parameter as array(*)) {
-                $parameter?in = "path" and
-                $parameter?name = $substitution
-            })
-        else ()
-
-    return
-        if (exists($param-config)) then
-            map { $substitution/string() : router:cast-parameter($value, head($param-config)) }
-        else
-            error($errors:REQUIRED_PARAM, "No definition for required path parameter " || $substitution)
-};
-
-declare function router:map-request-parameters($route as map(*)) {
-    let $params := $route?parameters
-    return
-        if (exists($params)) then
-            for $param in $params?*
-            where $param?in != "path"
-            let $default := if (exists($param?schema)) then $param?schema?default else ()
-            let $values := 
-                switch ($param?in)
-                    (: todo case "body" :)
-                    case "header" return
-                        head((request:get-header($param?name), $default))
-                    case "cookie" return
-                        head((request:get-cookie-value($param?name), $default))
-                    default return
-                        request:get-parameter($param?name, $default)
-            return
-                if ($param?required and empty($values)) then
-                    error($errors:REQUIRED_PARAM, "Parameter " || $param?name || " is required")
-                else
-                    map:entry($param?name, router:cast-parameter($values, $param))
-        else
-            ()
-};
-
-declare function router:cast-parameter($values as xs:string*, $config as map(*)) {
-    for $value in $values
-    return
-        switch($config?schema?type)
-            case "integer" return
-                if ($config?schema?format) then
-                    switch ($config?schema?format)
-                        case "int32" case "int64" return
-                            xs:int($value)
-                        default return
-                            xs:integer($value)
-                else
-                    xs:integer($value)
-            case "number" return
-                if ($config?schema?format) then
-                    switch ($config?schema?format)
-                        case "float" return
-                            xs:float($value)
-                        case "double" return
-                            xs:double($value)
-                        default return
-                            number($value)
-                else
-                    number($value)
-            case "boolean" return
-                xs:boolean($value)
-            case "string" return
-                if ($config?schema?format) then
-                    switch ($config?schema?format)
-                        case "date" return
-                            xs:date($value)
-                        case "date-time" return
-                            xs:dateTime($value)
-                        case "binary" return
-                            xs:base64Binary($value)
-                        case "byte" return
-                            util:binary-to-string(xs:base64Binary($value))
-                        default return
-                            string($value)
-                else
-                    string($value)
-            default return
-                string($value)
-};
-
-(:~
- : Try to retrieve and convert the request body if specified
- :)
-declare function router:request-body($request-body-config as map(*)?) {
-    if (not(exists($request-body-config) and exists($request-body-config?content)))
-    then () (: this route expects no body in request :)
-    else (
-        let $content := $request-body-config?content
-        let $content-type-header := 
-            request:get-header("Content-Type")
-            => replace("^([^;]+);?.*$", "$1") (: strip charset info from mime-type if present :)
-
-        return
-            if (map:contains($content, $content-type-header))
-            then (
-                let $content-type := $content($content-type-header)
-                let $body := request:get-data()
-                return
-                    switch ($content-type-header)
-                        case "application/json" return
-                            $body => util:binary-to-string() => parse-json()
-                        case "multipart/form-data" return
-                            () (: TODO: implement form-data handling? :)
-                        default return
-                            $body
-            )
-            else
-                error($errors:BODY_CONTENT_TYPE, "Passed in Content-Type " || $content-type-header || 
-                    " not allowed")
-    )
-};
-
-declare %private function router:create-regex($path as xs:string) {
-    let $components := 
-        substring-after($path, "/") (: cut-off first slash :)
-        => replace("(\.|\$|\^|\+|\*)", "\\$1") (: escape special characters :)
-        => tokenize("/") (: split into components :)
-
-    let $length := count($components)
-
-    let $replaced :=
-        for $component at $index in $components
-        let $replacement := 
-            if ($index = $length)
-            then "(.+)"
-            else "([^/]+)"
-        return replace($component, $router:path-parameter-matcher, $replacement)
-    
-    return
-        "/" || string-join($replaced, "/")
-};
-
-declare function router:login-domain($config as map(*)) {
-    router:resolve-ref($config, ("components", "securitySchemes", "cookieAuth", "name"))
-};
-
-declare function router:resolve-pointer($config as map(*), $ref as xs:string) {
-    router:resolve-ref($config, tokenize($ref, "/"))
-};
-
 (:
- :  QUESTION: what is returned for pointers that cannot be resolved?
+ : resolve pointers in API definition
+ : @throws errors:OPERATION if the pointer cannot be resolved
  :)
-declare %private function router:resolve-ref($config as map(*), $parts as xs:string*) {
+declare %private function router:resolve-ref ($config as map(*), $parts as xs:string*) as item()* {
     fold-left($parts, $config, function ($config as item()?, $next as xs:string) as item()? {
         if (empty($next) or $next = ("", "#"))
-        then
+        then 
             $config
         else if ($config instance of map(*) and map:contains($config, $next))
         then 
-            $config($next)
-        else 
+            $config?($next)
+        else
             error($errors:OPERATION, "could not resolve ref: " || string-join($parts, '/'), $parts)
     })
 };
@@ -556,20 +361,22 @@ declare function router:error-description($description as xs:string, $line as xs
  : oas configuration for the route and "_response" is the response data provided by the user function
  : in the third argument of error().
  :)
-declare function router:send($code as xs:integer, $description as xs:string, $value as item()*, $lookup as function(xs:string) as function(*)?) {
+declare %private function router:error ($code as xs:integer, $error as map(*), $request-data as map(*), $lookup as function(xs:string) as function(*)?) {
+    router:log-error($request-data, $error),
     if (
-        $description = "" and 
-        count($value) = 1 and
-        $value instance of map(*) and
-        map:contains($value, "_config") and
-        map:contains($value, "_response")
+        $error?description = "" and 
+        count($error?value) = 1 and
+        $error?value instance of map(*) and
+        map:contains($error?value, "_config") and
+        map:contains($error?value, "_response")
     )
     then (
-        let $route := $value?("_config")
-        let $response := $value?("_response")
+        let $route := $error?value?("_config")
+        let $response := $error?value?("_response")
         return
             (: if an error handler is defined, call it instead of returning the error directly :)
-            if (map:contains($route, "x-error-handler")) then (
+            if (map:contains($route, "x-error-handler"))
+            then (
                 try {
                     let $fn := $lookup($route?("x-error-handler"))
                     return
@@ -587,15 +394,55 @@ declare function router:send($code as xs:integer, $description as xs:string, $va
         response:set-status-code($code),
         response:set-header("Content-Type", "application/json"),
         util:declare-option("output:method", "json"),
-        if ($description = "") then
-            $value
+        if ($error?description = "") then
+            $error?value (: value already contains the data to return :)
         else
             map {
-                "description": $description,
+                "description": $error?description,
                 "details": 
-                    if ($value instance of map(*) and map:contains($value, "_response"))
-                    then $value?("_response") 
-                    else $value
+                    if ($error?value instance of map(*) and map:contains($error?value, "_response"))
+                    then $error?value?("_response") 
+                    else $error?value
             }
     )
+};
+
+declare %private function router:write-response($default-code as xs:integer, $data as item()*, $config as map(*)) {
+    if ($data instance of map(*) and map:contains($data, $router:RESPONSE_CODE))
+    then (
+        let $code := head(($data?($router:RESPONSE_CODE), $default-code))
+        let $content-type := 
+            if (exists($data?($router:RESPONSE_TYPE)))
+            then $data($router:RESPONSE_TYPE)
+            else router:get-content-type-for-code($config, $code, "application/xml")
+
+        return (
+            response:set-status-code($code),
+            if ($code = 204)
+            then ()
+            else (
+                response:set-header("Content-Type", $content-type),
+                util:declare-option("output:method", router:method-for-content-type($content-type)),
+                $data?($router:RESPONSE_BODY)
+            )
+        )
+    )
+    else (
+        let $content-type := router:get-content-type-for-code($config, $default-code, "application/xml")
+        return (
+            response:set-status-code($default-code),
+            response:set-header("Content-Type", $content-type),
+            util:declare-option("output:method", router:method-for-content-type($content-type)),
+            $data
+        )
+    )
+};
+
+(: helpers :)
+
+declare %private function router:log-error ($request as map(*), $data as map(*)) {
+    let $_data := serialize(map:remove($data, "_config"), map{"method": "adaptive"})
+    return
+        util:log("error", 
+            ``[[`{$request?id}`] `{$request?method}` `{$request?path}`: `{$_data}`]``)
 };
