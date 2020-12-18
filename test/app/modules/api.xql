@@ -4,32 +4,17 @@ declare namespace api="https://e-editiones.org/oas-router/xquery/test-api";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 
 import module namespace router="http://exist-db.org/xquery/router";
-import module namespace std-router="http://exist-db.org/xquery/router/std";
+import module namespace simple-router="http://exist-db.org/xquery/router/simple";
+
+import module namespace rutil="http://exist-db.org/xquery/router/util";
 import module namespace errors = "http://exist-db.org/xquery/router/errors";
 
-import module namespace auth="http://exist-db.org/xquery/router/auth";
-import module namespace auth = "https://e-editiones.org/oas-router/xquery/jwt-auth" at "auth.xqm";
 
 (:~
  : list of definition files to use
  :)
-declare variable $api:definitions := (
-    "api-jwt.json",
-    "api.json"
-);
+declare variable $api:definitions := ("api.json");
 
-(:~
- : Define authentication/authorization handlers
- : 
- : All securitySchemes in any api definition that is
- : included MUST have an entry in this map.
- : Otherwise the router will throw an error. 
- :)
-declare variable $api:AUTH_STRATEGIES := map {
-    $auth:METHOD : bearer:auth#1,
-    "cookieAuth": auth:cookie-auth#1,
-    "basicAuth": auth:use-basic-auth#1
-};
 
 (:~
  : You can add application specific route handlers here.
@@ -82,13 +67,7 @@ declare function api:binary-upload($request as map(*)) {
  : You can leave it as it is, but it has to be here
  :)
 declare function api:lookup ($name as xs:string) {
-    let $fn := xs:QName($name) => fn:function-lookup(1)
-    return
-        if ($fn instance of function(*))
-        then $fn
-        else error()
+    function-lookup(xs:QName($name), 1)
 };
 
-(: std-router:route($api:definitions, api:lookup#1) :)
-router:route($api:definitions, api:lookup#1,
-    auth:use-authorization($api:AUTH_STRATEGIES))
+simple-router:route($api:definitions, api:lookup#1)
