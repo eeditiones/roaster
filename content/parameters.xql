@@ -21,7 +21,7 @@ xquery version "3.1";
  :)
 module namespace parameters="http://exist-db.org/xquery/router/parameters";
 
-import module namespace errors = "http://exist-db.org/xquery/router/errors";
+import module namespace errors="http://exist-db.org/xquery/router/errors";
 
 declare function parameters:in-path ($match as map(*), $config) as map(*)* {
     let $substitutions := analyze-string($match?pattern, "\{([^\}]+)\}")
