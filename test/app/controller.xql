@@ -11,8 +11,8 @@ if ($exist:path eq "") then
         <redirect url="{request:get-uri()}/"/>
     </dispatch>
 
+(: forward root path to index.xql :)
 else if ($exist:path eq "/") then
-    (: forward root path to index.xql :)
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
         <redirect url="api.html"/>
     </dispatch>
@@ -30,6 +30,18 @@ else if (matches($exist:resource, "\.(png|jpg|jpeg|gif|tif|tiff|txt|mei)$", "s")
         </forward>
     </dispatch>
 
+(: use a different Open API router, needs exist-jwt installed! :)
+else if (starts-with($exist:path, '/jwt'))
+    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
+        <forward url="{$exist:controller}/modules/custom-api.xql">
+            <set-header name="Access-Control-Allow-Origin" value="*"/>
+            <set-header name="Access-Control-Allow-Credentials" value="true"/>
+            <set-header name="Access-Control-Allow-Methods" value="GET, POST, DELETE, PUT, PATCH, OPTIONS"/>
+            <set-header name="Access-Control-Allow-Headers" value="Accept, Content-Type, Authorization, X-Auth-Token"/>
+            <set-header name="Cache-Control" value="no-cache"/>
+        </forward>
+    </dispatch>
+
 (: all other requests are passed on the Open API router :)
 else
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
@@ -37,7 +49,7 @@ else
             <set-header name="Access-Control-Allow-Origin" value="*"/>
             <set-header name="Access-Control-Allow-Credentials" value="true"/>
             <set-header name="Access-Control-Allow-Methods" value="GET, POST, DELETE, PUT, PATCH, OPTIONS"/>
-            <set-header name="Access-Control-Allow-Headers" value="Accept, Content-Type, Authorization, X-Auth-Token"/>
+            <set-header name="Access-Control-Allow-Headers" value="Accept, Content-Type, Authorization, X-Start"/>
             <set-header name="Cache-Control" value="no-cache"/>
         </forward>
     </dispatch>

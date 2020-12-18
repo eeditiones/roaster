@@ -21,7 +21,7 @@
         }
     },
     "paths": {
-        "/api/test/dba": {
+        "/jwt/test/is-dba": {
             "get": {
                 "summary": "test token authorization",
                 "operationId": "rutil:debug",
@@ -72,11 +72,11 @@
                 }
             }
         },
-        "/api/token": {
+        "/jwt/token": {
             "post": {
                 "security": [],
                 "summary": "Issue a JWT access token",
-                "operationId": "auth:issue-token",
+                "operationId": "jwt-auth:issue-token",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -138,7 +138,7 @@
                 }
             }
         },
-        "/public/{path}":{
+        "/jwt/public/{path}":{
             "get": {
                 "summary": "Public route example",
                 "operationId": "rutil:debug",
@@ -146,16 +146,7 @@
                     {
                         "name": "path",
                         "in": "path",
-                        "required": false,
                         "schema":{
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "X-Authorization",
-                        "in": "header",
-                        "required": false,
-                        "schema": {
                             "type": "string"
                         }
                     }

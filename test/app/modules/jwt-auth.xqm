@@ -3,10 +3,7 @@ xquery version "3.1";
 (:~
  : example implementation to use exist-JWT in combination with OAS-router
  :)
-module namespace auth="https://e-editiones.org/oas-router/xquery/jwt-auth";
-
-
-declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
+module namespace jwt-auth="https://e-editiones.org/oas-router/xquery/jwt-auth";
 
 
 import module namespace jwt="http://existsolutions.com/ns/jwt";
@@ -18,23 +15,25 @@ import module namespace errors="http://exist-db.org/xquery/router/errors";
 (:~
  : configure and get JWT instance
  :)
-declare %private variable $auth:secret := "your-256-bit-secret";
-declare %private variable $auth:token-lifetime := 30*60; (: 30 minutes :)
-declare %private variable $auth:jwt := jwt:instance($auth:secret, $auth:token-lifetime);
+declare %private variable $jwt-auth:secret := "your-256-bit-secret";
+declare %private variable $jwt-auth:token-lifetime := 30*60; (: 30 minutes :)
+declare %private variable $jwt-auth:jwt := jwt:instance($jwt-auth:secret, $jwt-auth:token-lifetime);
 
 (:~
  : The name of the securityScheme in API definition
  :)
-declare variable $auth:METHOD := "JWTAuth";
+declare variable $jwt-auth:METHOD := "JWTAuth";
+
+declare variable $jwt-auth:handler := map { $jwt-auth:METHOD : jwt-auth:bearer-auth#1 }
 
 (:~
  : which header to check for the token 
  : TODO: Authorization header seems to be swallowed by jetty
  : TODO: implement function to cut off scheme (BEARER )
  :)
-declare variable $auth:AUTH_HEADER := "X-Auth-Token";
+declare variable $jwt-auth:AUTH_HEADER := "X-Auth-Token";
 
-declare function auth:issue-token($request as map(*)) {
+declare function jwt-auth:issue-token($request as map(*)) {
     if (
         $request?body instance of map(*) and 
         map:contains($request?body, 'username') and
@@ -51,7 +50,7 @@ declare function auth:issue-token($request as map(*)) {
             then (
                 router:response(201, map {
                     "user": $user,
-                    "token": $auth:jwt?create($user)
+                    "token": $jwt-auth:jwt?create($user)
                 })
             )
             else
@@ -61,17 +60,18 @@ declare function auth:issue-token($request as map(*)) {
         error($errors:BAD_REQUEST, "Missing parameters 'username' and/or 'password'")
 };
 
-declare function auth:bearer-auth ($request as map(*)) as map(*)? {
+declare function jwt-auth:bearer-auth ($request as map(*)) as map(*)? {
     try {
         (: need to access request header directly because it will not be part of parameters :)
-        let $token := request:get-header($auth:AUTH_HEADER)
+        let $token := request:get-header($jwt-auth:AUTH_HEADER)
         return
             if (exists($token))
             then (
-                let $payload := $auth:jwt?read($token)
+                let $payload := $jwt-auth:jwt?read($token)
                 return map {
-                    "name": $payload?name,
-                    "groups": $payload?groups
+                    "name": $payload?user,
+                    "groups": $payload?groups,
+                    "dba": $payload?dba
                 }
             )
             else ()
