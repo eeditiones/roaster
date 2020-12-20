@@ -5,7 +5,7 @@ const { src, dest, watch, series, parallel } = require('gulp')
 const { createClient } = require('@existdb/gulp-exist')
 const rename = require('gulp-rename')
 const zip = require("gulp-zip")
-const gulpExistTmplReplace = require('./gulp-tmpl-replace.js')
+const gulpTmplReplace = require('./gulp-tmpl-replace.js')
 const del = require('delete')
 const pkg = require('./package.json')
 
@@ -19,13 +19,37 @@ const replacements = [existJSON.package, {version, license}]
 const packageUri = existJSON.package.namespace
 const serverInfo = existJSON.servers.localhost
 
+const { port, hostname } = new URL(serverInfo.server)
 const connectionOptions = {
     basic_auth: {
         user: serverInfo.user, 
         pass: serverInfo.password
-    }
+    },
+    host: hostname,
+    port
 }
 const existClient = createClient(connectionOptions);
+
+const static = [
+    "content/*",
+    "icon.png"
+]
+
+// test application metadata
+const testAppNs = "http://exist-db.org/apps/oas-test"
+const testAppFiles = ['test/app/*.*', "test/app/modules/*"]
+const testAppPackageName = "oas-test.xar"
+
+// construct the current xar name from available data
+const packageName = () => `${existJSON.package.target}-${version}.xar`
+
+/**
+ * helper function that uploads and installs a built XAR
+ */
+function installXar (packageName, packageUri) {
+    return src(packageName)
+        .pipe(existClient.install({ packageUri }))
+}
 
 /**
  * Use the `delete` module directly, instead of using gulp-rimraf
@@ -42,7 +66,7 @@ exports.clean = clean
  */
 function templates() {
     return src('*.tmpl')
-        .pipe(gulpExistTmplReplace({ replacements, unprefixed:true, debug:true }))
+        .pipe(gulpTmplReplace({ replacements, unprefixed:true }))
         .pipe(rename(path => { path.extname = "" }))
         .pipe(dest('build/'))
 }
@@ -53,11 +77,6 @@ function watchTemplates () {
     watch('*.tmpl', series(templates))
 }
 exports["watch:tmpl"] = watchTemplates
-
-const static = [
-    "content/*",
-    // "src/icon.svg"
-]
 
 /**
  * copy html templates, XSL stylesheet, XMLs and XQueries to 'build'
@@ -82,9 +101,6 @@ function watchBuild () {
     watch('build/**/*', series(xar, installXar))
 }
 
-// construct the current xar name from available data
-const packageName = () => `${existJSON.package.target}-${version}.xar`
-
 /**
  * create XAR package in repo root
  */
@@ -95,15 +111,37 @@ function xar () {
 }
 
 /**
+ * create XAR package in repo root
+ */
+function packageTestApp () {
+    return src(testAppFiles, {base: 'test/app'})
+        .pipe(zip(testAppPackageName))
+        .pipe(dest('.'))
+}
+exports["build:test"] = packageTestApp
+
+/**
+ * upload and install a built XAR
+ */
+function installTestAppXar () {
+    return installXar(testAppPackageName, testAppNs)
+}
+exports["install:test"] = series(packageTestApp, installTestAppXar)
+
+function watchTestApp () {
+    watch(testAppFiles, series(packageTestApp, installTestAppXar));
+}
+exports["watch:test"] = watchTestApp
+
+/**
  * upload and install the latest built XAR
  */
-function installXar () {
-    return src(packageName())
-        .pipe(existClient.install({ packageUri }))
+function installLibraryXar () {
+    return installXar(packageName(), packageUri)
 }
 
 // composed tasks
-const build = series(
+const packageLibrary = series(
     clean,
     templates,
     copyStatic,
@@ -112,14 +150,20 @@ const build = series(
 const watchAll = parallel(
     watchStatic,
     watchTemplates,
-    watchBuild
+    watchBuild,
+    watchTestApp
 )
 
-exports.build = build
-exports.watch = watchAll
+exports.build = packageLibrary
+// alias of build
+exports.xar = packageLibrary
 
-exports.xar = build
-exports.install = series(build, installXar)
+exports.watch = watchAll
+exports.install = series(packageLibrary, installLibraryXar)
+exports["install:all"] = series(
+    packageLibrary, installLibraryXar, 
+    packageTestApp, installTestAppXar
+)
 
 // main task for day to day development
-exports.default = series(build, installXar, watchAll)
+exports.default = series(packageLibrary, installLibraryXar, watchAll)
