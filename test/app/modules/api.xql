@@ -51,8 +51,15 @@ declare function api:error-explicit($request as map(*)) {
 (:~
  : This is used as an error-handler in the API definition 
  :)
-declare function api:handle-error($response) {
-    <p>{$response}</p>
+declare function api:handle-error($error as map(*)) as element(html) {
+    <html>
+        <body>
+            <h1>Error [{$error?code}]</h1>
+            <p>An error occurred in {$error?module} at line {$error?line} column {$error?column}</p>
+            <h2>Description</h2>
+            <p>{$error?description}</p>
+        </body>
+    </html>
 };
 
 declare function api:binary-upload($request as map(*)) {
