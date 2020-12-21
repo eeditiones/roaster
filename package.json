@@ -1,6 +1,6 @@
 {
   "name": "oas-router",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "Open API Router for eXist",
   "scripts": {
     "test": "gulp install:all && mocha --exit",
