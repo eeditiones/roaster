@@ -93,8 +93,6 @@ declare function router:route($api-files as xs:string+, $lookup as function(xs:s
         "path": request:get-attribute("$exist:path")
     }
 
-    let $handle-error := router:error(?, ?, $request-data, $lookup)
-
     return (
         util:log("info", ``[[`{$request-data?id}`] request `{$request-data?method}` `{$request-data?path}`]``),
         try {
@@ -131,27 +129,28 @@ declare function router:route($api-files as xs:string+, $lookup as function(xs:s
                 util:log("info", ``[[`{$request-data?id}`] `{$request-data?method}` `{$request-data?path}`: OK]``)
             )
 
-        } catch errors:BAD_REQUEST_400 | errors:REQUIRED_PARAM | errors:BODY_CONTENT_TYPE {
-            $handle-error(400, map {"code": $err:code, "description": $err:description, "value": $err:value})
-        } catch errors:UNAUTHORIZED_401 {
-            $handle-error(401, map {"code": $err:code, "description": $err:description, "value": $err:value})
-        } catch errors:FORBIDDEN_403 {
-            $handle-error(403, map {"code": $err:code, "description": $err:description, "value": $err:value})
-        } catch errors:NOT_FOUND_404 {
-            $handle-error(404, map {"code": $err:code, "description": $err:description, "value": $err:value})
-        } catch errors:METHOD_NOT_ALLOWED_405 {
-            $handle-error(405, map {"code": $err:code, "description": $err:description, "value": $err:value})
         } catch * {
-            (: add line and column for server errors, java exceptions and the like for debugging  :)
-            let $error := map {
-                "code": $err:code, "description": $err:description, "value": $err:value, 
-                "line": $err:line-number, "column": $err:column-number
-            }
-            return
-                if (contains($err:description, "permission")) then
-                    $handle-error(403, $error)
+            let $error :=
+                if (router:is-rethrown-error($err:value))
+                then $err:value
+                (: add line and column for server errors, java exceptions and the like for debugging  :)
                 else
-                    $handle-error(500, $error)
+                    map {
+                        "_error": map {
+                            "code": $err:code, "description": $err:description, "value": $err:value, 
+                            "line": $err:line-number, "column": $err:column-number, "module": $err:module
+                        },
+                        "_request": $request-data
+                    }
+            
+            let $status-code :=
+                if (contains($error?description, "permission")) then
+                    403
+                else
+                    errors:get-status-code-from-error($err:code)
+
+            return
+                router:error($status-code, $error, $lookup)
         }
     )
 };
@@ -209,7 +208,7 @@ declare %private function router:route-specificity ($route as map(*)) as xs:inte
     $route?priority (: sort ascending :)
 };
 
-declare %private function router:process-request($pattern-map as map(*), $lookup as function(*), $middlewares as function(*)*) {
+declare %private function router:process-request($pattern-map as map(*), $lookup as function(*), $custom-middlewares as function(*)*) {
     let $route :=
         if (map:contains($pattern-map?config, $pattern-map?method)) then 
             $pattern-map?config?($pattern-map?method)
@@ -217,28 +216,23 @@ declare %private function router:process-request($pattern-map as map(*), $lookup
             error($errors:METHOD_NOT_ALLOWED, 
                 "The method "|| $pattern-map?method || " is not supported for " || $pattern-map?path)
 
-    let $parameters := map:merge((
-        parameters:in-request($route),
-        parameters:in-path($pattern-map, $route)
-    ))
+    (: overwrite config field with the specific method handler :)
+    let $base-request := map:put($pattern-map, "config", $route)
 
-    let $base-request := map {
-        "id": $pattern-map?id,
-        "path": $pattern-map?path,
-        "method": $pattern-map?method,
-        "spec": $pattern-map?spec,
-        "parameters": $parameters,
-        "body": parameters:body($route?requestBody),
-        "config": $route
-    }
+    let $default-middleware := (
+        parameters:in-path#1,
+        parameters:in-request#1,
+        parameters:body#1
+    )
 
     (: enable arbitrary middleware configuration :)
+    let $use := ($default-middleware, $custom-middlewares)
     let $extended-request :=
-        fold-left($middlewares, $base-request, function ($request, $next-middleware) {
+        fold-left($use, $base-request, function ($request, $next-middleware) {
             $next-middleware($request)
         })
 
-    let $response := router:execute-handler($route, $extended-request, $lookup)
+    let $response := router:execute-handler($extended-request, $lookup)
 
     return router:write-response(200, $response, $route)
 };
@@ -247,32 +241,26 @@ declare %private function router:process-request($pattern-map as map(*), $lookup
  : Look up the XQuery function whose name matches property "operationId".
  : If found, call it and pass the request map as single parameter.
  :)
-declare %private function router:execute-handler ($route as map(*), $request as map(*), $lookup as function(xs:string) as function(*)?) {
-    let $operation-id := $route?operationId
-    let $error-handler := $route?('x-error-handler')
-
-    return
-        if (not($operation-id)) then
-            error($errors:OPERATION, "Operation does not define an operationId")
-        else
-            try {
-                let $fn := $lookup($operation-id)
-                return $fn($request)
-            } catch * {
-                (: Catch all errors and add the current route configuration to $err:value,
-                    so we can check it later to format the response :)
-                if (not($error-handler)) 
-                then
-                    error($err:code, if ($err:description) then $err:description else '', map {
-                        "_config": $route,
-                        "_response": $err:value
-                    })
-                else
-                    error($err:code, '', map {
-                        "_config": $route,
-                        "_response": if (exists($err:value)) then $err:value else $err:description
-                    })
-            }
+declare %private function router:execute-handler ($request as map(*), $lookup as function(xs:string) as function(*)?) {
+    if (not(map:contains($request?config, "operationId"))) then
+        error($errors:OPERATION, "Operation does not define an operationId", $request)
+    else
+        try {
+            let $fn := $lookup($request?config?operationId)
+            return $fn($request)
+        } catch * {
+            (:
+             : Catch all errors and add the current route configuration to $err:value,
+             : so we can check it later to format the response
+             :)
+            error($err:code, '', map {
+                "_error": map {
+                    "code": $err:code, "description": $err:description, "value": $err:value, 
+                    "line": $err:line-number, "column": $err:column-number, "module": $err:module
+                },
+                "_request": $request
+            })
+        }
 };
 
 (: content types :)
@@ -361,50 +349,45 @@ declare function router:error-description($description as xs:string, $line as xs
  : oas configuration for the route and "_response" is the response data provided by the user function
  : in the third argument of error().
  :)
-declare %private function router:error ($code as xs:integer, $error as map(*), $request-data as map(*), $lookup as function(xs:string) as function(*)?) {
-    router:log-error($request-data, $error),
-    if (
-        $error?description = "" and 
-        count($error?value) = 1 and
-        $error?value instance of map(*) and
-        map:contains($error?value, "_config") and
-        map:contains($error?value, "_response")
-    )
-    then (
-        let $route := $error?value?("_config")
-        let $response := $error?value?("_response")
-        return
-            (: if an error handler is defined, call it instead of returning the error directly :)
-            if (map:contains($route, "x-error-handler"))
-            then (
-                try {
-                    let $fn := $lookup($route?("x-error-handler"))
-                    return
-                        router:write-response($code, $fn($response), $route)
-                } catch * {
-                    (: Catch all errors and add the current route configuration to $err:value,
-                    so we can check it later to format the response :)
-                    error($errors:OPERATION, "Failed to execute error handler " || $route?("x-error-handler"))
-                }
-            )
-            else
-                router:write-response($code, $response, $route)
-    )
-    else (
-        response:set-status-code($code),
-        response:set-header("Content-Type", "application/json"),
-        util:declare-option("output:method", "json"),
-        if ($error?description = "") then
-            $error?value (: value already contains the data to return :)
-        else
-            map {
-                "description": $error?description,
-                "details": 
-                    if ($error?value instance of map(*) and map:contains($error?value, "_response"))
-                    then $error?value?("_response") 
-                    else $error?value
+declare %private function router:error ($code as xs:integer, $error as map(*), $lookup as function(xs:string) as function(*)?) {
+    router:log-error($code, $error),
+    (: unwrap error data :)
+    let $route := $error?_request?config
+    let $error := $error?_error
+    return
+        (: if an error handler is defined, call it instead of returning the error directly :)
+        if (exists($route) and map:contains($route, "x-error-handler"))
+        then (
+            try {
+                let $fn := $lookup($route?x-error-handler)
+                return
+                    router:write-response($code, $fn($error), $route)
+            } catch * {
+                let $_error :=
+                    map {
+                        "code": $err:code,
+                        "description": "Failed to execute error handler " || $route?x-error-handler, 
+                        "value": $err:value, "module": $err:module,
+                        "line": $err:line-number, "column": $err:column-number
+                    }
+                return (
+                    router:log-error(500, $_error),
+                    router:default-error-handler(500, $_error)
+                )
             }
-    )
+        )
+        (: default error handler :)
+        else
+            router:default-error-handler($code, $error)
+};
+
+declare function router:default-error-handler ($code as xs:integer, $error as map(*)) as item()* {
+    response:set-status-code($code),
+    response:set-header("Content-Type", "application/json"),
+    util:declare-option("output:method", "json"),
+    if ($error?description = "") then
+        $error?value (: value already contains the data to return :)
+    else $error
 };
 
 declare %private function router:write-response($default-code as xs:integer, $data as item()*, $config as map(*)) {
@@ -440,9 +423,17 @@ declare %private function router:write-response($default-code as xs:integer, $da
 
 (: helpers :)
 
-declare %private function router:log-error ($request as map(*), $data as map(*)) {
-    let $_data := serialize(map:remove($data, "_config"), map{"method": "adaptive"})
+declare %private function router:is-rethrown-error($value as item()*) as xs:boolean {
+    count($value) eq 1 and
+    $value instance of map(*) and
+    map:contains($value, "_error")
+};
+
+declare %private function router:log-error ($code as xs:integer, $data as map(*)) {
+    (: let $request := $data?_request => => serialize(map{"method": "json"}) :)
+    let $error := $data?_error => serialize(map{"method": "json"})
     return
         util:log("error", 
-            ``[[`{$request?id}`] `{$request?method}` `{$request?path}`: `{$_data}`]``)
+            ``[[`{$data?_request?id}`] `{$data?_request?method}` `{$data?_request?path}`: `{$code}`
+            `{$error}`]``)
 };

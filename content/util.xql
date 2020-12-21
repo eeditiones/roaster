@@ -17,7 +17,7 @@
 xquery version "3.1";
 
 (:~
- : Utility handler functions for user login/logout and debugging.
+ : Utility handler functions for getting the current user and debugging
  :)
 module namespace rutil="http://exist-db.org/xquery/router/util";
 
@@ -33,7 +33,7 @@ declare function rutil:getDBUser() as map(*) {
     let $user := ($smid/sm:effective, $smid/sm:real)[1]
     let $name := $user/sm:username/text()
     return map {
-        "user": $name,
+        "name": $name,
         "groups": array { $user//sm:group/text() },
         "dba" : sm:is-dba($name)
     }
@@ -45,16 +45,5 @@ declare function rutil:getDBUser() as map(*) {
  : to handler functions.
  :)
 declare function rutil:debug($request as map(*)) {
-    router:response(200, "application/json",
-        map {
-            "parameters": $request?parameters,
-            "body": $request?body,
-            "method": request:get-method(),
-            "pattern": $request?config?pattern,
-            "path": $request?config?path,
-            "regex": $request?config?regex,
-            "priority": $request?config?priority,
-            "user": $request?user
-        }
-    )
+    router:response(200, "application/json", $request)
 };

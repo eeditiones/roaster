@@ -23,54 +23,113 @@ module namespace parameters="http://exist-db.org/xquery/router/parameters";
 
 import module namespace errors="http://exist-db.org/xquery/router/errors";
 
-declare function parameters:in-path ($match as map(*), $config) as map(*)* {
-    let $substitutions := analyze-string($match?pattern, "\{([^\}]+)\}")
-    let $match-path := analyze-string($match?path, $match?regex)
-
-    for $substitution at $pos in $substitutions//fn:group
-    let $value := $match-path//fn:group[@nr=$pos]/string()
-    let $param-config :=
-        if ($config?parameters instance of array(*))
-        then
-            filter($config?parameters?*, function($parameter as array(*)) {
-                $parameter?in = "path" and
-                $parameter?name = $substitution
-            })
-        else ()
+(:~
+ : path parameter middleware
+ :)
+declare function parameters:in-path ($request as map(*)) as map(*)* {
+    let $path-param-map := parameters:get-path-parameter-map-from-config($request?config?parameters)
+    let $has-path-parameters-in-pattern := contains($request?pattern, "{")
 
     return
-        if (exists($param-config)) then
-            map { $substitution/string() : parameters:cast($value, head($param-config)) }
+        if (not($has-path-parameters-in-pattern) and exists($path-param-map))
+        then error($errors:OPERATION, "Path pattern has no substitutions, but path parameters are defined " || $request?pattern, $request)
+        else if (not($has-path-parameters-in-pattern))
+        then $request (: the matching route does not define path parameters :)
         else
-            error($errors:REQUIRED_PARAM, "No definition for required path parameter " || $substitution)
+            let $substitutions := analyze-string($request?pattern, "\{([^\}]+)\}")
+            let $match-path := analyze-string($request?path, $request?regex)
+
+            let $maps :=
+                for $substitution at $pos in $substitutions//fn:group
+                let $key := $substitution/string()
+                return
+                    if (map:contains($path-param-map, $key))
+                    then (
+                        let $value :=
+                            $match-path//fn:group[@nr=$pos]/string()
+                            => parameters:cast($path-param-map?($key))
+
+                        return map { $key : $value }
+                    )
+                    else
+                        error($errors:REQUIRED_PARAM, "No definition for required path parameter " || $substitution)
+
+            (: extend previous parameters map with new values :)
+            let $merged := map:merge(($request?parameters, $maps))
+
+            return map:put($request, "parameters", $merged)
 };
 
-declare function parameters:in-request ($route as map(*)) as map(*)* {
-    let $params := $route?parameters
-    return
-        if (exists($params)) then
-            for $param in $params?*
-            where $param?in != "path"
-            let $default := if (exists($param?schema)) then $param?schema?default else ()
-            let $values := 
-                switch ($param?in)
-                    (: todo case "body" :)
-                    case "header" return
-                        head((request:get-header($param?name), $default))
-                    case "cookie" return
-                        head((request:get-cookie-value($param?name), $default))
-                    default return
-                        request:get-parameter($param?name, $default)
-            return
-                if ($param?required and empty($values)) then
-                    error($errors:REQUIRED_PARAM, "Parameter " || $param?name || " is required")
-                else
-                    map { $param?name : parameters:cast($values, $param) }
-        else
-            ()
+declare %private function parameters:is-path-parameter($parameter as map(*)) as xs:boolean {
+    $parameter?in = "path"
+};
+
+declare %private function parameters:get-path-parameter-map-from-config ($parameters as array(*)?) as map(*)? {
+    if (not(exists($parameters)))
+    then () (: no parameters defined :)
+    else
+        let $path-parameters :=
+            for-each($parameters?*, function ($parameter as map(*)) as map(*)? {
+                if (parameters:is-path-parameter($parameter))
+                then map { $parameter?name : $parameter }
+                else ()
+            })
+        
+        return
+            if (count($path-parameters))
+            then map:merge($path-parameters)
+            else ()
+};
+
+(:~
+ : request parameter middleware
+ :)
+declare function parameters:in-request ($request as map(*)) as map(*)* {
+    if (not(map:contains($request?config, "parameters")))
+    then ($request) (: route expects no parameters, return request unchanged :)
+    else if (not($request?config?parameters instance of array(*)))
+    then error($errors:OPERATION, "Parameter definition must be an array: " || $request?pattern, $request)
+    else
+        let $maps := for-each($request?config?parameters?*, parameters:retrieve#1)
+
+        (: extend previous parameters map with new values :)
+        let $merged := map:merge(($request?parameters, $maps))
+
+        return
+            map:put($request, "parameters", $merged)
+};
+
+declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? {
+    if (parameters:is-path-parameter($parameter))
+    then ()
+    else
+        let $name := $parameter?name
+        let $default := parameters:get-parameter-default-value($parameter?schema)
+        let $values := 
+            switch ($parameter?in)
+                (: TODO case "body" :)
+                case "header" return
+                    head((request:get-header($name), $default))
+                case "cookie" return
+                    head((request:get-cookie-value($name), $default))
+                default return
+                    request:get-parameter($name, $default)
+
+        return
+            if ($parameter?required and empty($values)) then
+                error($errors:REQUIRED_PARAM, "Parameter " || $name || " is required")
+            else
+                map { $name : parameters:cast($values, $parameter) }
+};
+
+declare %private function parameters:get-parameter-default-value ($schema as map(*)?) as item()? {
+    if (exists($schema)) 
+    then ($schema?default)
+    else ()
 };
 
 declare %private function parameters:cast ($values as xs:string*, $config as map(*)) as item()* {
+    (: TODO handle $ref :)
     for $value in $values
     return
         switch($config?schema?type)
@@ -118,19 +177,22 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
 (:~
  : Try to retrieve and convert the request body if specified
  :)
-declare function parameters:body ($request-body-config as map(*)?) as item()* {
-    if (not(exists($request-body-config) and exists($request-body-config?content)))
-    then () (: this route expects no body in request :)
+declare function parameters:body ($request as map(*)) as item()* {
+    if (
+        not(map:contains($request?config, "requestBody")) or
+        not(map:contains($request?config?requestBody, "content"))
+    )
+    then ($request) (: this route expects no body in request, return untouched :)
     else (
-        let $content := $request-body-config?content
+        let $content-spec := $request?config?requestBody?content
         let $content-type-header := 
             request:get-header("Content-Type")
             => replace("^([^;]+);?.*$", "$1") (: strip charset info from mime-type if present :)
 
-        return
-            if (map:contains($content, $content-type-header))
+        let $content :=
+            if (map:contains($content-spec, $content-type-header))
             then (
-                let $content-type := $content($content-type-header)
+                let $content-type := $content-spec($content-type-header)
                 let $body := request:get-data()
                 return
                     switch ($content-type-header)
@@ -147,5 +209,7 @@ declare function parameters:body ($request-body-config as map(*)?) as item()* {
             else 
                 error($errors:BODY_CONTENT_TYPE, "Passed in Content-Type " || $content-type-header || 
                     " not allowed")
+
+        return map:put($request, "body", $content)
     )
 };
