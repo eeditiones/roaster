@@ -25,7 +25,7 @@ import module namespace errors="http://exist-db.org/xquery/router/errors";
 
 (:~
  :)
-declare variable $auth:STD_STRATEGIES := map {
+declare variable $auth:DEFAULT_STRATEGIES := map {
     "cookieAuth": auth:use-cookie-auth#1,
     "basicAuth": auth:use-basic-auth#1
 };
@@ -40,7 +40,7 @@ declare variable $auth:STD_STRATEGIES := map {
  : @return the extended request map
  :)
 declare function auth:standard-authorization($request as map(*)) as map(*) {
-    auth:authenticate($request, $auth:STD_STRATEGIES)
+    auth:authenticate($request, $auth:DEFAULT_STRATEGIES)
 };
 
 (:~
