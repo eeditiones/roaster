@@ -21,14 +21,31 @@ xquery version "3.1";
  :)
 module namespace errors="http://exist-db.org/xquery/router/errors";
 
+(: router specific errors :)
 declare variable $errors:REQUIRED_PARAM := xs:QName("errors:REQUIRED_PARAM");
 declare variable $errors:OPERATION := xs:QName("errors:OPERATION");
 declare variable $errors:BODY_CONTENT_TYPE := xs:QName("errors:BODY_CONTENT_TYPE");
 
+(: common HTTP status codes :)
 declare variable $errors:BAD_REQUEST := xs:QName("errors:BAD_REQUEST_400");
 declare variable $errors:UNAUTHORIZED := xs:QName("errors:UNAUTHORIZED_401");
 declare variable $errors:FORBIDDEN := xs:QName("errors:FORBIDDEN_403");
 declare variable $errors:NOT_FOUND := xs:QName("errors:NOT_FOUND_404");
 declare variable $errors:METHOD_NOT_ALLOWED := xs:QName("errors:METHOD_NOT_ALLOWED_405");
-
 declare variable $errors:SERVER_ERROR := xs:QName("errors:SERVER_ERROR_500");
+
+declare function errors:get-status-code-from-error($error as xs:QName) as xs:integer {
+    switch($error)
+        case $errors:REQUIRED_PARAM (: fall-through :)
+        case $errors:BAD_REQUEST (: fall-through :)
+        case $errors:BODY_CONTENT_TYPE return 400
+
+        case $errors:UNAUTHORIZED return 401
+        case $errors:FORBIDDEN return 403
+        case $errors:NOT_FOUND return 404
+        case $errors:METHOD_NOT_ALLOWED return 405
+
+        case $errors:OPERATION (: fall-through :)
+        case $errors:SERVER_ERROR return 500 (: no fall-through possible :)
+        default return 500
+};
