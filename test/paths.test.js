@@ -116,7 +116,7 @@ describe('Error reporting', function() {
         return util.axios.post('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(500);
-                expect(error.response.data.description).to.match(/\[at line \d+ of.*\]/);
+                expect(error.response.data.line).to.match(/\d+/);
                 expect(error.response.data.description).to.contain('$undefined');
             });
     });
