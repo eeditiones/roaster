@@ -3,10 +3,12 @@
   "version": "0.5.0",
   "description": "Open API Router for eXist",
   "scripts": {
-    "test": "npm run test:build && mocha --exit",
-    "test-watch": "npm run test:build && mocha --watch",
-    "test:build": "cd test/app && ant",
-    "build:all": "ant && npm run test:build"
+    "test": "gulp install:all && mocha --exit",
+    "test:watch": "mocha --watch",
+    "test:build": "gulp test:install",
+    "build": "gulp build",
+    "build:all": "gulp build && gulp test:build",
+    "deploy": "gulp install"
   },
   "repository": {
     "type": "git",
