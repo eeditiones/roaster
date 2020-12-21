@@ -182,10 +182,9 @@ declare function auth:use-cookie-auth ($request as map(*)) as map(*)? {
     let $login := login:set-user($login-domain, (), false())
     let $user := request:get-attribute($login-domain || ".user")
     return (
-        util:log("info", "----~~~~~----" || $user),
         if ($user)
         then rutil:getDBUser()
-        else (util:log("warn", "----~~no cookieAuth~~----" || $user))
+        else ()
     )
 };
 
