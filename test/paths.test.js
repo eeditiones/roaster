@@ -7,10 +7,6 @@ const chaiResponseValidator = require('chai-openapi-response-validator');
 const spec = path.resolve("./test/app/api.json");
 chai.use(chaiResponseValidator(spec));
 
-before(util.install);
-
-after(util.uninstall);
-
 describe('Path parameters', function () {
     it('passes parameter in last component of path', async function () {
         const res = await util.axios.get('api/paths/my-path');
@@ -82,7 +78,7 @@ describe('Query parameters', function () {
             }
         });
         expect(res.status).to.equal(200);
-        expect(res.data.method).to.equal('POST');
+        expect(res.data.method).to.equal('post');
         expect(res.data.parameters.num).to.be.a('number');
         expect(res.data.parameters.num).to.equal(165.75);
         expect(res.data.parameters.bool).to.be.a('boolean');
@@ -107,44 +103,39 @@ describe('Query parameters', function () {
 });
 
 describe('Error reporting', function() {
-    it('receives error report', function(done) {
-        util.axios.get('api/errors')
+    it('receives error report', function() {
+        return util.axios.get('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(404);
-                expect(error.response.data.description).to.contain('document not found');
-                expect(error.response.data.description).to.match(/\[at line \d+ of.*api\.xql\]/);
-                expect(error.response.data.details).to.equal('error details');
-                done();
+                expect(error.response.data.description).to.equal('document not found');
+                expect(error.response.data.value).to.equal('error details');
             });
     });
 
-    it('receives dynamic XQuery error', function(done) {
-        util.axios.post('api/errors')
+    it('receives dynamic XQuery error', function() {
+        return util.axios.post('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(500);
                 expect(error.response.data.description).to.match(/\[at line \d+ of.*\]/);
                 expect(error.response.data.description).to.contain('$undefined');
-                done();
             });
     });
 
-    it('receives explicit error', function(done) {
-        util.axios.delete('api/errors')
+    it('receives explicit error', function() {
+        return util.axios.delete('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(403);
                 expect(error.response.headers['content-type']).to.equal('application/xml');
                 expect(error.response.data).to.equal('<forbidden/>');
-                done();
             });
     });
 
-    it('calls error handler', function(done) {
-        util.axios.get('api/errors/handle')
+    it('calls error handler', function() {
+        return util.axios.get('api/errors/handle')
             .catch(function(error) {
                 expect(error.response.status).to.equal(500);
                 expect(error.response.headers['content-type']).to.equal('text/html');
                 expect(error.response.data).to.contain('$undefined');
-                done();
             });
     });
 });
