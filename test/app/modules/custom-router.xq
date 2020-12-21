@@ -6,10 +6,10 @@ declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 import module namespace router="http://exist-db.org/xquery/router";
 
 import module namespace rutil="http://exist-db.org/xquery/router/util";
-import module namespace errors = "http://exist-db.org/xquery/router/errors";
+import module namespace errors="http://exist-db.org/xquery/router/errors";
 import module namespace auth="http://exist-db.org/xquery/router/auth";
 
-(: 
+(:~
  : For the bearer token authentication example to work install following packages 
  : - exist-jwt 1.0.1
  : - crypto-lib 1.0.0
