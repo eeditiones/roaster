@@ -24,7 +24,10 @@ declare %private variable $jwt-auth:jwt := jwt:instance($jwt-auth:secret, $jwt-a
  :)
 declare variable $jwt-auth:METHOD := "JWTAuth";
 
-declare variable $jwt-auth:handler := map { $jwt-auth:METHOD : jwt-auth:bearer-auth#1 }
+(:~
+ : The name of the securityScheme in API definition
+ :)
+declare variable $jwt-auth:handler := map { $jwt-auth:METHOD : jwt-auth:bearer-auth#1 };
 
 (:~
  : which header to check for the token 
@@ -33,7 +36,7 @@ declare variable $jwt-auth:handler := map { $jwt-auth:METHOD : jwt-auth:bearer-a
  :)
 declare variable $jwt-auth:AUTH_HEADER := "X-Auth-Token";
 
-declare function jwt-auth:issue-token($request as map(*)) {
+declare function jwt-auth:issue-token ($request as map(*)) {
     if (
         $request?body instance of map(*) and 
         map:contains($request?body, 'username') and
@@ -69,7 +72,7 @@ declare function jwt-auth:bearer-auth ($request as map(*)) as map(*)? {
             then (
                 let $payload := $jwt-auth:jwt?read($token)
                 return map {
-                    "name": $payload?user,
+                    "name": $payload?name,
                     "groups": $payload?groups,
                     "dba": $payload?dba
                 }
