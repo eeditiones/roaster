@@ -31,9 +31,9 @@ else if (matches($exist:resource, "\.(png|jpg|jpeg|gif|tif|tiff|txt|mei)$", "s")
     </dispatch>
 
 (: use a different Open API router, needs exist-jwt installed! :)
-else if (starts-with($exist:path, '/jwt'))
+else if (starts-with($exist:path, '/jwt')) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-        <forward url="{$exist:controller}/modules/custom-api.xql">
+        <forward url="{$exist:controller}/modules/custom-router.xq">
             <set-header name="Access-Control-Allow-Origin" value="*"/>
             <set-header name="Access-Control-Allow-Credentials" value="true"/>
             <set-header name="Access-Control-Allow-Methods" value="GET, POST, DELETE, PUT, PATCH, OPTIONS"/>
