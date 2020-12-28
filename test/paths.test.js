@@ -24,11 +24,22 @@ describe('Path parameters', function () {
         expect(res.status).to.equal(200);
         // expect(res).to.satisfyApiSpec;
     });
-    it('handles post to path including $', async function () {
+    it('handles post of binary data', async function () {
+        const res = await util.axios.post('api/paths/my-path', 'TEST ME', {
+            headers: {
+                'Content-Type': 'application/octet-stream'
+            }
+        });
+        expect(res.status).to.equal(200);
+        expect(res.data).to.equal('TEST ME');
+    });
+});
+
+describe('Request body', function() {
+    it('uploads string in body', async function() {
         const res = await util.axios.post('api/$op-er+ation*!');
         expect(res.status).to.equal(200);
-        // expect(res).to.satisfyApiSpec;
-    });
+    })
 });
 
 describe('Query parameters', function () {

@@ -211,8 +211,44 @@
                         }
                     }
                 }
+            },
+            "post": {
+                "summary": "Post body as application/octet-stream",
+                "operationId": "api:binary-upload",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/octet-stream": {
+                            "schema": {
+                                "type": "string",
+                                "format": "binary"
+                            }
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "path",
+                        "in": "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns uploaded string",
+                        "content": {
+                            "text/text": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            
         },
         "/api/$op-er+ation*!":{
             "get": {

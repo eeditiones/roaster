@@ -29,6 +29,10 @@ declare function api:handle-error($response) {
     <p>{$response}</p>
 };
 
+declare function api:binary-upload($request as map(*)) {
+    util:binary-to-string($request?body)
+};
+
 let $lookup := function($name as xs:string, $arity as xs:integer) {
     try {
         function-lookup(xs:QName($name), $arity)

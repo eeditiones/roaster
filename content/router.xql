@@ -377,12 +377,10 @@ declare function router:request-body($route as map(*)) {
                     switch ($contentTypeHeader)
                         case "application/json" return
                             parse-json(util:binary-to-string($body))
-                        case "text/xml" case "application/xml" return
-                            $body
                         case "multipart/form-data" return
                             ()
                         default return
-                            error($errors:BODY_CONTENT_TYPE, "Unable to handle request body content type " || $contentType)
+                            $body
             else
                 error($errors:BODY_CONTENT_TYPE, "Passed in Content-Type " || $contentTypeHeader || 
                     " not allowed")
