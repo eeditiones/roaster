@@ -5,20 +5,18 @@ const { src, dest, watch, series, parallel } = require('gulp')
 const { createClient } = require('@existdb/gulp-exist')
 const rename = require('gulp-rename')
 const zip = require("gulp-zip")
-const gulpTmplReplace = require('./gulp-tmpl-replace.js')
+const replace = require('@existdb/gulp-replace-tmpl')
 const del = require('delete')
-const pkg = require('./package.json')
 
-// read metadata from .existdb.json
-const existJSON = require('./.existdb.json')
+// read metadata from package.json and .existdb.json
+const { version, license } = require('./package.json')
+const { package, servers } = require('./.existdb.json')
+
 // .tmpl replacements to include 
 // first value wins
-const { version, license } = pkg
-const replacements = [existJSON.package, {version, license}]
+const replacements = [package, {version, license}]
 
-const packageUri = existJSON.package.namespace
-const serverInfo = existJSON.servers.localhost
-
+const serverInfo = servers.localhost
 const { port, hostname } = new URL(serverInfo.server)
 const connectionOptions = {
     basic_auth: {
@@ -41,7 +39,7 @@ const testAppFiles = ['test/app/*.*', "test/app/modules/*"]
 const testAppPackageName = "oas-test.xar"
 
 // construct the current xar name from available data
-const packageName = () => `${existJSON.package.target}-${version}.xar`
+const packageName = () => `${package.target}-${version}.xar`
 
 /**
  * helper function that uploads and installs a built XAR
@@ -66,7 +64,7 @@ exports.clean = clean
  */
 function templates() {
     return src('*.tmpl')
-        .pipe(gulpTmplReplace({ replacements, unprefixed:true }))
+        .pipe(replace(replacements, { unprefixed: true }))
         .pipe(rename(path => { path.extname = "" }))
         .pipe(dest('build/'))
 }
@@ -137,7 +135,7 @@ exports["watch:test"] = watchTestApp
  * upload and install the latest built XAR
  */
 function installLibraryXar () {
-    return installXar(packageName(), packageUri)
+    return installXar(packageName(), package.namespace)
 }
 
 // composed tasks
