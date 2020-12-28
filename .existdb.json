@@ -19,7 +19,7 @@
         ]
     },
     "package": {
-        "author": "Wolfgang Meier",
+        "author": "TEI Publisher Project Team",
         "target": "oas-router",
         "description": "Open API Router library for eXist: reads an Open API JSON specification and routes requests accordingly. See the README for more information.",
         "namespace": "http://exist-db.org/open-api/router",
