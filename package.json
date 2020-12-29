@@ -1,7 +1,7 @@
 {
-  "name": "oas-router",
+  "name": "roaster",
   "version": "1.0.0",
-  "description": "Open API Router for eXist",
+  "description": "roaster - Open API Router for eXist",
   "scripts": {
     "test": "gulp install:all && mocha --exit",
     "test:watch": "mocha --watch",

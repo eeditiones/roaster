@@ -19,9 +19,9 @@ xquery version "3.1";
 (:~
  : The core library functions of the OAS router.
  :)
-module namespace parameters="http://exist-db.org/xquery/router/parameters";
+module namespace parameters="http://e-editiones.org/roaster/parameters";
 
-import module namespace errors="http://exist-db.org/xquery/router/errors";
+import module namespace errors="http://e-editiones.org/roaster/errors";
 
 (:~
  : path parameter middleware

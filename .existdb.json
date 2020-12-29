@@ -4,7 +4,7 @@
             "server": "http://localhost:8080/exist",
             "user": "admin",
             "password": "",
-            "root": "/db/apps/oas-router"
+            "root": "/db/system/repo/roaster"
         }
     },
     "sync": {
@@ -20,12 +20,12 @@
     },
     "package": {
         "author": "TEI Publisher Project Team",
-        "target": "oas-router",
-        "description": "Open API Router library for eXist: reads an Open API JSON specification and routes requests accordingly. See the README for more information.",
-        "namespace": "http://exist-db.org/open-api/router",
+        "target": "roaster",
+        "description": "OpenAPI Router library for eXist-db: reads an Open API JSON specification and routes requests accordingly. See the README for more information.",
+        "namespace": "http://e-editiones.org/roaster",
         "website": "https://github.com/eeditiones/oas-router",
         "status": "stable",
-        "title": "Open API Router library for eXist",
+        "title": "roaster - OpenAPI Router",
         "license": "GPLv3"
     }
 }

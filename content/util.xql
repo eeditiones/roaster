@@ -19,9 +19,9 @@ xquery version "3.1";
 (:~
  : Utility handler functions for getting the current user and debugging
  :)
-module namespace rutil="http://exist-db.org/xquery/router/util";
+module namespace rutil="http://e-editiones.org/roaster/util";
 
-import module namespace router="http://exist-db.org/xquery/router";
+import module namespace router="http://e-editiones.org/roaster/router";
 
 declare function rutil:getDBUser() as map(*) {
     let $smid := sm:id()/sm:id

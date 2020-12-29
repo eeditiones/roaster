@@ -19,7 +19,7 @@ xquery version "3.1";
 (:~
  : Variables to indicate common errors
  :)
-module namespace errors="http://exist-db.org/xquery/router/errors";
+module namespace errors="http://e-editiones.org/roaster/errors";
 
 (: router specific errors :)
 declare variable $errors:REQUIRED_PARAM := xs:QName("errors:REQUIRED_PARAM");

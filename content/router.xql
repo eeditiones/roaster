@@ -19,26 +19,16 @@ xquery version "3.1";
 (:~
  : The core library functions of the OAS router.
  :)
-module namespace router="http://exist-db.org/xquery/router";
+module namespace router="http://e-editiones.org/roaster/router";
 
-import module namespace errors="http://exist-db.org/xquery/router/errors";
-import module namespace parameters="http://exist-db.org/xquery/router/parameters";
+
+import module namespace errors="http://e-editiones.org/roaster/errors";
+import module namespace parameters="http://e-editiones.org/roaster/parameters";
+
 
 declare variable $router:RESPONSE_CODE := xs:QName("router:RESPONSE_CODE");
 declare variable $router:RESPONSE_TYPE := xs:QName("router:RESPONSE_TYPE");
 declare variable $router:RESPONSE_BODY := xs:QName("router:RESPONSE_BODY");
-
-(:~
- : May be called from user code to send a response with a particular
- : response code (other than 200). The media type will be determined by
- : looking at the response specification for the given status code.
- :
- : @param code the response code to return
- : @param body data to be sent in the body of the response
- :)
-declare function router:response($code as xs:integer, $body as item()*) {
-    router:response($code, (), $body)
-};
 
 (:~
  : May be called from user code to send a response with a particular
@@ -77,6 +67,7 @@ declare function router:resolve-pointer($config as map(*), $ref as xs:string*) {
  : Maps a request to the configured handler 
  : Loads API definitions, matches routes
  : Calls route handler function returned by $lookup function
+ : Accepts middlewares
  :
  : Route specificity rules:
  : 1. normalize patterns: replace placeholders with "?"
@@ -208,11 +199,11 @@ declare %private function router:route-specificity ($route as map(*)) as xs:inte
     $route?priority (: sort ascending :)
 };
 
-declare %private function router:process-request($pattern-map as map(*), $lookup as function(*), $custom-middlewares as function(*)*) {
+declare %private function router:process-request ($pattern-map as map(*), $lookup as function(*), $custom-middlewares as function(*)*) {
     let $route :=
         if (map:contains($pattern-map?config, $pattern-map?method)) then 
             $pattern-map?config?($pattern-map?method)
-        else 
+        else
             error($errors:METHOD_NOT_ALLOWED, 
                 "The method "|| $pattern-map?method || " is not supported for " || $pattern-map?path)
 
@@ -283,7 +274,7 @@ declare %private function router:get-content-type-for-code ($config as map(*), $
  : and compare with the Accept header sent by the client. Use the
  : first content type if none matches.
  :)
-declare %private function router:get-matching-content-type($content-types as map(*)) {
+declare %private function router:get-matching-content-type ($content-types as map(*)) {
     let $accept := router:accepted-content-types()
     let $matches := filter($accept, map:contains($content-types, ?))
 
@@ -296,7 +287,7 @@ declare %private function router:get-matching-content-type($content-types as map
 (:~
  : Tokenize the accept header and return a sequence of content types.
  :)
-declare function router:accepted-content-types() as xs:string* {
+declare function router:accepted-content-types () as xs:string* {
     let $accept-header := head((request:get-header("accept"), request:get-header("Accept")))
     for $type in tokenize($accept-header, "\s*,\s*")
     return
@@ -335,7 +326,7 @@ declare %private function router:resolve-ref ($config as map(*), $parts as xs:st
  : Add line and source info to error description. To avoid outputting multiple locations
  : for rethrown errors, check if $value is set.
  :)
-declare function router:error-description($description as xs:string, $line as xs:integer?, $module as xs:string?, $value) {
+declare function router:error-description ($description as xs:string, $line as xs:integer?, $module as xs:string?, $value) {
     if ($line and $line > 0 and empty($value)) then
         ``[`{$description}` [at line `{$line}` of `{($module, 'unknown')[1]}`]]``
     else
@@ -390,7 +381,7 @@ declare function router:default-error-handler ($code as xs:integer, $error as ma
     else $error
 };
 
-declare %private function router:write-response($default-code as xs:integer, $data as item()*, $config as map(*)) {
+declare %private function router:write-response ($default-code as xs:integer, $data as item()*, $config as map(*)) {
     if ($data instance of map(*) and map:contains($data, $router:RESPONSE_CODE))
     then (
         let $code := head(($data?($router:RESPONSE_CODE), $default-code))

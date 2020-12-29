@@ -14,12 +14,13 @@
  :  You should have received a copy of the GNU General Public License
  :  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  :)
-module namespace auth="http://exist-db.org/xquery/router/auth";
+module namespace auth="http://e-editiones.org/roaster/auth";
 
 import module namespace login="http://exist-db.org/xquery/login" at "resource:org/exist/xquery/modules/persistentlogin/login.xql";
-import module namespace router="http://exist-db.org/xquery/router";
-import module namespace rutil="http://exist-db.org/xquery/router/util";
-import module namespace errors="http://exist-db.org/xquery/router/errors";
+
+import module namespace router="http://e-editiones.org/roaster/router";
+import module namespace rutil="http://e-editiones.org/roaster/util";
+import module namespace errors="http://e-editiones.org/roaster/errors";
 
 (: API Request Authentication and Authorisation :)
 

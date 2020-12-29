@@ -1,6 +1,8 @@
-# Open API Router for eXist
+# roaster 
 
-Reads an Open API 3.0 specification from JSON and routes requests to handler functions written in XQuery.
+OpenAPI Router for eXist
+
+Reads an OpenAPI 3.0 specification from JSON and routes requests to handler functions written in XQuery.
 
 It is a generic router to be used in any exist-db application. 
 Since it is also the routing library used by TEI Publisher 7 you will find some examples referring to it.
@@ -103,7 +105,7 @@ Certain operations may be restricted to defined users or groups. We use an imple
   "post": {
     "summary": "Upload a number of files",
     "x-constraints": {
-        "group": "tei"
+        "groups": "tei"
     }
   }
 }
