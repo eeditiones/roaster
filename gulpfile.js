@@ -30,7 +30,7 @@ const existClient = createClient(connectionOptions);
 
 const static = [
     "content/*",
-    "icon.png"
+    "icon.svg"
 ]
 
 // test application metadata
