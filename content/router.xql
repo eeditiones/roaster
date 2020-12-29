@@ -246,7 +246,9 @@ declare %private function router:execute-handler ($request as map(*), $lookup as
              :)
             error($err:code, '', map {
                 "_error": map {
-                    "code": $err:code, "description": $err:description, "value": $err:value, 
+                    "code": $err:code, 
+                    "description": router:error-description($err:description, $err:line-number, $err:module, $err:value), 
+                    "value": $err:value, 
                     "line": $err:line-number, "column": $err:column-number, "module": $err:module
                 },
                 "_request": $request
