@@ -34,9 +34,9 @@ const static = [
 ]
 
 // test application metadata
-const testAppNs = "http://exist-db.org/apps/oas-test"
+const testAppNs = "http://e-editiones.org/roasted"
 const testAppFiles = ['test/app/*.*', "test/app/modules/*"]
-const testAppPackageName = "oas-test.xar"
+const testAppPackageName = "roasted.xar"
 
 // construct the current xar name from available data
 const packageName = () => `${package.target}-${version}.xar`

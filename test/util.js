@@ -7,7 +7,7 @@ const serverInfo = existJSON.servers.localhost
 
 const { origin } = new URL(serverInfo.server)
 
-const app = `${origin}/exist/apps/oas-test`;
+const app = `${origin}/exist/apps/roasted`;
 
 const axiosInstance = axios.create({
     baseURL: app,

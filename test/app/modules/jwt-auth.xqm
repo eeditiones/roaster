@@ -3,13 +3,13 @@ xquery version "3.1";
 (:~
  : example implementation to use exist-JWT in combination with OAS-router
  :)
-module namespace jwt-auth="https://e-editiones.org/oas-router/xquery/jwt-auth";
+module namespace jwt-auth="http://e-editiones.org/roasted/jwt-auth";
 
 
 import module namespace jwt="http://existsolutions.com/ns/jwt";
-import module namespace router="http://exist-db.org/xquery/router";
-import module namespace rutil="http://exist-db.org/xquery/router/util";
-import module namespace errors="http://exist-db.org/xquery/router/errors";
+import module namespace router="http://e-editiones.org/roaster/router";
+import module namespace rutil="http://e-editiones.org/roaster/util";
+import module namespace errors="http://e-editiones.org/roaster/errors";
 
 
 (:~
