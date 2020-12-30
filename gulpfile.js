@@ -52,10 +52,26 @@ function installXar (packageName, packageUri) {
 /**
  * Use the `delete` module directly, instead of using gulp-rimraf
  */
-function clean (cb) {
+function cleanLibrary (cb) {
     del(['build'], cb);
 }
-exports.clean = clean
+exports['clean:library'] = cleanLibrary
+/**
+ * Use the `delete` module directly, instead of using gulp-rimraf
+ */
+function cleanTest (cb) {
+    del(['test/app/build'], cb);
+}
+exports['clean:test'] = cleanTest
+/**
+ * Use the `delete` module directly, instead of using gulp-rimraf
+ */
+function cleanAll (cb) {
+    del(['build', 'test/app/build'], cb);
+}
+exports['clean:all'] = cleanAll
+
+exports.clean = cleanAll
 
 /**
  * replace placeholders 
@@ -96,7 +112,7 @@ exports["watch:static"] = watchStatic
  * This is why the xar will be installed instead
  */
 function watchBuild () {
-    watch('build/**/*', series(xar, installXar))
+    watch('build/**/*', series(xar, installLibraryXar))
 }
 
 /**
@@ -116,7 +132,7 @@ function packageTestApp () {
         .pipe(zip(testAppPackageName))
         .pipe(dest('.'))
 }
-exports["build:test"] = packageTestApp
+exports["build:test"] = series(cleanTest, packageTestApp)
 
 /**
  * upload and install a built XAR
@@ -124,7 +140,7 @@ exports["build:test"] = packageTestApp
 function installTestAppXar () {
     return installXar(testAppPackageName, testAppNs)
 }
-exports["install:test"] = series(packageTestApp, installTestAppXar)
+exports["install:test"] = series(cleanTest, packageTestApp, installTestAppXar)
 
 function watchTestApp () {
     watch(testAppFiles, series(packageTestApp, installTestAppXar));
@@ -140,28 +156,40 @@ function installLibraryXar () {
 
 // composed tasks
 const packageLibrary = series(
-    clean,
     templates,
     copyStatic,
     xar
 )
+
+exports.build = series(cleanLibrary, packageLibrary)
+exports["build:all"] = series(
+    cleanAll,
+    packageLibrary, 
+    packageTestApp
+)
+
+exports.install = series(cleanLibrary, packageLibrary, installLibraryXar)
+exports["install:all"] = series(
+    cleanAll,
+    packageLibrary, installLibraryXar, 
+    packageTestApp, installTestAppXar
+)
+
 const watchAll = parallel(
     watchStatic,
     watchTemplates,
     watchBuild,
     watchTestApp
 )
-
-exports.build = packageLibrary
-// alias of build
-exports.xar = packageLibrary
-
 exports.watch = watchAll
-exports.install = series(packageLibrary, installLibraryXar)
-exports["install:all"] = series(
-    packageLibrary, installLibraryXar, 
-    packageTestApp, installTestAppXar
-)
 
 // main task for day to day development
-exports.default = series(packageLibrary, installLibraryXar, watchAll)
+// package and install library
+// package test application but do not install it
+// still watch all and install on change 
+exports.default = series(
+    cleanAll, 
+    packageLibrary, installLibraryXar,
+    packageTestApp,
+    watchAll
+)
