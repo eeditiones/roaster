@@ -40,8 +40,8 @@ declare variable $auth:DEFAULT_STRATEGIES := map {
  : @param $request the current request
  : @return the extended request map
  :)
-declare function auth:standard-authorization($request as map(*)) as map(*) {
-    auth:authenticate($request, $auth:DEFAULT_STRATEGIES)
+declare function auth:standard-authorization($request as map(*), $response as map(*)) as map(*)+ {
+    auth:authenticate($request, $response, $auth:DEFAULT_STRATEGIES)
 };
 
 (:~
@@ -54,7 +54,7 @@ declare function auth:standard-authorization($request as map(*)) as map(*) {
  : @return the authorization middleware that extends the request map
  :)
 declare function auth:use-authorization($strategies as map(*)) as function(*) {
-    auth:authenticate(?, $strategies)
+    auth:authenticate(?, ?, $strategies)
 };
 
 declare %private function auth:is-public-route ($constraints as map(*)?) as xs:boolean {
@@ -83,7 +83,7 @@ declare %private function auth:at-least-one-matches ($data as xs:string*, $const
             "Unable to handle constraint : '" || $constraint || "'")
 };
 
-declare %private function auth:authenticate ($request as map(*), $strategies as map(*)) as map(*)? {
+declare %private function auth:authenticate ($request as map(*), $response as map(*), $strategies as map(*)) as map(*)+ {
     let $defined-auth-methods := 
         if (exists($request?config?security)) (: route specific :)
         then ($request?config?security)
@@ -112,13 +112,16 @@ declare %private function auth:authenticate ($request as map(*), $strategies as 
         })
 
     let $user := array:fold-left($methods, (), auth:use-first-matching-method#2)
-    let $constraints := $request?config?("x-constraints")
+    let $constraints := $request?config?x-constraints
     return
         if (
             auth:is-public-route($constraints) or 
             auth:is-authorized-user($constraints, $user)
         )
-        then (map:put($request, "user", $user)) (: add "user" to request :)
+        then (
+            map:put($request, "user", $user), (: add "user" to request :)
+            $response
+        )
         else error($errors:UNAUTHORIZED, "Access denied")
 };
 

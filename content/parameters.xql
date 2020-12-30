@@ -26,7 +26,7 @@ import module namespace errors="http://e-editiones.org/roaster/errors";
 (:~
  : path parameter middleware
  :)
-declare function parameters:in-path ($request as map(*)) as map(*)* {
+declare function parameters:in-path ($request as map(*), $response as map(*)) as map(*)+ {
     let $path-param-map := parameters:get-path-parameter-map-from-config($request?config?parameters)
     let $has-path-parameters-in-pattern := contains($request?pattern, "{")
 
@@ -34,7 +34,7 @@ declare function parameters:in-path ($request as map(*)) as map(*)* {
         if (not($has-path-parameters-in-pattern) and exists($path-param-map))
         then error($errors:OPERATION, "Path pattern has no substitutions, but path parameters are defined " || $request?pattern, $request)
         else if (not($has-path-parameters-in-pattern))
-        then $request (: the matching route does not define path parameters :)
+        then ($request, $response) (: the matching route does not define path parameters :)
         else
             let $substitutions := analyze-string($request?pattern, "\{([^\}]+)\}")
             let $match-path := analyze-string($request?path, $request?regex)
@@ -57,7 +57,11 @@ declare function parameters:in-path ($request as map(*)) as map(*)* {
             (: extend previous parameters map with new values :)
             let $merged := map:merge(($request?parameters, $maps))
 
-            return map:put($request, "parameters", $merged)
+            return (
+                map:put($request, "parameters", $merged),
+                $response
+
+            )
 };
 
 declare %private function parameters:is-path-parameter($parameter as map(*)) as xs:boolean {
@@ -84,9 +88,9 @@ declare %private function parameters:get-path-parameter-map-from-config ($parame
 (:~
  : request parameter middleware
  :)
-declare function parameters:in-request ($request as map(*)) as map(*)* {
+declare function parameters:in-request ($request as map(*), $response as map(*)) as map(*)+ {
     if (not(map:contains($request?config, "parameters")))
-    then ($request) (: route expects no parameters, return request unchanged :)
+    then ($request, $response) (: route expects no parameters, return request unchanged :)
     else if (not($request?config?parameters instance of array(*)))
     then error($errors:OPERATION, "Parameter definition must be an array: " || $request?pattern, $request)
     else
@@ -95,8 +99,10 @@ declare function parameters:in-request ($request as map(*)) as map(*)* {
         (: extend previous parameters map with new values :)
         let $merged := map:merge(($request?parameters, $maps))
 
-        return
-            map:put($request, "parameters", $merged)
+        return (
+            map:put($request, "parameters", $merged),
+            $response
+        )
 };
 
 declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? {
@@ -177,12 +183,12 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
 (:~
  : Try to retrieve and convert the request body if specified
  :)
-declare function parameters:body ($request as map(*)) as item()* {
+declare function parameters:body ($request as map(*), $response as map(*)) as map(*)+ {
     if (
         not(map:contains($request?config, "requestBody")) or
         not(map:contains($request?config?requestBody, "content"))
     )
-    then ($request) (: this route expects no body in request, return untouched :)
+    then ($request, $response) (: this route expects no body in request, return untouched :)
     else (
         let $content-spec := $request?config?requestBody?content
         let $content-type-header := 
@@ -210,6 +216,9 @@ declare function parameters:body ($request as map(*)) as item()* {
                 error($errors:BODY_CONTENT_TYPE, "Passed in Content-Type " || $content-type-header || 
                     " not allowed")
 
-        return map:put($request, "body", $content)
+        return (
+            map:put($request, "body", $content),
+            $response
+        )
     )
 };

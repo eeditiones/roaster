@@ -28,6 +28,7 @@ import module namespace parameters="http://e-editiones.org/roaster/parameters";
 
 declare variable $router:RESPONSE_CODE := xs:QName("router:RESPONSE_CODE");
 declare variable $router:RESPONSE_TYPE := xs:QName("router:RESPONSE_TYPE");
+declare variable $router:RESPONSE_HEADERS := xs:QName("router:RESPONSE_HEADERS");
 declare variable $router:RESPONSE_BODY := xs:QName("router:RESPONSE_BODY");
 
 (:~
@@ -39,10 +40,11 @@ declare variable $router:RESPONSE_BODY := xs:QName("router:RESPONSE_BODY");
  : be converted into the target media type
  : @param $body data to be sent in the body of the response
  :)
-declare function router:response($code as xs:integer, $media-type as xs:string?, $body as item()*) {
+declare function router:response ($code as xs:integer, $media-type as xs:string?, $body as item()*, $headers as map(*)?) {
     map {
         $router:RESPONSE_CODE : $code,
         $router:RESPONSE_TYPE : $media-type,
+        $router:RESPONSE_HEADERS : $headers,
         $router:RESPONSE_BODY : $body
     }
 };
@@ -211,34 +213,61 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
     let $base-request := map:put($pattern-map, "config", $route)
 
     let $default-middleware := (
-        parameters:in-path#1,
-        parameters:in-request#1,
-        parameters:body#1
+        parameters:in-path#2,
+        parameters:in-request#2,
+        parameters:body#2
     )
 
     (: enable arbitrary middleware configuration :)
     let $use := ($default-middleware, $custom-middlewares)
-    let $extended-request :=
-        fold-left($use, $base-request, function ($request, $next-middleware) {
-            $next-middleware($request)
+    let $request-response :=
+        fold-left($use, [$base-request, map {
+        }], function ($args, $next-middleware) {
+            util:log("info", serialize(($next-middleware, $args), map{"method":"adaptive"})),
+            array { apply($next-middleware, $args) }
         })
 
-    let $response := router:execute-handler($extended-request, $lookup)
+    let $response := router:execute-handler($request-response?1, $request-response?2, $lookup)
 
-    return router:write-response(200, $response, $route)
+    return (
+        util:log("info", ("_______+++++++++++++___________", $response)),
+        router:write-response(200, $response, $route)
+    ) 
 };
 
 (:~
  : Look up the XQuery function whose name matches property "operationId".
  : If found, call it and pass the request map as single parameter.
  :)
-declare %private function router:execute-handler ($request as map(*), $lookup as function(xs:string) as function(*)?) {
+declare %private function router:execute-handler ($request as map(*), $response as map(*), $lookup as function(xs:string) as function(*)?) as map(*) {
     if (not(map:contains($request?config, "operationId"))) then
         error($errors:OPERATION, "Operation does not define an operationId", $request)
     else
         try {
             let $fn := $lookup($request?config?operationId)
-            return $fn($request)
+            let $handler-response := $fn($request)
+
+            return
+                if (
+                    $handler-response instance of map(*) and 
+                    map:contains($handler-response, $router:RESPONSE_CODE)
+                )
+                then (
+                    util:log("info", "MERGE!!!"),
+                    map {
+                        $router:RESPONSE_CODE : head(($handler-response?($router:RESPONSE_CODE), $response?($router:RESPONSE_CODE))),
+                        $router:RESPONSE_TYPE : head(($handler-response?($router:RESPONSE_TYPE), $response?($router:RESPONSE_TYPE))),
+                        $router:RESPONSE_HEADERS : map:merge((
+                                $response?($router:RESPONSE_HEADERS),
+                                $handler-response?($router:RESPONSE_HEADERS)
+                        )),
+                        $router:RESPONSE_BODY : head(($handler-response?($router:RESPONSE_BODY), $response?($router:RESPONSE_BODY)))
+                    }
+                )
+                else (
+                    util:log("info", "BODY LANGUAGE!!!"),
+                    map:put($response, $router:RESPONSE_BODY, $handler-response)
+                )
         } catch * {
             (:
              : Catch all errors and add the current route configuration to $err:value,
@@ -251,7 +280,8 @@ declare %private function router:execute-handler ($request as map(*), $lookup as
                     "value": $err:value, 
                     "line": $err:line-number, "column": $err:column-number, "module": $err:module
                 },
-                "_request": $request
+                "_request": $request,
+                "_response": $response
             })
         }
 };
@@ -296,17 +326,6 @@ declare function router:accepted-content-types () as xs:string* {
         replace($type, "^([^;]+).*$", "$1")
 };
 
-(:~
- : Q: binary types?
- :)
-declare %private function router:method-for-content-type ($type as xs:string) as xs:string {
-    switch($type)
-        case "application/json" return "json"
-        case "text/html" return "html5"
-        case "text/text" return "text"
-        default return "xml"
-};
-
 (:
  : resolve pointers in API definition
  : @throws errors:OPERATION if the pointer cannot be resolved
@@ -328,7 +347,7 @@ declare %private function router:resolve-ref ($config as map(*), $parts as xs:st
  : Add line and source info to error description. To avoid outputting multiple locations
  : for rethrown errors, check if $value is set.
  :)
-declare function router:error-description ($description as xs:string, $line as xs:integer?, $module as xs:string?, $value) {
+declare %private function router:error-description ($description as xs:string, $line as xs:integer?, $module as xs:string?, $value) {
     if ($line and $line > 0 and empty($value)) then
         ``[`{$description}` [at line `{$line}` of `{($module, 'unknown')[1]}`]]``
     else
@@ -385,36 +404,51 @@ declare function router:default-error-handler ($code as xs:integer, $error as ma
     else $error
 };
 
-declare %private function router:write-response ($default-code as xs:integer, $data as item()*, $config as map(*)) {
-    if ($data instance of map(*) and map:contains($data, $router:RESPONSE_CODE))
-    then (
-        let $code := head(($data?($router:RESPONSE_CODE), $default-code))
-        let $content-type := 
-            if (exists($data?($router:RESPONSE_TYPE)))
-            then $data($router:RESPONSE_TYPE)
-            else router:get-content-type-for-code($config, $code, "application/xml")
+declare %private function router:write-response ($default-code as xs:integer, $response as item()*, $config as map(*)) {
+    let $code := head(($response?($router:RESPONSE_CODE), $default-code))
+    let $content-type := head((
+        $response?($router:RESPONSE_TYPE),
+        router:get-content-type-for-code($config, $code, "application/xml")
+    ))
 
-        return (
-            response:set-status-code($code),
-            if ($code = 204)
-            then ()
-            else (
-                response:set-header("Content-Type", $content-type),
-                util:declare-option("output:method", router:method-for-content-type($content-type)),
-                $data?($router:RESPONSE_BODY)
-            )
+    return (
+        util:log("info", "CODE" || $code || " CONTENT_TYPE" || $content-type),
+        response:set-status-code($code),
+        if (
+            map:contains($response, $router:RESPONSE_HEADERS) and
+            $response?($router:RESPONSE_HEADERS) instance of map(*)
         )
-    )
-    else (
-        let $content-type := router:get-content-type-for-code($config, $default-code, "application/xml")
-        return (
-            response:set-status-code($default-code),
+        then (map:for-each($response?($router:RESPONSE_HEADERS), function ($k, $v) {
+            response:set-header($k, $v)            
+        }))
+        else (),
+        if ($code = 204)
+        then ()
+        else (
             response:set-header("Content-Type", $content-type),
             util:declare-option("output:method", router:method-for-content-type($content-type)),
-            $data
+            $response?($router:RESPONSE_BODY)
         )
     )
 };
+
+(: declare function router:get-content-type () {
+    if (exists($data?($router:RESPONSE_TYPE)))
+    then $data($router:RESPONSE_TYPE)
+    else router:get-content-type-for-code($config, $code, "application/xml")
+}; :)
+
+(:~
+ : Q: binary types?
+ :)
+declare %private function router:method-for-content-type ($type as xs:string) as xs:string {
+    switch($type)
+        case "application/json" return "json"
+        case "text/html" return "html5"
+        case "text/text" return "text"
+        default return "xml"
+};
+
 
 (: helpers :)
 

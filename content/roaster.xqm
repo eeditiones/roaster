@@ -35,7 +35,7 @@ import module namespace auth="http://e-editiones.org/roaster/auth";
  : @param body data to be sent in the body of the response
  :)
 declare function roaster:response ($code as xs:integer, $body as item()*) {
-    router:response($code, (), $body)
+    router:response($code, (), $body, ())
 };
 
 (:~
@@ -48,7 +48,11 @@ declare function roaster:response ($code as xs:integer, $body as item()*) {
  : @param $body data to be sent in the body of the response
  :)
 declare function roaster:response ($code as xs:integer, $media-type as xs:string?, $body as item()*) {
-    router:response($code, $media-type, $body)
+    router:response($code, $media-type, $body, ())
+};
+
+declare function roaster:response ($code as xs:integer, $media-type as xs:string?, $body as item()*, $headers as map(*)?) {
+    router:response($code, $media-type, $body, $headers)
 };
 
 (:~
@@ -73,7 +77,7 @@ declare function roaster:resolve-pointer ($config as map(*), $ref as xs:string*)
  : 3. If two paths have the same (normalized) length, prioritize by appearance in API files, first one wins
  :)
 declare function roaster:route($api-files as xs:string+, $lookup as function(xs:string) as function(*)?) {
-    router:route($api-files, $lookup, auth:standard-authorization#1)
+    router:route($api-files, $lookup, auth:standard-authorization#2)
 };
 
 declare function roaster:route($api-files as xs:string+, $lookup as function(xs:string) as function(*)?, $middleware) {
