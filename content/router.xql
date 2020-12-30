@@ -359,7 +359,9 @@ declare %private function router:error ($code as xs:integer, $error as map(*), $
                 let $_error :=
                     map {
                         "code": $err:code,
-                        "description": "Failed to execute error handler " || $route?x-error-handler, 
+                        "description": "Failed to execute error handler " || $route?x-error-handler || ": " ||
+                            $err:description || ". Error which triggered this: " || 
+                            router:error-description($error?description, $error?line, $error?module, $error?value), 
                         "value": $err:value, "module": $err:module,
                         "line": $err:line-number, "column": $err:column-number
                     }
