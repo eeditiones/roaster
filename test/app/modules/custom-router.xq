@@ -4,6 +4,7 @@ declare namespace custom-router="https://e-editiones.org/roasted/custom-router";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
 
 import module namespace roaster="http://e-editiones.org/roaster";
+import module namespace router="http://e-editiones.org/roaster/router";
 import module namespace rutil="http://e-editiones.org/roaster/util";
 import module namespace errors="http://e-editiones.org/roaster/errors";
 import module namespace auth="http://e-editiones.org/roaster/auth";
@@ -39,8 +40,16 @@ declare function custom-router:lookup ($name as xs:string) {
  : Example of a app-specific middleware that
  : will add the "beep" field to each request
  :)
-declare function custom-router:use-beep-boop ($request as map(*)) as map(*) {
-    map:put($request, "beep", "boop")
+declare function custom-router:use-beep-boop ($request as map(*), $response as map(*)) as map(*)+ {
+    (: modify request :)
+    map:put($request, "beep", "boop"),
+    (: modify response :)
+    map:put($response, $router:RESPONSE_HEADERS, 
+        map:merge((
+            $response?($router:RESPONSE_HEADERS),
+            map { "x-beep" : "boop" }
+        ))
+    )
 };
 
 declare variable $custom-router:use := (
@@ -54,7 +63,7 @@ declare variable $custom-router:use := (
      : Otherwise the router will throw an error. 
      :)
     auth:use-authorization($jwt-auth:handler),
-    custom-router:use-beep-boop#1
+    custom-router:use-beep-boop#2
 );
 
 roaster:route($custom-router:definitions, custom-router:lookup#1, $custom-router:use)

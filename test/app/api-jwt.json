@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "version": "1.0.0",
-        "title": "Custom API",
+        "title": "Custom Authorization API",
         "description": "Example how to use exist-JWT with OAS-router"
     },
     "servers": [

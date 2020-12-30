@@ -6,7 +6,7 @@
         <script src="https://unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js" charset="UTF-8"></script>
     </head>
     <body>
-        <!--<div id="custom"/>-->
+        <div id="custom"/>
         <div id="swagger"/>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -20,7 +20,7 @@
                 });
 
                 // show custom API only when the element was commented in
-                if (!document.getElementById('custom')) { return; }
+                if (!document.getElementById('custom')) { return }
                 SwaggerUIBundle({
                     url: 'api-jwt.json',
                     dom_id: '#custom',

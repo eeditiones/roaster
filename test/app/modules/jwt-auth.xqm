@@ -51,10 +51,10 @@ declare function jwt-auth:issue-token ($request as map(*)) {
         return
             if ($loggedin and $username = $user?name)
             then (
-                router:response(201, map {
+                router:response(201, (), map {
                     "user": $user,
                     "token": $jwt-auth:jwt?create($user)
-                })
+                }, ())
             )
             else
                 error($errors:UNAUTHORIZED, 'Username or password incorrect')
