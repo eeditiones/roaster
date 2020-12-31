@@ -76,7 +76,7 @@ declare function router:resolve-pointer($config as map(*), $ref as xs:string*) {
  : 2. use the matching route with the longest normalized pattern
  : 3. If two paths have the same (normalized) length, prioritize by appearance in API files, first one wins
  :)
-declare function router:route($api-files as xs:string+, $lookup as function(xs:string) as function(*)?, $middlewares as function(*)*) {
+declare function router:route ($api-files as xs:string+, $lookup as function(xs:string) as function(*)?, $middlewares as function(*)*) {
     let $controller := request:get-attribute("$exist:controller")
     let $base-collection := ``[`{repo:get-root()}`/`{$controller}`/]``
 
@@ -90,7 +90,7 @@ declare function router:route($api-files as xs:string+, $lookup as function(xs:s
         util:log("info", ``[[`{$request-data?id}`] request `{$request-data?method}` `{$request-data?path}`]``),
         try {
             (: load router definitions :)
-            let $specs := 
+            let $specs :=
                 for $api-file in $api-files
                 let $file-path := concat($base-collection, $api-file)
                 let $spec := json-doc($file-path)
@@ -124,10 +124,10 @@ declare function router:route($api-files as xs:string+, $lookup as function(xs:s
 
         } catch * {
             let $error :=
-                if (router:is-rethrown-error($err:value))
-                then $err:value
-                (: add line and column for server errors, java exceptions and the like for debugging  :)
+                if (router:is-rethrown-error($err:value)) then
+                    $err:value
                 else
+                    (: add line and column for server errors, java exceptions and the like for debugging  :)
                     map {
                         "_error": map {
                             "code": $err:code, "description": $err:description, "value": $err:value, 
@@ -151,7 +151,7 @@ declare function router:route($api-files as xs:string+, $lookup as function(xs:s
 (:~
  : find matching route by checking each path pattern
  :)
-declare %private function router:match-route($request as map(*), $spec as map(*), $priority as xs:integer) {
+declare %private function router:match-route ($request as map(*), $spec as map(*), $priority as xs:integer) as map(*)* {
     map:for-each($spec?paths, function ($route-pattern as xs:string, $route-config as map(*)) {
         let $regex := router:create-regex($route-pattern)
 
@@ -344,7 +344,7 @@ declare %private function router:resolve-ref ($config as map(*), $parts as xs:st
  :)
 declare %private function router:error-description ($description as xs:string, $line as xs:integer?, $module as xs:string?, $value) {
     if ($line and $line > 0 and empty($value)) then
-        ``[`{$description}` [at line `{$line}` of `{($module, 'unknown')[1]}`]]``
+        ``[`{$description}` [at line `{$line}` of `{head(($module, 'unknown'))}`]]``
     else
         $description
 };
@@ -468,7 +468,7 @@ declare %private function router:is-rethrown-error($value as item()*) as xs:bool
     map:contains($value, "_error")
 };
 
-declare %private function router:log-error ($code as xs:integer, $data as map(*)) {
+declare %private function router:log-error ($code as xs:integer, $data as map(*)) as empty-sequence() {
     (: let $request := $data?_request => => serialize(map{"method": "json"}) :)
     let $error := $data?_error => serialize(map{"method": "json"})
     return
