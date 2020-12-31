@@ -221,18 +221,15 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
     (: enable arbitrary middleware configuration :)
     let $use := ($default-middleware, $custom-middlewares)
     let $request-response :=
-        fold-left($use, [$base-request, map {
-        }], function ($args, $next-middleware) {
-            util:log("info", serialize(($next-middleware, $args), map{"method":"adaptive"})),
-            array { apply($next-middleware, $args) }
+        fold-left($use, [$base-request, map {}],
+            function ($args as array(map(*)), $next-middleware as function(map(*), map(*)) as map(*)+) as array(map(*)) {
+                array { apply($next-middleware, $args) }
         })
 
     let $response := router:execute-handler($request-response?1, $request-response?2, $lookup)
 
-    return (
-        util:log("info", ("_______+++++++++++++___________", $response)),
+    return
         router:write-response(200, $response, $route)
-    ) 
 };
 
 (:~
@@ -248,12 +245,11 @@ declare %private function router:execute-handler ($request as map(*), $response 
             let $handler-response := $fn($request)
 
             return
-                if (
-                    $handler-response instance of map(*) and 
-                    map:contains($handler-response, $router:RESPONSE_CODE)
-                )
-                then (
-                    util:log("info", "MERGE!!!"),
+                if (router:is-response-map($handler-response)) then
+                    (: 
+                     : handler values will overwrite code, content-type and body 
+                     : headers are merged with middleware response map
+                     :)
                     map {
                         $router:RESPONSE_CODE : head(($handler-response?($router:RESPONSE_CODE), $response?($router:RESPONSE_CODE))),
                         $router:RESPONSE_TYPE : head(($handler-response?($router:RESPONSE_TYPE), $response?($router:RESPONSE_TYPE))),
@@ -263,11 +259,10 @@ declare %private function router:execute-handler ($request as map(*), $response 
                         )),
                         $router:RESPONSE_BODY : head(($handler-response?($router:RESPONSE_BODY), $response?($router:RESPONSE_BODY)))
                     }
-                )
-                else (
-                    util:log("info", "BODY LANGUAGE!!!"),
+                else
+                    (: handler just returned the response body :)
                     map:put($response, $router:RESPONSE_BODY, $handler-response)
-                )
+
         } catch * {
             (:
              : Catch all errors and add the current route configuration to $err:value,
@@ -372,8 +367,15 @@ declare %private function router:error ($code as xs:integer, $error as map(*), $
         then (
             try {
                 let $fn := $lookup($route?x-error-handler)
+                let $handled-error := $fn($error)
+                let $error-response :=
+                    if (router:is-response-map($handled-error)) then
+                        $handled-error
+                    else
+                        map { $router:RESPONSE_BODY : $handled-error }
+
                 return
-                    router:write-response($code, $fn($error), $route)
+                    router:write-response($code, $error-response, $route)
             } catch * {
                 let $_error :=
                     map {
@@ -405,38 +407,37 @@ declare function router:default-error-handler ($code as xs:integer, $error as ma
 };
 
 declare %private function router:write-response ($default-code as xs:integer, $response as item()*, $config as map(*)) {
-    let $code := head(($response?($router:RESPONSE_CODE), $default-code))
+    let $code := head((
+        $response?($router:RESPONSE_CODE), 
+        $default-code
+    ))
+
     let $content-type := head((
         $response?($router:RESPONSE_TYPE),
         router:get-content-type-for-code($config, $code, "application/xml")
     ))
 
     return (
-        util:log("info", "CODE" || $code || " CONTENT_TYPE" || $content-type),
         response:set-status-code($code),
-        if (
-            map:contains($response, $router:RESPONSE_HEADERS) and
-            $response?($router:RESPONSE_HEADERS) instance of map(*)
-        )
-        then (map:for-each($response?($router:RESPONSE_HEADERS), function ($k, $v) {
-            response:set-header($k, $v)            
-        }))
-        else (),
-        if ($code = 204)
-        then ()
-        else (
-            response:set-header("Content-Type", $content-type),
-            util:declare-option("output:method", router:method-for-content-type($content-type)),
-            $response?($router:RESPONSE_BODY)
-        )
+        router:set-additional-headers($response?($router:RESPONSE_HEADERS)),
+        if ($code = 204) then 
+            ()
+        else 
+            (
+                response:set-header("Content-Type", $content-type),
+                util:declare-option("output:method", router:method-for-content-type($content-type)),
+                $response?($router:RESPONSE_BODY)
+            )
     )
 };
 
-(: declare function router:get-content-type () {
-    if (exists($data?($router:RESPONSE_TYPE)))
-    then $data($router:RESPONSE_TYPE)
-    else router:get-content-type-for-code($config, $code, "application/xml")
-}; :)
+declare %private function router:set-additional-headers($headers as map(*)?) as empty-sequence() {
+    if (not(exists($headers))) then
+        ()
+    else 
+        map:remove($headers, "Content-Type")
+        => map:for-each(response:set-header(?, ?))
+};
 
 (:~
  : Q: binary types?
@@ -451,6 +452,15 @@ declare %private function router:method-for-content-type ($type as xs:string) as
 
 
 (: helpers :)
+
+declare %private function router:is-response-map($value as item()*) as xs:boolean {
+    count($value) eq 1 and
+    $value instance of map(*) and
+    (
+        map:contains($value, $router:RESPONSE_CODE) or
+        map:contains($value, $router:RESPONSE_BODY)
+    )
+};
 
 declare %private function router:is-rethrown-error($value as item()*) as xs:boolean {
     count($value) eq 1 and
