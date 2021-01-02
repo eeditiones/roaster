@@ -1,6 +1,8 @@
 # roaster 
 
-OpenAPI Router for eXist
+<img alt="roaster router logo" src="icon.svg" width="96" />
+
+## OpenAPI Router for eXist
 
 Reads an OpenAPI 3.0 specification from JSON and routes requests to handler functions written in XQuery.
 
@@ -12,12 +14,12 @@ Since it is also the routing library used by TEI Publisher 7 you will find some 
 ## How it works
 
 eXist applications usually have a controller as main entry point. The 
-[controller.xql](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/controller.xql) in TEI Publisher only handles requests to static resources, but forwards all other requests to an XQuery script [api.xql](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/lib/api.xql). This script imports the Open API Router module and calls `simple-router:route`, passing it one or more Open API specifications in JSON format.
+[controller.xql](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/controller.xql) in TEI Publisher only handles requests to static resources, but forwards all other requests to an XQuery script [api.xql](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/lib/api.xql). This script imports the OpenAPI router module and calls `roaster:route`, passing it one or more Open API specifications in JSON format.
 
 TEI Publisher uses two specifications: [api.json](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/lib/api.json) and [custom-api.json](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/custom-api.json). This is done to make it easier for users to extend the default API. It is also possible to overwrite a route from `api.json` by placing it into `custom-api.json`.
 
 Each route in the specification _must_ have an `operationId` property.
-Is is the name of the XQuery function that will handle the request to the given route. The XQuery function must be resolved by the $lookup function in one of the modules which are visible at the point where `router:route` is called. Consequently, [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
+Is is the name of the XQuery function that will handle the request to the given route. The XQuery function must be resolved by the $lookup function in one of the modules which are visible at the point where `roaster:route` is called. Consequently, [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
 
 The XQuery handler function _must_ expect exactly one argument: `$request as map(*)`. This is a map with a number of keys:
 
@@ -40,9 +42,22 @@ declare function custom:echo($request as map(*)) {
 
 ## Responses
 
-If the function returns a value, it is sent to the client with a HTTP status code of 200 (OK). The returned value is converted into the specified target media type (if any, otherwise application/xml is assumed).
+If the function returns a value, it is sent to the client with a HTTP status code of 200 (OK). The returned value is converted into the specified target media type (if any, otherwise `application/xml` is assumed).
 
-If a different HTTP status code should be sent, the function may call `router:response($code as xs:int, $mediaType as xs:string?, $data as item()*)` as its last operation. You may also skip `$mediaType`, in which case the content type of the response is determined automatically by checking the response definition for the given status code. If a content type cannot be determined, the default, `application/xml` is used.
+To modify responses like HTTP status code, body and headers the handler function may call `roaster:response` as its last operation.
+
+- `roaster:response($code as xs:int, $data as item()*)`
+- `roaster:response($code as xs:int, $mediaType as xs:string?, $data as item()*)`
+- `roaster:response($code as xs:int, $mediaType as xs:string?, $data as item()*, $headers as map(*)?)`
+
+**Example:**
+
+```xquery
+declare function custom:response($request as map(*)) {
+    roaster:response(427, "application/octet-stream", "101010", 
+      map { "x-special": "23", "Content-Length" : "1" })
+};
+```
 
 ## Error Handling
 
@@ -73,11 +88,10 @@ The server will respond with the HTTP status code 404 to the client.
 The description and additional information will be added to the data that is sent.
 
 However, for some operations you may want to handle an error instead of just returning it to the client. In this case use the extension property `x-error-handler` inside an API path item. It should contain the name of an error handler function, which is expected to take exactly one argument, a map(*).
-The error map will have all the keys that would normally be sent as json.
 
 ## Authentication
 
-`basic` and `cookie` authentication are supported by default when the `simple-router` is used.
+`basic` and `cookie` authentication are supported by default when the two-parameter signature of `roaster:router` is used.
 The key based authentication type corresponds to eXist's persistent login mechanism and uses cookies for the key. To enable it, use the following securityScheme declaration:
 
 ```json
@@ -92,7 +106,7 @@ The key based authentication type corresponds to eXist's persistent login mechan
 }
 ```
 
-The security scheme must be named "cookieAuth". The `name` property defines the login session name to be used.
+The security scheme must be named **cookieAuth**. The `name` property defines the login session name to be used.
 
 Custom authentication strategies are possible. The test application has an example for JSON Web Tokens.
 
@@ -105,7 +119,7 @@ Certain operations may be restricted to defined users or groups. We use an imple
   "post": {
     "summary": "Upload a number of files",
     "x-constraints": {
-        "groups": "tei"
+        "groups": "dba"
     }
   }
 }
@@ -114,22 +128,33 @@ Certain operations may be restricted to defined users or groups. We use an imple
 requires that the *effective user* or *real user* running the operation belongs to the "tei" group.
 The *effective user* will be used, if present.
 
-This will work also for custom authorization, if they extend the request map with the user information.
+**groups** can be an array, too. In that case the user must be in at least one of them.
+
+```json
+{ "groups": ["tei", "dba"] }
+```
+
+This will work also for custom authorization strategies. The handler function needs to [extend the request map with the user information](test/app/modules/jwt-auth.xqm#L66).
 
 ## Middleware
 
 If you need to perform certain actions on each request you can add a transformation function also known as middleware.
 
-Most internal operations that construct the $request map passed to your handler are in fact such functions.
-Authorization is a middleware as well. 
+Most internal operations that construct the $request map passed to your operations are such functions. Authorization is a middleware as well. 
 
-A middleware has one parameter of type map, the current request map, and returns a map that will be the request map for the next transformation.
+A middleware has two parameters of type map, the current request map and the current response, and returns two map that will become the request and response maps for the next transformation.
 
-Example middleware that adds a "beep" property to each request:
+Example middleware that adds a "beep" property to each request and a custom x-beep header to each response:
 
 ```xquery
-declare function custom-router:use-beep-boop ($request as map(*)) as map(*) {
-    map:put($request, "beep", "boop")
+declare function custom-router:use-beep-boop ($request as map(*), $response as map(*)) as map(*) {
+    (: extend request :)
+    map:put($request, "beep", "boop"),
+    (: add custom header to all responses :)
+    map:put($response, $router:RESPONSE_HEADERS, map:merge((
+      $response?($router:RESPONSE_HEADERS),
+      map { "x-beep": "boop" }
+    ))
 };
 ```
 
