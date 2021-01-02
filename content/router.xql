@@ -270,10 +270,12 @@ declare %private function router:execute-handler ($request as map(*), $response 
              :)
             error($err:code, '', map {
                 "_error": map {
-                    "code": $err:code, 
-                    "description": router:error-description($err:description, $err:line-number, $err:module, $err:value), 
-                    "value": $err:value, 
-                    "line": $err:line-number, "column": $err:column-number, "module": $err:module
+                    "code": $err:code,
+                    "description": $err:description,
+                    "value": $err:value,
+                    "module": $err:module,
+                    "line": $err:line-number,
+                    "column": $err:column-number
                 },
                 "_request": $request,
                 "_response": $response
@@ -342,9 +344,9 @@ declare %private function router:resolve-ref ($config as map(*), $parts as xs:st
  : Add line and source info to error description. To avoid outputting multiple locations
  : for rethrown errors, check if $value is set.
  :)
-declare %private function router:error-description ($description as xs:string, $line as xs:integer?, $module as xs:string?, $value) {
+declare %private function router:error-description ($description as xs:string, $line as xs:integer?, $column as xs:integer?, $module as xs:string?, $value as item()*) as xs:string {
     if ($line and $line > 0 and empty($value)) then
-        ``[`{$description}` [at line `{$line}` of `{head(($module, 'unknown'))}`]]``
+        ``[`{$description}` [at line `{$line}` column `{$column}` in module `{head(($module, 'unknown'))}`]]``
     else
         $description
 };
@@ -382,8 +384,9 @@ declare %private function router:error ($code as xs:integer, $error as map(*), $
                         "code": $err:code,
                         "description": "Failed to execute error handler " || $route?x-error-handler || ": " ||
                             $err:description || ". Error which triggered this: " || 
-                            router:error-description($error?description, $error?line, $error?module, $error?value), 
-                        "value": $err:value, "module": $err:module,
+                            router:error-description($error?description, $error?line, $error?column, $error?module, $error?value), 
+                        "value": $err:value, 
+                        "module": $err:module,
                         "line": $err:line-number, "column": $err:column-number
                     }
                 return (
@@ -401,9 +404,8 @@ declare function router:default-error-handler ($code as xs:integer, $error as ma
     response:set-status-code($code),
     response:set-header("Content-Type", "application/json"),
     util:declare-option("output:method", "json"),
-    if ($error?description = "") then
-        $error?value (: value already contains the data to return :)
-    else $error
+    map:put($error, "description", 
+        router:error-description($error?description, $error?line, $error?column, $error?module, $error?value))
 };
 
 declare %private function router:write-response ($default-code as xs:integer, $response as item()*, $config as map(*)) {
