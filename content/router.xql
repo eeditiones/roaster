@@ -117,10 +117,8 @@ declare function router:route ($api-files as xs:string+, $lookup as function(xs:
                     head(sort($matching-routes, (), router:route-specificity#1))
                 )
 
-            return (
-                router:process-request($first-match, $lookup, $middlewares),
-                util:log("info", ``[[`{$request-data?id}`] `{$request-data?method}` `{$request-data?path}`: OK]``)
-            )
+            return
+                router:process-request($first-match, $lookup, $middlewares)
 
         } catch * {
             let $error :=
@@ -212,24 +210,62 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
     (: overwrite config field with the specific method handler :)
     let $base-request := map:put($pattern-map, "config", $route)
 
+    let $request-with-body := map:put($base-request, "body", router:body($base-request))
+
     let $default-middleware := (
         parameters:in-path#2,
-        parameters:in-request#2,
-        parameters:body#2
+        parameters:in-request#2
     )
-
     (: enable arbitrary middleware configuration :)
     let $use := ($default-middleware, $custom-middlewares)
     let $request-response :=
-        fold-left($use, [$base-request, map {}],
+        fold-left($use, [$request-with-body, map {}],
             function ($args as array(map(*)), $next-middleware as function(map(*), map(*)) as map(*)+) as array(map(*)) {
                 array { apply($next-middleware, $args) }
         })
 
     let $response := router:execute-handler($request-response?1, $request-response?2, $lookup)
 
-    return
-        router:write-response(200, $response, $route)
+    let $status :=
+        if (map:contains($response, $router:RESPONSE_CODE))
+        then $response?($router:RESPONSE_CODE)
+        else 200
+
+    return (
+        router:write-response($status, $response, $route),
+        util:log("info", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
+    )
+};
+
+(:~
+ : Try to retrieve and convert the request body if specified
+ :)
+declare function router:body ($request as map(*)) {
+    if (
+        not(map:contains($request?config, "requestBody")) or
+        not(map:contains($request?config?requestBody, "content"))
+    )
+    then () (: this route expects no body, return an empty sequence :)
+    else (
+        let $content-type-header := (: strip charset info from mime-type if present :)
+            request:get-header("Content-Type")
+            => replace("^([^;]+);?.*$", "$1") 
+
+        return
+            if (map:contains($request?config?requestBody?content, $content-type-header))
+            then (
+                switch ($content-type-header)
+                    case "multipart/form-data" return
+                        () (: TODO: implement form-data handling? :)
+                    case "application/json" return
+                        request:get-data() => util:binary-to-string() => parse-json()
+                    default return
+                        request:get-data()
+            )
+            else 
+                error($errors:BODY_CONTENT_TYPE,
+                    "Passed in Content-Type " || $content-type-header || " not allowed")
+    )
 };
 
 (:~
@@ -449,6 +485,8 @@ declare %private function router:method-for-content-type ($type as xs:string) as
         case "application/json" return "json"
         case "text/html" return "html5"
         case "text/text" return "text"
+        case "application/octet-stream" return "text"
+        case "application/xml" return "xml"
         default return "xml"
 };
 

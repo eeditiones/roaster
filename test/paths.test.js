@@ -1,5 +1,6 @@
 const util = require('./util.js');
 const path = require('path');
+const fs = require('fs');
 const chai = require('chai');
 const expect = chai.expect;
 const chaiResponseValidator = require('chai-openapi-response-validator');
@@ -8,26 +9,31 @@ const spec = path.resolve("./test/app/api.json");
 chai.use(chaiResponseValidator(spec));
 
 describe('Path parameters', function () {
-    it('passes parameter in last component of path', async function () {
-        const res = await util.axios.get('api/paths/my-path');
-        expect(res.status).to.equal(200);
-        expect(res.data.parameters.path).to.equal('my-path');
-
-        // expect(res).to.satisfyApiSpec;
-    });
     it('handles get of path including $', async function () {
         const res = await util.axios.get('api/$op-er+ation*!');
         expect(res.status).to.equal(200);
         // expect(res).to.satisfyApiSpec;
     });
+});
+describe("Binary up and download", function () {
+    const contents = fs.readFileSync("./roasted.xar")
+
     it('handles post of binary data', async function () {
-        const res = await util.axios.post('api/paths/my-path', 'TEST ME', {
+        const res = await util.axios.post('api/paths/roasted.xar', contents, {
             headers: {
-                'Content-Type': 'application/octet-stream'
+                'Content-Type': 'application/octet-stream',
+                'Authorization': 'Basic YWRtaW46'
             }
         });
+        expect(res.status).to.equal(201);
+        expect(res.data).to.equal('/db/apps/roasted/roasted.xar');
+    });
+    it('passes parameter in last component of path', async function () {
+        const res = await util.axios.get('api/paths/roasted.xar', { responseType: 'arraybuffer' });
         expect(res.status).to.equal(200);
-        expect(res.data).to.equal('TEST ME');
+        expect(res.data).to.eql(contents);
+
+        // expect(res).to.satisfyApiSpec;
     });
 });
 

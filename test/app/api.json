@@ -188,7 +188,7 @@
         "/api/paths/{path}":{
             "get": {
                 "summary": "Parameter specified in last path component",
-                "operationId": "rutil:debug",
+                "operationId": "api:binary-load",
                 "parameters": [
                     {
                         "name": "path",
@@ -201,11 +201,12 @@
                 ],
                 "responses": {
                     "200":{
-                        "description": "JSON dump of request",
+                        "description": "file contents, if found",
                         "content": {
-                            "application/json": {
-                                "schema":{
-                                    "type": "object"
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
                                 }
                             }
                         }
@@ -214,6 +215,9 @@
             },
             "post": {
                 "summary": "Post body as application/octet-stream",
+                "x-constraints": {
+                    "user": "admin" 
+                },
                 "operationId": "api:binary-upload",
                 "requestBody": {
                     "required": true,
@@ -237,10 +241,10 @@
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "201": {
                         "description": "Returns uploaded string",
                         "content": {
-                            "text/text": {
+                            "application/json": {
                                 "schema": {
                                     "type": "string"
                                 }

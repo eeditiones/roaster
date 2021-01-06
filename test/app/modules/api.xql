@@ -61,9 +61,22 @@ declare function api:handle-error($error as map(*)) as element(html) {
     </html>
 };
 
-declare function api:binary-upload($request as map(*)) {
-    util:binary-to-string($request?body)
+declare function api:binary-upload ($request as map(*)) {
+    let $stored := xmldb:store("/db/apps/roasted", $request?parameters?path, $request?body)
+    return roaster:response(201, $stored)
 };
+
+declare function api:binary-load($request as map(*)) {
+    if (util:binary-doc-available("/db/apps/roasted/" || $request?parameters?path))
+    then (
+        util:binary-doc("/db/apps/roasted/" || $request?parameters?path)
+        => response:stream-binary("application/octet-stream", $request?parameters?path)
+    )
+    else (
+        error($errors:NOT_FOUND, "document " || $request?parameters?path || " not found", "error details")
+    )
+};
+
 
 (: end of route handlers :)
 
