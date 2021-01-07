@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project default="xar" name="oas-router">
+<project default="xar" name="roaster">
     <target name="dependencies">
         <exec executable="npm">
             <arg value="install"/>

@@ -23,7 +23,7 @@
         "target": "roaster",
         "description": "OpenAPI Router library for eXist-db: reads an Open API JSON specification and routes requests accordingly. See the README for more information.",
         "namespace": "http://e-editiones.org/roaster",
-        "website": "https://github.com/eeditiones/oas-router",
+        "website": "https://github.com/eeditiones/roaster",
         "status": "stable",
         "title": "roaster - OpenAPI Router",
         "license": "GPLv3"

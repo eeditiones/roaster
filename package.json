@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/eeditiones/oas-router.git"
+    "url": "https://github.com/eeditiones/roaster.git"
   },
   "license": "GPL-3.0",
   "devDependencies": {

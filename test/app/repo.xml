@@ -3,7 +3,7 @@
   xmlns="http://exist-db.org/xquery/repo">
   <description>roasted - OpenAPI Router Test Application</description>
   <author>TEI Publisher Project Team</author>
-  <website>https://github.com/eeditiones/oas-router#readme</website>
+  <website>https://github.com/eeditiones/roaster#readme</website>
   <status>stable</status>
   <license>GPL-3.0</license>
   <copyright>true</copyright>
