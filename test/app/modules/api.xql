@@ -1,45 +1,96 @@
 xquery version "3.1";
 
-declare namespace api="https://tei-publisher.com/xquery/api";
+declare namespace api="http://e-editiones.org/roasted/test-api";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
-declare namespace tei="http://www.tei-c.org/ns/1.0";
 
-import module namespace router="http://exist-db.org/xquery/router";
-import module namespace rutil="http://exist-db.org/xquery/router/util";
-import module namespace errors = "http://exist-db.org/xquery/router/errors";
+import module namespace roaster="http://e-editiones.org/roaster";
+
+import module namespace rutil="http://e-editiones.org/roaster/util";
+import module namespace errors="http://e-editiones.org/roaster/errors";
+
+
+(:~
+ : list of definition files to use
+ :)
+declare variable $api:definitions := ("api.json");
+
+
+(:~
+ : You can add application specific route handlers here.
+ : Having them in imported modules is preferred.
+ :)
 
 declare function api:date($request as map(*)) {
     $request?parameters?date instance of xs:date and
     $request?parameters?dateTime instance of xs:dateTime
 };
 
+(:~
+ : An example how to throw a dynamic custom error (error:NOT_FOUND_404)
+ : This error is handled in the router
+ :)
 declare function api:error-triggered($request as map(*)) {
     error($errors:NOT_FOUND, "document not found", "error details")
 };
 
+(:~
+ : calling this function will throw dynamic XQuery error (err:XPST0003)
+ :)
 declare function api:error-dynamic($request as map(*)) {
     util:eval('1 + $undefined')
 };
 
+(:~
+ : Handlers can also respond with an error directly 
+ :)
 declare function api:error-explicit($request as map(*)) {
-    router:response(403, "application/xml", <forbidden/>)
+    roaster:response(403, "application/xml", <forbidden/>)
 };
 
-declare function api:handle-error($response) {
-    <p>{$response}</p>
+(:~
+ : This is used as an error-handler in the API definition 
+ :)
+declare function api:handle-error($error as map(*)) as element(html) {
+    <html>
+        <body>
+            <h1>Error [{$error?code}]</h1>
+            <p>{
+                if (map:contains($error, "module"))
+                then ``[An error occurred in `{$error?module}` at line `{$error?line}`, column `{$error?column}`]``
+                else "An error occurred!"
+            }</p>
+            <h2>Description</h2>
+            <p>{$error?description}</p>
+        </body>
+    </html>
 };
 
-declare function api:binary-upload($request as map(*)) {
-    util:binary-to-string($request?body)
+declare function api:binary-upload ($request as map(*)) {
+    let $stored := xmldb:store("/db/apps/roasted", $request?parameters?path, $request?body)
+    return roaster:response(201, $stored)
 };
 
-let $lookup := function($name as xs:string, $arity as xs:integer) {
-    try {
-        function-lookup(xs:QName($name), $arity)
-    } catch * {
-        ()
-    }
-}
-let $resp := router:route("api.json", $lookup)
-return
-    $resp
+declare function api:binary-load($request as map(*)) {
+    if (util:binary-doc-available("/db/apps/roasted/" || $request?parameters?path))
+    then (
+        util:binary-doc("/db/apps/roasted/" || $request?parameters?path)
+        => response:stream-binary("application/octet-stream", $request?parameters?path)
+    )
+    else (
+        error($errors:NOT_FOUND, "document " || $request?parameters?path || " not found", "error details")
+    )
+};
+
+
+(: end of route handlers :)
+
+(:~
+ : This function "knows" all modules and their functions
+ : that are imported here 
+ : You can leave it as it is, but it has to be here
+ :)
+declare function api:lookup ($name as xs:string) {
+    function-lookup(xs:QName($name), 1)
+};
+
+roaster:route($api:definitions, api:lookup#1)

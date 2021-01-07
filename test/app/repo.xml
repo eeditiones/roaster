@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <meta 
   xmlns="http://exist-db.org/xquery/repo">
-  <description>Open API Router Test Application</description>
-  <author>Wolfgang Meier</author>
-  <website>http://exist-db.org</website>
+  <description>roasted - OpenAPI Router Test Application</description>
+  <author>TEI Publisher Project Team</author>
+  <website>https://github.com/eeditiones/oas-router#readme</website>
   <status>stable</status>
   <license>GPL-3.0</license>
   <copyright>true</copyright>
   <type>application</type>
-  <target>oas-test</target>
+  <target>roasted</target>
 </meta>

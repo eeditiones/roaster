@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project default="xar" name="oas-router">
-    <xmlproperty file="expath-pkg.xml"/>
-    <property name="project.version" value="${package(version)}"/>
-    <property name="project.app" value="${package(abbrev)}"/>
-    <property name="build.dir" value="build"/>
-    <target name="xar">
-        <mkdir dir="${build.dir}"/>
-        <zip basedir="." destfile="${build.dir}/${project.app}-${project.version}.xar" excludes="${build.dir}/* node_modules/** test/** package.json .vscode/**"/>
+    <target name="dependencies">
+        <exec executable="npm">
+            <arg value="install"/>
+        </exec>
+    </target>
+    <target name="xar" depends="dependencies">
+        <exec executable="npm">
+            <arg value="run" />
+            <arg value="build" />
+        </exec>
     </target>
 </project>

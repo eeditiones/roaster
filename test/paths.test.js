@@ -1,5 +1,6 @@
 const util = require('./util.js');
 const path = require('path');
+const fs = require('fs');
 const chai = require('chai');
 const expect = chai.expect;
 const chaiResponseValidator = require('chai-openapi-response-validator');
@@ -7,31 +8,32 @@ const chaiResponseValidator = require('chai-openapi-response-validator');
 const spec = path.resolve("./test/app/api.json");
 chai.use(chaiResponseValidator(spec));
 
-before(util.install);
-
-after(util.uninstall);
-
 describe('Path parameters', function () {
-    it('passes parameter in last component of path', async function () {
-        const res = await util.axios.get('api/paths/my-path');
-        expect(res.status).to.equal(200);
-        expect(res.data.parameters.path).to.equal('my-path');
-
-        // expect(res).to.satisfyApiSpec;
-    });
     it('handles get of path including $', async function () {
         const res = await util.axios.get('api/$op-er+ation*!');
         expect(res.status).to.equal(200);
         // expect(res).to.satisfyApiSpec;
     });
+});
+describe("Binary up and download", function () {
+    const contents = fs.readFileSync("./roasted.xar")
+
     it('handles post of binary data', async function () {
-        const res = await util.axios.post('api/paths/my-path', 'TEST ME', {
+        const res = await util.axios.post('api/paths/roasted.xar', contents, {
             headers: {
-                'Content-Type': 'application/octet-stream'
+                'Content-Type': 'application/octet-stream',
+                'Authorization': 'Basic YWRtaW46'
             }
         });
+        expect(res.status).to.equal(201);
+        expect(res.data).to.equal('/db/apps/roasted/roasted.xar');
+    });
+    it('passes parameter in last component of path', async function () {
+        const res = await util.axios.get('api/paths/roasted.xar', { responseType: 'arraybuffer' });
         expect(res.status).to.equal(200);
-        expect(res.data).to.equal('TEST ME');
+        expect(res.data).to.eql(contents);
+
+        // expect(res).to.satisfyApiSpec;
     });
 });
 
@@ -82,7 +84,7 @@ describe('Query parameters', function () {
             }
         });
         expect(res.status).to.equal(200);
-        expect(res.data.method).to.equal('POST');
+        expect(res.data.method).to.equal('post');
         expect(res.data.parameters.num).to.be.a('number');
         expect(res.data.parameters.num).to.equal(165.75);
         expect(res.data.parameters.bool).to.be.a('boolean');
@@ -107,44 +109,39 @@ describe('Query parameters', function () {
 });
 
 describe('Error reporting', function() {
-    it('receives error report', function(done) {
-        util.axios.get('api/errors')
+    it('receives error report', function() {
+        return util.axios.get('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(404);
-                expect(error.response.data.description).to.contain('document not found');
-                expect(error.response.data.description).to.match(/\[at line \d+ of.*api\.xql\]/);
-                expect(error.response.data.details).to.equal('error details');
-                done();
+                expect(error.response.data.description).to.equal('document not found');
+                expect(error.response.data.value).to.equal('error details');
             });
     });
 
-    it('receives dynamic XQuery error', function(done) {
-        util.axios.post('api/errors')
+    it('receives dynamic XQuery error', function() {
+        return util.axios.post('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(500);
-                expect(error.response.data.description).to.match(/\[at line \d+ of.*\]/);
+                expect(error.response.data.line).to.match(/\d+/);
                 expect(error.response.data.description).to.contain('$undefined');
-                done();
             });
     });
 
-    it('receives explicit error', function(done) {
-        util.axios.delete('api/errors')
+    it('receives explicit error', function() {
+        return util.axios.delete('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(403);
                 expect(error.response.headers['content-type']).to.equal('application/xml');
                 expect(error.response.data).to.equal('<forbidden/>');
-                done();
             });
     });
 
-    it('calls error handler', function(done) {
-        util.axios.get('api/errors/handle')
+    it('calls error handler', function() {
+        return util.axios.get('api/errors/handle')
             .catch(function(error) {
                 expect(error.response.status).to.equal(500);
                 expect(error.response.headers['content-type']).to.equal('text/html');
                 expect(error.response.data).to.contain('$undefined');
-                done();
             });
     });
 });

@@ -17,36 +17,26 @@
 xquery version "3.1";
 
 (:~
- : Utility handler functions for user login/logout and debugging.
+ : Utility handler functions for getting the current user and debugging
  :)
-module namespace rutil="http://exist-db.org/xquery/router/util";
+module namespace rutil="http://e-editiones.org/roaster/util";
 
-import module namespace errors="http://exist-db.org/xquery/router/errors";
-import module namespace router="http://exist-db.org/xquery/router";
-import module namespace login="http://exist-db.org/xquery/login" at "resource:org/exist/xquery/modules/persistentlogin/login.xql";
+import module namespace router="http://e-editiones.org/roaster/router";
 
-(:~
- : Either login a user (if parameter `user` is specified) or check if the current user is logged in.
- : Setting parameter `logout` to any value will log out the current user.
- :)
-declare function rutil:login($request as map(*)) {
-    if ($request?parameters?user) then
-        login:set-user($request?loginDomain, (), false())
-    else
-        (),
-    let $user := request:get-attribute($request?loginDomain || ".user")
-    return
-        if (exists($user)) then
-            map {
-                "user": $user,
-                "groups": array { sm:get-user-groups($user) },
-                "dba": sm:is-dba($user)
-            }
-        else
-            error($errors:UNAUTHORIZED, "Wrong user or password", map {
-                "user": $user,
-                "domain": $request?loginDomain
-            })
+declare function rutil:getDBUser() as map(*) {
+    let $smid := sm:id()/sm:id
+    (: 
+     : TODO unsure if sm:effective should ever be exposed by this
+     : but this is the only way to reliable get token issue request work
+     : xmldb:login seems to set sm:effective instead of sm:real
+     :)
+    let $user := ($smid/sm:effective, $smid/sm:real)[1]
+    let $name := $user/sm:username/text()
+    return map {
+        "name": $name,
+        "groups": array { $user//sm:group/text() },
+        "dba" : sm:is-dba($name)
+    }
 };
 
 (:~
@@ -55,22 +45,5 @@ declare function rutil:login($request as map(*)) {
  : to handler functions.
  :)
 declare function rutil:debug($request as map(*)) {
-    router:response(200, "application/json",
-        map {
-            "parameters":
-                map:merge(
-                    map:for-each($request?parameters, function($key, $value) {
-                        map {
-                            $key: $value
-                        }
-                    })
-                ),
-            "body": $request?body,
-            "method": request:get-method(),
-            "pattern": $request?config?pattern,
-            "path": $request?config?path,
-            "regex": $request?config?regex,
-            "priority": $request?config?priority
-        }
-    )
+    router:response(200, "application/json", $request, ())
 };
