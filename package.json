@@ -18,7 +18,7 @@
   "devDependencies": {
     "@existdb/gulp-exist": "^4.0.0",
     "@existdb/gulp-replace-tmpl": "^1.0.0",
-    "axios": "^0.20.0",
+    "axios": "^0.21.1",
     "chai": "^4.2.0",
     "chai-openapi-response-validator": "^0.9.4",
     "delete": "^1.1.0",
