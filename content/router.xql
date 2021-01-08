@@ -321,7 +321,7 @@ declare %private function router:execute-handler ($request as map(*), $response 
 
 (: content types :)
 
-declare %private function router:get-content-type-for-code ($config as map(*), $code as xs:integer, $fallback as xs:string) as xs:string {
+declare function router:get-content-type-for-code ($config as map(*), $code as xs:integer, $fallback as xs:string) as xs:string {
     let $response-definition := head(($config?responses?($code), $config?responses?default))
     let $content := 
         if (exists($response-definition) and $response-definition instance of map(*))
