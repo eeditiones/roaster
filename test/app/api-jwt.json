@@ -3,7 +3,7 @@
     "info": {
         "version": "1.0.0",
         "title": "Custom Authorization API",
-        "description": "Example how to use exist-JWT with OAS-router"
+        "description": "Example how to use exist-JWT with roaster"
     },
     "servers": [
         {

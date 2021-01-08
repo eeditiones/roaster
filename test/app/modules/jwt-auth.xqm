@@ -1,7 +1,7 @@
 xquery version "3.1";
 
 (:~
- : example implementation to use exist-JWT in combination with OAS-router
+ : example implementation to use exist-JWT in combination with roaster, the OpenAPI router
  :)
 module namespace jwt-auth="http://e-editiones.org/roasted/jwt-auth";
 
