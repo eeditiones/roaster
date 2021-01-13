@@ -1,5 +1,5 @@
 # roaster
-![Node.js CI](https://github.com/eeditiones/roaster/workflows/Node.js%20CI/badge.svg)
+![Node.js CI](https://github.com/eeditiones/roaster/workflows/Node.js%20CI/badge.svg)[![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 
 <img alt="roaster router logo" src="icon.svg" width="96" />
 
@@ -22,18 +22,31 @@ Database connection can be modified in `.existdb.json`.
 ant-task is still defined, but will use gulp (through `npm run build`).
 
 ### Requirements
+
 -  [node](https://nodejs.org/en/): `v12+`
 -  [exist-db](https://www.exist-db.org): `v5.0.0+`
 -  [Ant](https://ant.apache.org): `v1.10.9+` (optional)
 
-## Development
+## Contributing
+
+Roaster uses [Angular Commit Message Conventions](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines) to determine semantic versioning of releases, see these examples:
+
+| Commit message  | Release type |
+|-----------------|--------------|
+| `fix(pencil): stop graphite breaking when too much pressure applied` | Patch Release |
+| `feat(pencil): add 'graphiteWidth' option` | ~~Minor~~ Feature Release |
+| `perf(pencil): remove graphiteWidth option`<br/><br/>`BREAKING CHANGE: The graphiteWidth option has been removed.`<br/>`The default graphite width of 10mm is always used for performance reasons.` | ~~Major~~ Breaking Release |
+
+
+
+### Development
 
 Running `gulp watch` will build and install the library and watch
 for file changes. Whenever one of the watched files is changed a 
 fresh version of the xar will be installed in the database.
 This included the test application in `test/app`.
 
-## Testing
+### Testing
 
 To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. To test against a different port, edit `.existdb.json`.
 
