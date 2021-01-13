@@ -14,7 +14,7 @@ jobs:
     services:
       # Label used to access the service container
       exist:
-        image: existdb/existdb:$ {{ matrix.exist-version}}
+        image: existdb/existdb:${{ matrix.exist-version}}
         ports:
           - 8080:8080
     steps:
