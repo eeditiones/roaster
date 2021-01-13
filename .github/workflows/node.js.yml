@@ -8,10 +8,13 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+       matrix:
+         exist-version: [latest, release, 5.0.0, 4.7.1]
     services:
       # Label used to access the service container
       exist:
-        image: existdb/existdb:latest
+        image: existdb/existdb:$ {{ matrix.exist-version}}
         ports:
           - 8080:8080
     steps:
