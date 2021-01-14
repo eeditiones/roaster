@@ -1,15 +1,64 @@
-# roaster 
+# roaster
+![Node.js CI](https://github.com/eeditiones/roaster/workflows/Node.js%20CI/badge.svg)[![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 
 <img alt="roaster router logo" src="icon.svg" width="96" />
 
 ## OpenAPI Router for eXist
 
-Reads an OpenAPI 3.0 specification from JSON and routes requests to handler functions written in XQuery.
+Reads an [OpenAPI 3.0](https://swagger.io/docs/specification/about/) specification from JSON and routes requests to handler functions written in XQuery.
 
 It is a generic router to be used in any exist-db application. 
 Since it is also the routing library used by TEI Publisher 7 you will find some examples referring to it.
 
 ![TEI Publisher API](https://teipublisher.com/exist/apps/tei-publisher/doc/api-spec.png)
+
+## Installation (from source)
+
+Create `.xar` by calling `gulp build` and install into local eXist.
+`gulp install` will attempt to upload and install the library to 
+a database at `localhost:8080`.
+Database connection can be modified in `.existdb.json`.
+
+ant-task is still defined, but will use gulp (through `npm run build`).
+
+### Requirements
+
+-  [node](https://nodejs.org/en/): `v12+`
+-  [exist-db](https://www.exist-db.org): `v5.0.0+`
+-  [Ant](https://ant.apache.org): `v1.10.9+` (optional)
+
+## Contributing
+
+Roaster uses [Angular Commit Message Conventions](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines) to determine semantic versioning of releases, see these examples:
+
+| Commit message  | Release type |
+|-----------------|--------------|
+| `fix(pencil): stop graphite breaking when too much pressure applied` | Patch Release |
+| `feat(pencil): add 'graphiteWidth' option` | ~~Minor~~ Feature Release |
+| `perf(pencil): remove graphiteWidth option`<br/><br/>`BREAKING CHANGE: The graphiteWidth option has been removed.`<br/>`The default graphite width of 10mm is always used for performance reasons.` | ~~Major~~ Breaking Release |
+
+
+
+### Development
+
+Running `gulp watch` will build and install the library and watch
+for file changes. Whenever one of the watched files is changed a 
+fresh version of the xar will be installed in the database.
+This included the test application in `test/app`.
+
+### Testing
+
+To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. To test against a different port, edit `.existdb.json`.
+
+
+Run the test suite with
+
+```shell
+npm install
+npm test
+```
+
+More extensive tests for this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app/tree/feature/open-api/test) repository.
 
 ## How it works
 
@@ -140,7 +189,7 @@ This will work also for custom authorization strategies. The handler function ne
 
 If you need to perform certain actions on each request you can add a transformation function also known as middleware.
 
-Most internal operations that construct the $request map passed to your operations are such functions. Authorization is a middleware as well. 
+Most internal operations that construct the $request map passed to your operations are such functions. Authorization is a middleware as well.
 
 A middleware has two parameters of type map, the current request map and the current response, and returns two map that will become the request and response maps for the next transformation.
 
@@ -158,36 +207,6 @@ declare function custom-router:use-beep-boop ($request as map(*), $response as m
 };
 ```
 
-## Installation (from source)
-
-Create .xar by calling `gulp build` and install into local eXist.
-`gulp install` will attempt to upload and install the library to 
-a database at `localhost:8080`.
-Database connection can be modified in `.existdb.json`.
-
-ant-task is still defined, but will use gulp (through `npm run build`).
-
-## Development
-
-Running `gulp watch` will build and install the library and watch
-for file changes. Whenever one of the watched files is changed a 
-fresh version of the xar will be installed in the database.
-This included the test application in `test/app`.
-
-## Testing
-
-To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. To test against a different port, edit `.existdb.json`.
-
-
-Run the test suite with
-
-```
-npm install
-npm test
-```
-
-More extensive tests for this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app/tree/feature/open-api/test) repository.
-
-# Limitations
+## Limitations
 
 The library does not support `$ref` references in the Open API specification.
