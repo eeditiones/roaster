@@ -1,7 +1,9 @@
-# roaster
-![Node.js CI](https://github.com/eeditiones/roaster/workflows/Node.js%20CI/badge.svg)[![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
+<img alt="roaster router logo" src="icon.svg" width="84" />
 
-<img alt="roaster router logo" src="icon.svg" width="96" />
+# roaster
+
+![Test and Release](https://github.com/eeditiones/roaster/workflows/Test%20and%20Release/badge.svg) [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
+
 
 ## OpenAPI Router for eXist
 
