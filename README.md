@@ -70,7 +70,7 @@ eXist applications usually have a controller as main entry point. The
 TEI Publisher uses two specifications: [api.json](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/lib/api.json) and [custom-api.json](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/custom-api.json). This is done to make it easier for users to extend the default API. It is also possible to overwrite a route from `api.json` by placing it into `custom-api.json`.
 
 Each route in the specification _must_ have an `operationId` property.
-Is is the name of the XQuery function that will handle the request to the given route. The XQuery function must be resolved by the $lookup function in one of the modules which are visible at the point where `roaster:route` is called. Consequently, [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
+This is the name of the XQuery function that will handle the request to the given route. The XQuery function must be resolved by the $lookup function in one of the modules which are visible at the point where `roaster:route` is called. Consequently, [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
 
 The XQuery handler function _must_ expect exactly one argument: `$request as map(*)`. This is a map with a number of keys:
 
