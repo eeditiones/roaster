@@ -14,20 +14,35 @@ Since it is also the routing library used by TEI Publisher 7 you will find some 
 
 ![TEI Publisher API](https://teipublisher.com/exist/apps/tei-publisher/doc/api-spec.png)
 
-## Installation (from source)
-
-Create `.xar` by calling `gulp build` and install into local eXist.
-`gulp install` will attempt to upload and install the library to 
-a database at `localhost:8080`.
-Database connection can be modified in `.existdb.json`.
-
-ant-task is still defined, but will use gulp (through `npm run build`).
-
 ### Requirements
 
 -  [node](https://nodejs.org/en/): `v12+`
 -  [exist-db](https://www.exist-db.org): `v5.0.0+`
 -  [Ant](https://ant.apache.org): `v1.10.9+` (optional)
+
+## Building and Installation
+
+Roaster uses Gulp as its build tool which itself builds on NPM. 
+To initialize the project and load dependencies run
+
+```npm i```
+
+> Note: the `install` commands below assume that you have a local eXist-db running on port 8080. However the database connection can be modified in .existdb.json.
+
+| Run | Description |
+|---------|-------------|
+|```gulp build```|to just build the roaster routing lib. |
+|```gulp build:all```|to build the routing lib and the demo app.|
+|```gulp install```|To build and install the lib in one go|
+|```gulp install:all```|To build and install lib and demo app run|
+
+The resulting xar(s) are found in the root of the project.
+
+ant-task is still defined, but will use gulp (through `npm run build`).
+
+## Demo App
+
+The demo app 'Roasted' is a barebones eXist-db application using the Roaster router. It serves a good starting-point for playing, learning and as a 'template' for your own apps.
 
 ## Contributing
 
