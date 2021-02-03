@@ -14,7 +14,7 @@ Since it is also the routing library used by TEI Publisher 7 you will find some 
 
 ![TEI Publisher API](https://teipublisher.com/exist/apps/tei-publisher/doc/api-spec.png)
 
-### Requirements
+## Requirements
 
 -  [node](https://nodejs.org/en/): `v12+`
 -  [exist-db](https://www.exist-db.org): `v5.0.0+`
