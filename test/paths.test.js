@@ -15,6 +15,17 @@ describe('Path parameters', function () {
         // expect(res).to.satisfyApiSpec;
     });
 });
+
+describe('Prefixed known path', function () {
+    it('should return a not found error', function () {
+        return util.axios.get('not/api/parameters')
+            .then(response => { throw {response} })
+            .catch(error => {
+                expect(error.response.status).to.equal(404)
+            });
+    });
+});
+
 describe("Binary up and download", function () {
     const contents = fs.readFileSync("./roasted.xar")
 
