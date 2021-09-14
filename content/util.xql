@@ -34,6 +34,7 @@ declare function rutil:getDBUser() as map(*) {
     let $name := $user/sm:username/text()
     return map {
         "name": $name,
+        "fullName": (sm:get-account-metadata($name, xs:anyURI('http://axschema.org/namePerson')), $name)[1],
         "groups": array { $user//sm:group/text() },
         "dba" : sm:is-dba($name)
     }
