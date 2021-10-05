@@ -1,6 +1,7 @@
 const chai = require('chai');
 const expect = chai.expect;
 const axios = require('axios');
+const https = require('https')
 
 // read connction options from ENV
 const params = { user: 'admin', password: '' }
@@ -9,16 +10,20 @@ if (process.env.EXISTDB_USER && 'EXISTDB_PASS' in process.env) {
     params.password = process.env.EXISTDB_PASS
 }
 
-const origin = 'EXISTDB_SERVER' in process.env 
-    ? (new URL(process.env.EXISTDB_SERVER)).origin
+const server = 'EXISTDB_SERVER' in process.env
+    ? process.env.EXISTDB_SERVER
     : 'https://localhost:8443'
-
+  
+const {origin, hostname} = new URL(server)
 
 const axiosInstance = axios.create({
     baseURL: `${origin}/exist/apps/roasted`,
     headers: { Origin: origin },
-    withCredentials: true
-})
+    withCredentials: true,
+    httpsAgent: new https.Agent({
+        rejectUnauthorized: hostname !== 'localhost'
+    })
+});
 
 async function login() {
     // console.log('Logging in ' + serverInfo.user + ' to ' + app)
