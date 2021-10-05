@@ -1,21 +1,22 @@
-const chai = require('chai')
-const axios = require('axios')
+const chai = require('chai');
+const expect = chai.expect;
+const axios = require('axios');
 
-const path = require('path')
-const chaiResponseValidator = require('chai-openapi-response-validator')
-const spec = path.resolve("./test/app/api.json")
-chai.use(chaiResponseValidator(spec))
+// read connction options from ENV
+const params = { user: 'admin', password: '' }
+if (process.env.EXISTDB_USER && 'EXISTDB_PASS' in process.env) {
+    params.user = process.env.EXISTDB_USER
+    params.password = process.env.EXISTDB_PASS
+}
 
-// read metadata from .existdb.json
-const existJSON = require('../.existdb.json')
-const serverInfo = existJSON.servers.localhost
-const { origin } = new URL(serverInfo.server)
+const origin = 'EXISTDB_SERVER' in process.env 
+    ? (new URL(process.env.EXISTDB_SERVER)).origin
+    : 'https://localhost:8443'
 
-const app = `${origin}/exist/apps/roasted`
 
 const axiosInstance = axios.create({
-    baseURL: app,
-    headers: { "Origin": origin },
+    baseURL: `${origin}/exist/apps/roasted`,
+    headers: { Origin: origin },
     withCredentials: true
 })
 
@@ -24,9 +25,24 @@ async function login() {
     const res = await axiosInstance.request({
         url: 'login',
         method: 'post',
+        params
+    });
+
+    expect(res.status).to.equal(200);
+    expect(res.data.user).to.equal('tei');
+
+    const cookie = res.headers['set-cookie'];
+    axiosInstance.defaults.headers.Cookie = cookie[0];
+    // console.log('Logged in as %s: %s', res.data.user, res.statusText);
+}
+
+function logout(done) {
+    // console.log('Logging out ...');
+    axiosInstance.request({
+        url: 'login',
+        method: 'post',
         params: {
-            "user": serverInfo.user,
-            "password": serverInfo.password
+            logout: 'true'
         }
     })
 

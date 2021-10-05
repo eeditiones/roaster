@@ -77,8 +77,8 @@ describe('Prefixed known path', function () {
     });
 });
 
-describe('On Login', function () {
-    let response
+describe("Binary up and download", function () {
+    const contents = fs.readFileSync("./dist/roasted.xar")
 
     before(async function () {
         await util.login()
