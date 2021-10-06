@@ -10,6 +10,12 @@ if (process.env.EXISTDB_USER && 'EXISTDB_PASS' in process.env) {
     params.password = process.env.EXISTDB_PASS
 }
 
+// for use in custom controller tests
+const adminCredentials = {
+    username: params.user,
+    password: params.password
+}
+
 const server = 'EXISTDB_SERVER' in process.env
     ? process.env.EXISTDB_SERVER
     : 'https://localhost:8443'
@@ -56,15 +62,4 @@ function logout(done) {
     // console.log('Logged in as %s: %s', res.data.user, res.statusText)
 }
 
-function logout() {
-    // console.log('Logging out ...')
-    return axiosInstance
-        .request({ url: 'logout', method: 'get'})
-        .catch(_ => Promise.resolve())
-}
-
-module.exports = {
-    axios: axiosInstance,
-    login, logout,
-    spec
-}
+module.exports = {axios: axiosInstance, login, logout, adminCredentials };
