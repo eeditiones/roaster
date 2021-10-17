@@ -396,8 +396,8 @@ declare %private function router:error-description ($description as xs:string, $
 (:~
  : Called when an error is caught. Note that users can also throw an error from within a function 
  : to indicate that a different response code should be sent to the client. Errors thrown from user
- : code will have a map with keys "_config" and "_response" as $value, where "_config" is the current
- : oas configuration for the route and "_response" is the response data provided by the user function
+ : code will have a map with keys "_request" and "_response" as $value, where "_request?config" is the current
+ : OAS configuration for the route and "_response" is the response data provided by the user function
  : in the third argument of error().
  :)
 declare %private function router:error ($code as xs:integer, $error as map(*), $lookup as function(xs:string) as function(*)?) {
