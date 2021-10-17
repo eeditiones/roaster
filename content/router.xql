@@ -219,10 +219,7 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
     (: enable arbitrary middleware configuration :)
     let $use := ($default-middleware, $custom-middlewares)
     let $request-response :=
-        fold-left($use, [$request-with-body, map {}],
-            function ($args as array(map(*)), $next-middleware as function(map(*), map(*)) as map(*)+) as array(map(*)) {
-                array { apply($next-middleware, $args) }
-        })
+        fold-left($use, [$request-with-body, map {}], router:middleware-reducer#2)
 
     let $response := router:execute-handler($request-response?1, $request-response?2, $lookup)
 
@@ -235,6 +232,15 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
         router:write-response($status, $response, $route),
         util:log("info", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
     )
+};
+
+declare 
+    %private
+function router:middleware-reducer (
+    $args as array(map(*)), 
+    $next-middleware as function(map(*), map(*)) as map(*)+
+) as array(map(*)) {
+    array { apply($next-middleware, $args) }
 };
 
 (:~
