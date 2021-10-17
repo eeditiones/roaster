@@ -25,6 +25,109 @@
         }
     },
     "paths": {
+        "/login": {
+            "get": {
+                "operationId": "auth:login",
+                "parameters": [
+                    {
+                        "name": "logout",
+                        "in": "query",
+                        "description": "Set to some value to log out the current user",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "true"
+                        }
+                    }
+                ],
+                "responses": {
+                    "401": { "description": "unauthorized" }
+                }
+            },
+            "post": {
+                "summary": "Login the user",
+                "description": "Login the given user",
+                "operationId": "auth:login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                    "user": {
+                                        "description": "Name of the user",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                    "user": {
+                                        "description": "Name of the user",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                            "type": "object",
+                            "nullable": true,
+                                "properties": {
+                                    "user": {
+                                        "description": "Name of the user",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "user": { "type": "string" },
+                                        "groups": {
+                                            "type": "array",
+                                            "items": { "type": "string" }
+                                        },
+                                        "dba": { "type": "boolean" },
+                                        "domain": { "type": "string" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Wrong user or password"
+                    }
+                },
+                "security": [{ "cookieAuth": [] }]
+            }
+        },
         "/api/parameters": {
             "get": {
                 "summary": "Test various parameter types passed in a GET",

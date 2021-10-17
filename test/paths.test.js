@@ -29,23 +29,50 @@ describe('Prefixed known path', function () {
 describe("Binary up and download", function () {
     const contents = fs.readFileSync("./roasted.xar")
 
-    it('handles post of binary data', async function () {
-        const res = await util.axios.post('api/paths/roasted.xar', contents, {
-            headers: {
-                'Content-Type': 'application/octet-stream',
-                'Authorization': 'Basic YWRtaW46'
-            }
+    describe("using basic authentication", function () {
+        it('handles post of binary data', async function () {
+            const res = await util.axios.post('api/paths/roasted.xar', contents, {
+                headers: {
+                    'Content-Type': 'application/octet-stream',
+                    'Authorization': 'Basic YWRtaW46'
+                }
+            });
+            expect(res.status).to.equal(201);
+            expect(res.data).to.equal('/db/apps/roasted/roasted.xar');
         });
-        expect(res.status).to.equal(201);
-        expect(res.data).to.equal('/db/apps/roasted/roasted.xar');
-    });
-    it('passes parameter in last component of path', async function () {
-        const res = await util.axios.get('api/paths/roasted.xar', { responseType: 'arraybuffer' });
-        expect(res.status).to.equal(200);
-        expect(res.data).to.eql(contents);
+        it('passes parameter in last component of path', async function () {
+            const res = await util.axios.get('api/paths/roasted.xar', { responseType: 'arraybuffer' });
+            expect(res.status).to.equal(200);
+            expect(res.data).to.eql(contents);
 
-        // expect(res).to.satisfyApiSpec;
-    });
+            // expect(res).to.satisfyApiSpec;
+        });
+    })
+
+    describe("using cookie authentication", function () {
+        const filename = "roasted2.xar"
+        before(async function () {
+            await util.login()
+        })
+        after(function () {
+            return util.logout()
+        })
+
+        it('handles post of binary data', async function () {
+            const res = await util.axios.post('api/paths/' + filename, contents, {
+                headers: { 'Content-Type': 'application/octet-stream' }
+            });
+            expect(res.status).to.equal(201);
+            expect(res.data).to.equal('/db/apps/roasted/' + filename);
+        });
+        it('passes parameter in last component of path', async function () {
+            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' });
+            expect(res.status).to.equal(200);
+            expect(res.data).to.eql(contents);
+
+            // expect(res).to.satisfyApiSpec;
+        });
+    })
 });
 
 describe('Request body', function() {
