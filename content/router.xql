@@ -478,9 +478,19 @@ declare %private function router:write-response ($default-code as xs:integer, $r
 declare %private function router:set-additional-headers($headers as map(*)?) as empty-sequence() {
     if (not(exists($headers))) then
         ()
-    else 
+    else
         map:remove($headers, "Content-Type")
-        => map:for-each(response:set-header(?, ?))
+        => map:for-each(router:safe-set-header#2)
+};
+
+declare %private function router:safe-set-header ($header as xs:string, $value as item()?) as empty-sequence() {
+    if (not(exists($value)))
+    (: Q: rather throw here error ? :)
+    then util:log("warn", "Empty header '" || $header || "'") 
+    else if (not($value castable as xs:string))
+    (: Q: rather throw here error ? :)
+    then util:log("warn", "Headervalue for '" || $header || "' is not castable to xs:string")
+    else response:set-header($header, $value)
 };
 
 (:~
