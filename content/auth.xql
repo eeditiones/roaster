@@ -150,14 +150,24 @@ declare function auth:login($request as map(*)) {
             ()
 
     let $user := request:get-attribute($login-domain || ".user")
-
+    (: Work-around for the actual login request  
+     : It is possible that the session is not yet ready 
+     : and sm:id() still reports "guest" as real user
+     :)
+    let $session-ready := (sm:id()//sm:real/sm:username/string() = $user)
     return
-        if (exists($user))
+        if (exists($user) and $session-ready)
         then
             map {
                 "user": $user,
                 "groups": array { sm:get-user-groups($user) },
                 "dba": sm:is-dba($user),
+                "domain": $login-domain
+            }
+        else if (exists($user))
+        then
+            map {
+                "user": $user,
                 "domain": $login-domain
             }
         else

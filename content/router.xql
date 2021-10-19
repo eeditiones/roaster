@@ -219,10 +219,7 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
     (: enable arbitrary middleware configuration :)
     let $use := ($default-middleware, $custom-middlewares)
     let $request-response :=
-        fold-left($use, [$request-with-body, map {}],
-            function ($args as array(map(*)), $next-middleware as function(map(*), map(*)) as map(*)+) as array(map(*)) {
-                array { apply($next-middleware, $args) }
-        })
+        fold-left($use, [$request-with-body, map {}], router:middleware-reducer#2)
 
     let $response := router:execute-handler($request-response?1, $request-response?2, $lookup)
 
@@ -235,6 +232,15 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
         router:write-response($status, $response, $route),
         util:log("info", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
     )
+};
+
+declare 
+    %private
+function router:middleware-reducer (
+    $args as array(map(*)), 
+    $next-middleware as function(map(*), map(*)) as map(*)+
+) as array(map(*)) {
+    array { apply($next-middleware, $args) }
 };
 
 (:~
@@ -390,8 +396,8 @@ declare %private function router:error-description ($description as xs:string, $
 (:~
  : Called when an error is caught. Note that users can also throw an error from within a function 
  : to indicate that a different response code should be sent to the client. Errors thrown from user
- : code will have a map with keys "_config" and "_response" as $value, where "_config" is the current
- : oas configuration for the route and "_response" is the response data provided by the user function
+ : code will have a map with keys "_request" and "_response" as $value, where "_request?config" is the current
+ : OAS configuration for the route and "_response" is the response data provided by the user function
  : in the third argument of error().
  :)
 declare %private function router:error ($code as xs:integer, $error as map(*), $lookup as function(xs:string) as function(*)?) {
@@ -472,9 +478,19 @@ declare %private function router:write-response ($default-code as xs:integer, $r
 declare %private function router:set-additional-headers($headers as map(*)?) as empty-sequence() {
     if (not(exists($headers))) then
         ()
-    else 
+    else
         map:remove($headers, "Content-Type")
-        => map:for-each(response:set-header(?, ?))
+        => map:for-each(router:safe-set-header#2)
+};
+
+declare %private function router:safe-set-header ($header as xs:string, $value as item()?) as empty-sequence() {
+    if (not(exists($value)))
+    (: Q: rather throw here error ? :)
+    then util:log("warn", "Empty header '" || $header || "'") 
+    else if (not($value castable as xs:string))
+    (: Q: rather throw here error ? :)
+    then util:log("warn", "Headervalue for '" || $header || "' is not castable to xs:string")
+    else response:set-header($header, $value)
 };
 
 (:~

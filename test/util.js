@@ -18,7 +18,7 @@ const axiosInstance = axios.create({
 });
 
 async function login() {
-    // console.log('Logging in user ...');
+    // console.log('Logging in ' + serverInfo.user + ' to ' + app);
     const res = await axiosInstance.request({
         url: 'login',
         method: 'post',
@@ -28,27 +28,22 @@ async function login() {
         }
     });
 
-    expect(res.status).to.equal(200);
-    expect(res.data.user).to.equal('tei');
+    // expect(res.status).to.equal(200);
+    // expect(res.data.user).to.equal(serverInfo.user);
 
     const cookie = res.headers["set-cookie"];
     axiosInstance.defaults.headers.Cookie = cookie[0];
     // console.log('Logged in as %s: %s', res.data.user, res.statusText);
 }
 
-function logout(done) {
+function logout() {
     // console.log('Logging out ...');
-    axiosInstance.request({
+    return axiosInstance.request({
         url: 'login',
-        method: 'post',
-        params: {
-            "logout": "true"
-        }
+        method: 'get',
+        params: { logout: "true" }
     })
-    .catch((error) => {
-        expect(error.response.status).to.equal(401);
-        done();
-    });
+    .catch(_ => Promise.resolve())
 }
 
 module.exports = {axios: axiosInstance, login, logout};
