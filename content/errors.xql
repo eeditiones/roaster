@@ -32,6 +32,10 @@ declare variable $errors:UNAUTHORIZED := xs:QName("errors:UNAUTHORIZED_401");
 declare variable $errors:FORBIDDEN := xs:QName("errors:FORBIDDEN_403");
 declare variable $errors:NOT_FOUND := xs:QName("errors:NOT_FOUND_404");
 declare variable $errors:METHOD_NOT_ALLOWED := xs:QName("errors:METHOD_NOT_ALLOWED_405");
+(: https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.13 :)
+declare variable $errors:UNSUPPORTED_MEDIA_TYPE := xs:QName("errors:UNSUPPORTED_MEDIA_TYPE_415");
+(: https://datatracker.ietf.org/doc/html/rfc4918#section-11.2 :)
+declare variable $errors:UNPROCESSABLE_ENTITY := xs:QName("errors:UNPROCESSABLE_ENTITY_422");
 declare variable $errors:SERVER_ERROR := xs:QName("errors:SERVER_ERROR_500");
 
 declare function errors:get-status-code-from-error($error as xs:QName) as xs:integer {
@@ -44,6 +48,8 @@ declare function errors:get-status-code-from-error($error as xs:QName) as xs:int
         case $errors:FORBIDDEN return 403
         case $errors:NOT_FOUND return 404
         case $errors:METHOD_NOT_ALLOWED return 405
+        case $errors:UNSUPPORTED_MEDIA_TYPE return 415
+        case $errors:UNPROCESSABLE_ENTITY return 422
 
         case $errors:OPERATION (: fall-through :)
         case $errors:SERVER_ERROR return 500 (: no fall-through possible :)
