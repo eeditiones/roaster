@@ -207,21 +207,17 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
             error($errors:METHOD_NOT_ALLOWED, 
                 "The method "|| $pattern-map?method || " is not supported for " || $pattern-map?path)
 
-    (: overwrite config field with the specific method handler :)
-    let $base-request := map:put($pattern-map, "config", $route)
-
-    let $request-with-body := map:put($base-request, "body", router:body($base-request))
-
     let $default-middleware := (
         parameters:in-path#2,
         parameters:in-request#2
     )
     (: enable arbitrary middleware configuration :)
     let $use := ($default-middleware, $custom-middlewares)
-    let $request-response :=
-        fold-left($use, [$request-with-body, map {}], router:middleware-reducer#2)
 
-    let $response := router:execute-handler($request-response?1, $request-response?2, $lookup)
+    (: overwrite config field with the specific method handler :)
+    let $base-request := map:put($pattern-map, "config", $route)
+
+    let $response := router:execute-handler($base-request, $use, $lookup)
 
     let $status :=
         if (map:contains($response, $router:RESPONSE_CODE))
@@ -284,12 +280,20 @@ declare function router:body ($request as map(*)) {
  : Look up the XQuery function whose name matches property "operationId".
  : If found, call it and pass the request map as single parameter.
  :)
-declare %private function router:execute-handler ($request as map(*), $response as map(*), $lookup as function(xs:string) as function(*)?) as map(*) {
-    if (not(map:contains($request?config, "operationId"))) then
-        error($errors:OPERATION, "Operation does not define an operationId", $request)
+declare %private function router:execute-handler ($base-request as map(*), $use, $lookup as function(xs:string) as function(*)?) as map(*) {
+    if (not(map:contains($base-request?config, "operationId"))) then
+        error($errors:OPERATION, "Operation does not define an operationId", $base-request?config)
     else
         try {
-            let $fn := $lookup($request?config?operationId)
+            let $request-with-body := map:put($base-request, "body", router:body($base-request))
+
+            let $request-response-array :=
+                fold-left($use, [$request-with-body, map {}], router:middleware-reducer#2)
+
+            let $request := $request-response-array?1
+            let $response := $request-response-array?2
+
+            let $fn := $lookup($base-request?config?operationId)
             let $handler-response := $fn($request)
 
             return
@@ -325,8 +329,7 @@ declare %private function router:execute-handler ($request as map(*), $response 
                     "line": $err:line-number,
                     "column": $err:column-number
                 },
-                "_request": $request,
-                "_response": $response
+                "_request": $base-request
             })
         }
 };

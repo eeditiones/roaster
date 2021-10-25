@@ -90,7 +90,7 @@ describe("body with content-type application/xml", function () {
                 headers: { 'Content-Type': 'application/xml' }
             })
             .then(r => uploadResponse = r)
-            .catch(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
         })
         it("is accepted", function () {
             expect(uploadResponse.status).to.equal(201)
@@ -98,16 +98,65 @@ describe("body with content-type application/xml", function () {
     })
 
     describe("with invalid content", function () {
-        let upload
+        let uploadResponse
         before(async function () {
             return util.axios.post('api/paths/invalid.xml', Buffer.from('<invalid>asdf'), {
                 headers: { 'Content-Type': 'application/xml' }
             })
-            .then(r => upload = r)
-            .catch(r => upload = r)
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
         })
         it("is rejected", function () {
-            expect(upload.response.status).to.equal(500)
+            expect(uploadResponse.status).to.equal(500)
+        })        
+    })
+})
+
+describe("body with content-type application/json", function () {
+    before(async function () {
+        await util.login()
+    })
+    after(function () {
+        return util.logout()
+    })
+
+    describe("with valid content", function () {
+        let uploadResponse
+        before(function () {
+            return util.axios.post(
+                'api/paths/valid.txt', 
+`
+[{
+    "valid": "json",
+    "valid1": "json",
+    "valid2": "json",
+    "valid3": "json",
+    "valid4": "json",
+    "valid5": "json"
+}]
+`, 
+                { headers: { 'Content-Type': 'application/octet-stream'} }
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
+        })
+        it("is accepted", function () {
+            console.log(uploadResponse)
+            expect(uploadResponse.status).to.equal(201)
+        })    
+    })
+
+    describe("with invalid content", function () {
+        let uploadResponse
+        before(async function () {
+            return util.axios.post('api/paths/invalid.json', '{ "invalid: ()}', {
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
+        })
+        it("is rejected", function () {
+            expect(uploadResponse.status).to.equal(500)
         })        
     })
 })
