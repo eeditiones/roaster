@@ -75,6 +75,43 @@ describe("Binary up and download", function () {
     })
 });
 
+describe("body with content-type application/xml", function () {
+    before(async function () {
+        await util.login()
+    })
+    after(function () {
+        return util.logout()
+    })
+
+    describe("with valid content", function () {
+        let uploadResponse
+        before(function () {
+            return util.axios.post('api/paths/valid.xml', Buffer.from('<root/>'), {
+                headers: { 'Content-Type': 'application/xml' }
+            })
+            .then(r => uploadResponse = r)
+            .catch(r => uploadResponse = r)
+        })
+        it("is accepted", function () {
+            expect(uploadResponse.status).to.equal(201)
+        })    
+    })
+
+    describe("with invalid content", function () {
+        let upload
+        before(async function () {
+            return util.axios.post('api/paths/invalid.xml', Buffer.from('<invalid>asdf'), {
+                headers: { 'Content-Type': 'application/xml' }
+            })
+            .then(r => upload = r)
+            .catch(r => upload = r)
+        })
+        it("is rejected", function () {
+            expect(upload.response.status).to.equal(500)
+        })        
+    })
+})
+
 describe('Request body', function() {
     it('uploads string in body', async function() {
         const res = await util.axios.post('api/$op-er+ation*!');

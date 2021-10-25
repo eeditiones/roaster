@@ -317,7 +317,7 @@
                 }
             },
             "post": {
-                "summary": "Post body as application/octet-stream",
+                "summary": "Post body with several content-types",
                 "x-constraints": {
                     "user": "admin" 
                 },
@@ -326,6 +326,18 @@
                     "required": true,
                     "content": {
                         "application/octet-stream": {
+                            "schema": {
+                                "type": "string",
+                                "format": "binary"
+                            }
+                        },
+                        "application/xml": {
+                            "schema": {
+                                "type": "string",
+                                "format": "binary"
+                            }
+                        },
+                        "application/json": {
                             "schema": {
                                 "type": "string",
                                 "format": "binary"
