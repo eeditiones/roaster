@@ -142,21 +142,15 @@ declare function auth:login($request as map(*)) {
     (: login-domain must be configured! :)
     let $login-domain := auth:login-domain($request?spec)
 
-    let $login :=
-        if ($request?parameters?user)
-        then
-            login:set-user($login-domain, (), false())
-        else
-            ()
+    let $login := login:set-user($login-domain, (), false())
 
     let $user := request:get-attribute($login-domain || ".user")
     (: Work-around for the actual login request  
      : It is possible that the session is not yet ready 
      : and sm:id() still reports "guest" as real user
      :)
-    let $session-ready := (sm:id()//sm:real/sm:username/string() = $user)
     return
-        if (exists($user) and $session-ready)
+        if (exists($user))
         then
             map {
                 "user": $user,
@@ -164,17 +158,25 @@ declare function auth:login($request as map(*)) {
                 "dba": sm:is-dba($user),
                 "domain": $login-domain
             }
-        else if (exists($user))
-        then
-            map {
-                "user": $user,
-                "domain": $login-domain
-            }
         else
             error($errors:UNAUTHORIZED, "Wrong user or password", map {
                 "user": $user,
                 "domain": $login-domain
             })
+};
+
+declare function auth:logout ($request as map(*)) {
+    if (empty($request?parameters?logout))
+    then router:response (
+        301, "text/plain", "redirecting", 
+        map { "Location": "?logout=true" })
+    else
+        let $user := 
+            auth:login-domain($request?spec)
+            => concat(".user")
+            => request:get-attribute()
+
+        return map { "success": empty($user) }
 };
 
 (:~
