@@ -27,7 +27,9 @@ describe('Path parameters', function () {
 
 describe('Request methods on api/$op-er+ation*! route', function (){
     const route = 'api/$op-er+ation*!'
-    const expect405 = err => expect(err.response.status).to.equal(405)
+    const expectNotAllowed = err => expect(err.response.status).to.equal(405)
+    const expectNotAllowedOrNotImplented = err => expect(err.response.status).to.be.oneOf([405, 501])
+
     const fail = res => expect.fail(res)
 
     it('should handle defined GET request', function () {
@@ -45,25 +47,27 @@ describe('Request methods on api/$op-er+ation*! route', function (){
     it('should reject a HEAD request', function () {
         return util.axios.head(route)
             .then(fail)
-            .catch(expect405)
+            .catch(expectNotAllowed)
     });
 
     it('should reject a PUT request', function () {
         return util.axios.put(route)
             .then(fail)
-            .catch(expect405)
+            .catch(expectNotAllowed)
     });
 
     it('should reject a DELETE request', function () {
         return util.axios.delete(route)
             .then(fail)
-            .catch(expect405)
+            .catch(expectNotAllowed)
     });
 
+    // please note that HTTP PATCH is available in 
+    // exist since v5.3.0 and after
     it('should reject a PATCH request', function () {
         return util.axios.patch(route)
             .then(fail)
-            .catch(expect405)
+            .catch(expectNotAllowedOrNotImplented)
     });
 
     // OPTIONS request is handled by Jetty and will not reach your controller,
@@ -82,7 +86,7 @@ describe('Request methods on api/$op-er+ation*! route', function (){
             method: 'wibbley-wobbley'
         })
             .then(fail)
-            .catch(err => expect(err.response.status).to.equal(501))
+            .catch(expectNotAllowedOrNotImplented)
     });
 })
 
