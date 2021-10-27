@@ -38,11 +38,7 @@ async function login() {
 
 function logout() {
     // console.log('Logging out ...');
-    return axiosInstance.request({
-        url: 'login',
-        method: 'get',
-        params: { logout: "true" }
-    })
+    return axiosInstance.request({ url: 'logout', method: 'get'})
     .catch(_ => Promise.resolve())
 }
 

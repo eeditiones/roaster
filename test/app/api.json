@@ -19,31 +19,54 @@
             },
             "cookieAuth": {
                 "type": "apiKey",
-                "name": "teipublisher.com.login",
+                "name": "roasted.com.login",
                 "in": "cookie"
             }
         }
     },
     "paths": {
-        "/login": {
+        "/logout": {
             "get": {
-                "operationId": "auth:login",
+                "operationId": "auth:logout",
                 "parameters": [
                     {
                         "name": "logout",
                         "in": "query",
                         "description": "Set to some value to log out the current user",
                         "schema": {
-                            "type": "string",
-                            "nullable": true,
-                            "example": "true"
+                            "type": "string"
                         }
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": { "type": "boolean" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "301": {
+                        "description": "Redirect with the logout parameter set.",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
                     "401": { "description": "unauthorized" }
                 }
-            },
+            }
+        },
+        "/login": {
             "post": {
                 "summary": "Login the user",
                 "description": "Login the given user",
@@ -71,22 +94,6 @@
                             "schema": {
                                 "type": "object",
                                 "nullable": true,
-                                "properties": {
-                                    "user": {
-                                        "description": "Name of the user",
-                                        "type": "string"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password"
-                                    }
-                                }
-                            }
-                        },
-                        "application/json": {
-                            "schema": {
-                            "type": "object",
-                            "nullable": true,
                                 "properties": {
                                     "user": {
                                         "description": "Name of the user",
