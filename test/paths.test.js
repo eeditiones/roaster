@@ -8,6 +8,13 @@ const chaiResponseValidator = require('chai-openapi-response-validator');
 const spec = path.resolve("./test/app/api.json");
 chai.use(chaiResponseValidator(spec));
 
+describe('Requesting a static file from the server', function () {
+    it('will download the resource', async function () {
+        const res = await util.axios.get('static/roaster-router-logo.png');
+        expect(res.status).to.equal(200);
+    });
+});
+
 describe('Path parameters', function () {
     it('handles get of path including $', async function () {
         const res = await util.axios.get('api/$op-er+ation*!');

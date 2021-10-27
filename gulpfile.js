@@ -35,7 +35,11 @@ const static = [
 
 // test application metadata
 const testAppNs = "http://e-editiones.org/roasted"
-const testAppFiles = ['test/app/*.*', "test/app/modules/*"]
+const testAppFiles = [
+    'test/app/**/*.*',      // all non-dotfiles
+    'test/app/**/.keep',    // explicitly include .keep file(s)
+    '!test/app/build.xml'   // exclude build.xml
+]
 const testAppPackageName = "roasted.xar"
 
 // construct the current xar name from available data
@@ -128,7 +132,7 @@ function xar () {
  * create XAR package in repo root
  */
 function packageTestApp () {
-    return src(testAppFiles, {base: 'test/app'})
+    return src(testAppFiles, {base: 'test/app', dot: true})
         .pipe(zip(testAppPackageName))
         .pipe(dest('.'))
 }
