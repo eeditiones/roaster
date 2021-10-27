@@ -30,7 +30,7 @@ else if ($local:isget and $exist:path eq "/") then
 (: static HTML page for API documentation should be served directly to make sure it is always accessible :)
 else if (
     ($local:isget and $exist:path eq "/api.html") or 
-    ($local:isget and matches($exist:path, "^/.+\.json$", "s"))
+    ($local:isget and matches($exist:path, "^/[^/]+\.json$", "s"))
 ) then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist" />
 
