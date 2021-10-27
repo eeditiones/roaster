@@ -68,7 +68,7 @@ describe('Request methods on api/$op-er+ation*! route', function (){
     // nor roaster API
     it('should handle OPTIONS request ', function () {
         return util.axios.options(route)
-            .then(r => {console.log(r);expect(r.status).to.equal(200)})
+            .then(r => expect(r.status).to.equal(200))
             .catch(fail)
     });
 
