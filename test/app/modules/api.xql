@@ -66,15 +66,31 @@ declare function api:handle-error($error as map(*)) as element(html) {
     </html>
 };
 
-declare function api:binary-upload ($request as map(*)) {
-    let $stored := xmldb:store("/db/apps/roasted", $request?parameters?path, $request?body)
+declare function api:upload-data ($request as map(*)) {
+    let $body :=
+        if (
+            $request?body instance of array(*) or
+            $request?body instance of map(*)
+        )
+        then ($request?body => serialize(map { "method": "json" }))
+        else ($request?body)
+
+    let $stored := xmldb:store("/db/apps/roasted/uploads", $request?parameters?path, $body)
     return roaster:response(201, $stored)
 };
 
-declare function api:binary-load($request as map(*)) {
-    if (util:binary-doc-available("/db/apps/roasted/" || $request?parameters?path))
+declare function api:get-uploaded-data ($request as map(*)) {
+    (: xml :)
+    if (doc-available("/db/apps/roasted/uploads/" || $request?parameters?path))
     then (
-        util:binary-doc("/db/apps/roasted/" || $request?parameters?path)
+        unparsed-text("/db/apps/roasted/uploads/" || $request?parameters?path)
+        => util:base64-encode()
+        => response:stream-binary("application/octet-stream", $request?parameters?path)
+    )
+    (: anything else :)
+    else if (util:binary-doc-available("/db/apps/roasted/uploads/" || $request?parameters?path))
+    then (
+        util:binary-doc("/db/apps/roasted/uploads/" || $request?parameters?path)
         => response:stream-binary("application/octet-stream", $request?parameters?path)
     )
     else (

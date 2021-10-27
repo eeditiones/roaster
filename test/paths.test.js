@@ -8,6 +8,8 @@ const chaiResponseValidator = require('chai-openapi-response-validator');
 const spec = path.resolve("./test/app/api.json");
 chai.use(chaiResponseValidator(spec));
 
+const dbUploadCollection = '/db/apps/roasted/uploads/'
+
 describe('Requesting a static file from the server', function () {
     it('will download the resource', async function () {
         const res = await util.axios.get('static/roaster-router-logo.png');
@@ -98,22 +100,21 @@ describe("Binary up and download", function () {
     const contents = fs.readFileSync("./roasted.xar")
 
     describe("using basic authentication", function () {
+        const filename = 'roasted.xar'
         it('handles post of binary data', async function () {
-            const res = await util.axios.post('api/paths/roasted.xar', contents, {
+            const res = await util.axios.post('api/paths/' + filename, contents, {
                 headers: {
                     'Content-Type': 'application/octet-stream',
                     'Authorization': 'Basic YWRtaW46'
                 }
             });
             expect(res.status).to.equal(201);
-            expect(res.data).to.equal('/db/apps/roasted/roasted.xar');
+            expect(res.data).to.equal(dbUploadCollection + filename);
         });
-        it('passes parameter in last component of path', async function () {
-            const res = await util.axios.get('api/paths/roasted.xar', { responseType: 'arraybuffer' });
+        it('retrieves the data', async function () {
+            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' });
             expect(res.status).to.equal(200);
             expect(res.data).to.eql(contents);
-
-            // expect(res).to.satisfyApiSpec;
         });
     })
 
@@ -122,8 +123,8 @@ describe("Binary up and download", function () {
         before(async function () {
             await util.login()
         })
-        after(function () {
-            return util.logout()
+        after(async function () {
+            await util.logout()
         })
 
         it('handles post of binary data', async function () {
@@ -131,14 +132,12 @@ describe("Binary up and download", function () {
                 headers: { 'Content-Type': 'application/octet-stream' }
             });
             expect(res.status).to.equal(201);
-            expect(res.data).to.equal('/db/apps/roasted/' + filename);
+            expect(res.data).to.equal(dbUploadCollection + filename);
         });
-        it('passes parameter in last component of path', async function () {
+        it('retrieves the data', async function () {
             const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' });
             expect(res.status).to.equal(200);
             expect(res.data).to.eql(contents);
-
-            // expect(res).to.satisfyApiSpec;
         });
     })
 });
@@ -147,22 +146,30 @@ describe("body with content-type application/xml", function () {
     before(async function () {
         await util.login()
     })
-    after(function () {
-        return util.logout()
+    after(async function () {
+        await util.logout()
     })
 
     describe("with valid content", function () {
         let uploadResponse
+        const filename = 'valid.xml'
+        const contents = Buffer.from('<root/>')
         before(function () {
-            return util.axios.post('api/paths/valid.xml', Buffer.from('<root/>'), {
+            return util.axios.post('api/paths/' + filename, contents, {
                 headers: { 'Content-Type': 'application/xml' }
             })
             .then(r => uploadResponse = r)
             .catch(e => uploadResponse = e.response)
         })
-        it("is accepted", function () {
+        it("is uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
-        })    
+            expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
+        })
+        it('can be retrieved', async function () {
+            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' });
+            expect(res.status).to.equal(200);
+            expect(res.data).to.eql(contents);
+        });
     })
 
     describe("with invalid content", function () {
@@ -184,42 +191,41 @@ describe("body with content-type application/json", function () {
     before(async function () {
         await util.login()
     })
-    after(function () {
-        return util.logout()
+    after(async function () {
+        await util.logout()
     })
-
     describe("with valid content", function () {
         let uploadResponse
+        const filename = 'valid.json'
+        const contents = Buffer.from('{"valid":[]}')
         before(function () {
             return util.axios.post(
-                'api/paths/valid.txt', 
-`
-[{
-    "valid": "json",
-    "valid1": "json",
-    "valid2": "json",
-    "valid3": "json",
-    "valid4": "json",
-    "valid5": "json"
-}]
-`, 
-                { headers: { 'Content-Type': 'application/octet-stream'} }
+                'api/paths/' + filename, 
+                contents, 
+                { headers: { 'Content-Type': 'application/json'} }
             )
             .then(r => uploadResponse = r)
             .catch(e => uploadResponse = e.response)
         })
-        it("is accepted", function () {
-            console.log(uploadResponse)
+        it("is uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
-        })    
+            expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
+        })
+        it('can be retrieved', async function () {
+            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' });
+            expect(res.status).to.equal(200);
+            expect(res.data).to.eql(contents);
+        });
     })
 
     describe("with invalid content", function () {
         let uploadResponse
-        before(async function () {
-            return util.axios.post('api/paths/invalid.json', '{ "invalid: ()}', {
-                headers: { 'Content-Type': 'application/json' }
-            })
+        before(function () {
+            return util.axios.post(
+                'api/paths/invalid.json',
+                '{"invalid: ()',
+                { headers: { 'Content-Type': 'application/json' } }
+            )
             .then(r => uploadResponse = r)
             .catch(e => uploadResponse = e.response)
         })

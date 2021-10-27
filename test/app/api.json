@@ -298,7 +298,7 @@
         "/api/paths/{path}":{
             "get": {
                 "summary": "Parameter specified in last path component",
-                "operationId": "api:binary-load",
+                "operationId": "api:get-uploaded-data",
                 "parameters": [
                     {
                         "name": "path",
@@ -328,7 +328,7 @@
                 "x-constraints": {
                     "user": "admin" 
                 },
-                "operationId": "api:binary-upload",
+                "operationId": "api:upload-data",
                 "requestBody": {
                     "required": true,
                     "content": {
