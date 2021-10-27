@@ -534,7 +534,6 @@ declare %private function router:is-rethrown-error($value as item()*) as xs:bool
 };
 
 declare %private function router:log-error ($code as xs:integer, $data as map(*)) as empty-sequence() {
-    (: let $request := $data?_request => => serialize(map{"method": "json"}) :)
     let $error := $data?_error => serialize(map{"method": "json"})
     return
         util:log("error", 
