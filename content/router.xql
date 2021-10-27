@@ -265,6 +265,12 @@ declare function router:body ($request as map(*)) {
                         () (: TODO: implement form-data handling? :)
                     case "application/json" return
                         request:get-data() => util:binary-to-string() => parse-json()
+                    case "application/xml" return (
+                        let $data := request:get-data()
+                        let $test := parse-xml($data)
+                        let $xml := $data/node()
+                        return $xml
+                    )
                     default return
                         request:get-data()
             )
