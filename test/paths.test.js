@@ -16,6 +16,67 @@ describe('Path parameters', function () {
     });
 });
 
+describe('Request methods on api/$op-er+ation*! route', function (){
+    const route = 'api/$op-er+ation*!'
+    const expect405 = err => expect(err.response.status).to.equal(405)
+    const fail = res => expect.fail(res)
+
+    it('should handle defined GET request', function () {
+        return util.axios.get(route)
+            .then(r => expect(r.status).to.equal(200))
+            .catch(fail)
+    });
+
+    it('should handle defined POST request', function () {
+        return util.axios.post(route, {})
+            .then(r => expect(r.status).to.equal(200))
+            .catch(fail)
+    });
+
+    it('should reject a HEAD request', function () {
+        return util.axios.head(route)
+            .then(fail)
+            .catch(expect405)
+    });
+
+    it('should reject a PUT request', function () {
+        return util.axios.put(route)
+            .then(fail)
+            .catch(expect405)
+    });
+
+    it('should reject a DELETE request', function () {
+        return util.axios.delete(route)
+            .then(fail)
+            .catch(expect405)
+    });
+
+    it('should reject a PATCH request', function () {
+        return util.axios.patch(route)
+            .then(fail)
+            .catch(expect405)
+    });
+
+    // OPTIONS request is handled by Jetty and will not reach your controller,
+    // nor roaster API
+    it('should handle OPTIONS request ', function () {
+        return util.axios.options(route)
+            .then(r => {console.log(r);expect(r.status).to.equal(200)})
+            .catch(fail)
+    });
+
+    // exist DB does not handle custom request methods, which is why this will
+    // return with error 501 instead
+    it('should reject a request with method "wibbley-wobbley"', function () {
+        return util.axios.request({
+            url: 'api/$op-er+ation*!',
+            method: 'wibbley-wobbley'
+        })
+            .then(fail)
+            .catch(err => expect(err.response.status).to.equal(501))
+    });
+})
+
 describe('Prefixed known path', function () {
     it('should return a not found error', function () {
         return util.axios.get('not/api/parameters')
