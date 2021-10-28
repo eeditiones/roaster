@@ -1,6 +1,6 @@
 {
   "name": "roaster",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "roaster - OpenAPI Router for eXist",
   "scripts": {
     "test": "gulp install:all && mocha --exit",
