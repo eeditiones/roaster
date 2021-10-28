@@ -251,22 +251,41 @@ declare function router:body ($request as map(*)) {
     else (
         let $content-type-header := (: strip charset info from mime-type if present :)
             request:get-header("Content-Type")
-            => replace("^([^;]+);?.*$", "$1") 
+            => replace("^([^;]+);?.*$", "$1")
+        
+        let $definition := $request?config?requestBody?content
 
         return
-            if (map:contains($request?config?requestBody?content, $content-type-header))
+            if (
+                map:contains($definition, $content-type-header) or 
+                map:contains($definition, "*/*")
+            )
             then (
                 switch ($content-type-header)
                     case "multipart/form-data" return
                         () (: TODO: implement form-data handling? :)
                     case "application/json" return
-                        request:get-data() => util:binary-to-string() => parse-json()
-                    case "application/xml" return (
-                        let $data := request:get-data()
-                        let $test := parse-xml($data)
-                        let $xml := $data/node()
-                        return $xml
-                    )
+                        try {
+                            request:get-data() => util:binary-to-string() => parse-json()
+                        }
+                        catch * {
+                            error($errors:BODY_CONTENT_TYPE, "Invalid JSON", $err:description)
+                        }
+                    case "application/xml" return 
+                        try {
+                            (: 
+                             : workaround for eXist-DB specific behaviour, 
+                             : this way we will get parse errors as early as possible
+                             : while still having access to the data afterwards
+                             :)
+                            let $data := request:get-data()
+                            let $_test := parse-xml($data)
+                            (: return root node instead of a document fragment :)
+                            return $data/node() 
+                        }
+                        catch * {
+                            error($errors:BODY_CONTENT_TYPE, "Invalid XML", $err:description)
+                        }
                     default return
                         request:get-data()
             )
