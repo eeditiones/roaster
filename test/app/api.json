@@ -298,7 +298,7 @@
         "/api/paths/{path}":{
             "get": {
                 "summary": "Parameter specified in last path component",
-                "operationId": "api:binary-load",
+                "operationId": "api:get-uploaded-data",
                 "parameters": [
                     {
                         "name": "path",
@@ -320,6 +320,16 @@
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "description": "File not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -328,23 +338,11 @@
                 "x-constraints": {
                     "user": "admin" 
                 },
-                "operationId": "api:binary-upload",
+                "operationId": "api:upload-data",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/octet-stream": {
-                            "schema": {
-                                "type": "string",
-                                "format": "binary"
-                            }
-                        },
-                        "application/xml": {
-                            "schema": {
-                                "type": "string",
-                                "format": "binary"
-                            }
-                        },
-                        "application/json": {
+                        "*/*": {
                             "schema": {
                                 "type": "string",
                                 "format": "binary"
@@ -365,6 +363,16 @@
                 "responses": {
                     "201": {
                         "description": "Returns uploaded string",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Content was invalid",
                         "content": {
                             "application/json": {
                                 "schema": {

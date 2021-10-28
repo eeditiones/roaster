@@ -207,21 +207,17 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
             error($errors:METHOD_NOT_ALLOWED, 
                 "The method "|| $pattern-map?method || " is not supported for " || $pattern-map?path)
 
-    (: overwrite config field with the specific method handler :)
-    let $base-request := map:put($pattern-map, "config", $route)
-
-    let $request-with-body := map:put($base-request, "body", router:body($base-request))
-
     let $default-middleware := (
         parameters:in-path#2,
         parameters:in-request#2
     )
     (: enable arbitrary middleware configuration :)
     let $use := ($default-middleware, $custom-middlewares)
-    let $request-response :=
-        fold-left($use, [$request-with-body, map {}], router:middleware-reducer#2)
 
-    let $response := router:execute-handler($request-response?1, $request-response?2, $lookup)
+    (: overwrite config field with the specific method handler :)
+    let $base-request := map:put($pattern-map, "config", $route)
+
+    let $response := router:execute-handler($base-request, $use, $lookup)
 
     let $status :=
         if (map:contains($response, $router:RESPONSE_CODE))
@@ -255,22 +251,41 @@ declare function router:body ($request as map(*)) {
     else (
         let $content-type-header := (: strip charset info from mime-type if present :)
             request:get-header("Content-Type")
-            => replace("^([^;]+);?.*$", "$1") 
+            => replace("^([^;]+);?.*$", "$1")
+        
+        let $definition := $request?config?requestBody?content
 
         return
-            if (map:contains($request?config?requestBody?content, $content-type-header))
+            if (
+                map:contains($definition, $content-type-header) or 
+                map:contains($definition, "*/*")
+            )
             then (
                 switch ($content-type-header)
                     case "multipart/form-data" return
                         () (: TODO: implement form-data handling? :)
                     case "application/json" return
-                        request:get-data() => util:binary-to-string() => parse-json()
-                    case "application/xml" return (
-                        let $data := request:get-data()
-                        let $test := parse-xml($data)
-                        let $xml := $data/node()
-                        return $xml
-                    )
+                        try {
+                            request:get-data() => util:binary-to-string() => parse-json()
+                        }
+                        catch * {
+                            error($errors:BODY_CONTENT_TYPE, "Invalid JSON", $err:description)
+                        }
+                    case "application/xml" return 
+                        try {
+                            (: 
+                             : workaround for eXist-DB specific behaviour, 
+                             : this way we will get parse errors as early as possible
+                             : while still having access to the data afterwards
+                             :)
+                            let $data := request:get-data()
+                            let $_test := parse-xml($data)
+                            (: return root node instead of a document fragment :)
+                            return $data/node() 
+                        }
+                        catch * {
+                            error($errors:BODY_CONTENT_TYPE, "Invalid XML", $err:description)
+                        }
                     default return
                         request:get-data()
             )
@@ -284,12 +299,20 @@ declare function router:body ($request as map(*)) {
  : Look up the XQuery function whose name matches property "operationId".
  : If found, call it and pass the request map as single parameter.
  :)
-declare %private function router:execute-handler ($request as map(*), $response as map(*), $lookup as function(xs:string) as function(*)?) as map(*) {
-    if (not(map:contains($request?config, "operationId"))) then
-        error($errors:OPERATION, "Operation does not define an operationId", $request)
+declare %private function router:execute-handler ($base-request as map(*), $use, $lookup as function(xs:string) as function(*)?) as map(*) {
+    if (not(map:contains($base-request?config, "operationId"))) then
+        error($errors:OPERATION, "Operation does not define an operationId", $base-request?config)
     else
         try {
-            let $fn := $lookup($request?config?operationId)
+            let $request-with-body := map:put($base-request, "body", router:body($base-request))
+
+            let $request-response-array :=
+                fold-left($use, [$request-with-body, map {}], router:middleware-reducer#2)
+
+            let $request := $request-response-array?1
+            let $response := $request-response-array?2
+
+            let $fn := $lookup($base-request?config?operationId)
             let $handler-response := $fn($request)
 
             return
@@ -325,8 +348,7 @@ declare %private function router:execute-handler ($request as map(*), $response 
                     "line": $err:line-number,
                     "column": $err:column-number
                 },
-                "_request": $request,
-                "_response": $response
+                "_request": $base-request
             })
         }
 };
@@ -531,7 +553,6 @@ declare %private function router:is-rethrown-error($value as item()*) as xs:bool
 };
 
 declare %private function router:log-error ($code as xs:integer, $data as map(*)) as empty-sequence() {
-    (: let $request := $data?_request => => serialize(map{"method": "json"}) :)
     let $error := $data?_error => serialize(map{"method": "json"})
     return
         util:log("error", 

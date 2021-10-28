@@ -8,6 +8,15 @@ const chaiResponseValidator = require('chai-openapi-response-validator');
 const spec = path.resolve("./test/app/api.json");
 chai.use(chaiResponseValidator(spec));
 
+const dbUploadCollection = '/db/apps/roasted/uploads/'
+
+describe('Requesting a static file from the server', function () {
+    it('will download the resource', async function () {
+        const res = await util.axios.get('static/roaster-router-logo.png');
+        expect(res.status).to.equal(200);
+    });
+});
+
 describe('Path parameters', function () {
     it('handles get of path including $', async function () {
         const res = await util.axios.get('api/$op-er+ation*!');
@@ -15,6 +24,71 @@ describe('Path parameters', function () {
         // expect(res).to.satisfyApiSpec;
     });
 });
+
+describe('Request methods on api/$op-er+ation*! route', function (){
+    const route = 'api/$op-er+ation*!'
+    const expectNotAllowed = err => expect(err.response.status).to.equal(405)
+    const expectNotAllowedOrNotImplented = err => expect(err.response.status).to.be.oneOf([405, 501])
+
+    const fail = res => expect.fail(res)
+
+    it('should handle defined GET request', function () {
+        return util.axios.get(route)
+            .then(r => expect(r.status).to.equal(200))
+            .catch(fail)
+    });
+
+    it('should handle defined POST request', function () {
+        return util.axios.post(route, {})
+            .then(r => expect(r.status).to.equal(200))
+            .catch(fail)
+    });
+
+    it('should reject a HEAD request', function () {
+        return util.axios.head(route)
+            .then(fail)
+            .catch(expectNotAllowed)
+    });
+
+    it('should reject a PUT request', function () {
+        return util.axios.put(route)
+            .then(fail)
+            .catch(expectNotAllowed)
+    });
+
+    it('should reject a DELETE request', function () {
+        return util.axios.delete(route)
+            .then(fail)
+            .catch(expectNotAllowed)
+    });
+
+    // please note that HTTP PATCH is available in 
+    // exist since v5.3.0 and after
+    it('should reject a PATCH request', function () {
+        return util.axios.patch(route)
+            .then(fail)
+            .catch(expectNotAllowedOrNotImplented)
+    });
+
+    // OPTIONS request is handled by Jetty and will not reach your controller,
+    // nor roaster API
+    it('should handle OPTIONS request ', function () {
+        return util.axios.options(route)
+            .then(r => expect(r.status).to.equal(200))
+            .catch(fail)
+    });
+
+    // exist DB does not handle custom request methods, which is why this will
+    // return with error 501 instead
+    it('should reject a request with method "wibbley-wobbley"', function () {
+        return util.axios.request({
+            url: 'api/$op-er+ation*!',
+            method: 'wibbley-wobbley'
+        })
+            .then(fail)
+            .catch(expectNotAllowedOrNotImplented)
+    });
+})
 
 describe('Prefixed known path', function () {
     it('should return a not found error', function () {
@@ -30,22 +104,21 @@ describe("Binary up and download", function () {
     const contents = fs.readFileSync("./roasted.xar")
 
     describe("using basic authentication", function () {
+        const filename = 'roasted.xar'
         it('handles post of binary data', async function () {
-            const res = await util.axios.post('api/paths/roasted.xar', contents, {
+            const res = await util.axios.post('api/paths/' + filename, contents, {
                 headers: {
                     'Content-Type': 'application/octet-stream',
                     'Authorization': 'Basic YWRtaW46'
                 }
             });
             expect(res.status).to.equal(201);
-            expect(res.data).to.equal('/db/apps/roasted/roasted.xar');
+            expect(res.data).to.equal(dbUploadCollection + filename);
         });
-        it('passes parameter in last component of path', async function () {
-            const res = await util.axios.get('api/paths/roasted.xar', { responseType: 'arraybuffer' });
+        it('retrieves the data', async function () {
+            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' });
             expect(res.status).to.equal(200);
             expect(res.data).to.eql(contents);
-
-            // expect(res).to.satisfyApiSpec;
         });
     })
 
@@ -54,8 +127,8 @@ describe("Binary up and download", function () {
         before(async function () {
             await util.login()
         })
-        after(function () {
-            return util.logout()
+        after(async function () {
+            await util.logout()
         })
 
         it('handles post of binary data', async function () {
@@ -63,14 +136,12 @@ describe("Binary up and download", function () {
                 headers: { 'Content-Type': 'application/octet-stream' }
             });
             expect(res.status).to.equal(201);
-            expect(res.data).to.equal('/db/apps/roasted/' + filename);
+            expect(res.data).to.equal(dbUploadCollection + filename);
         });
-        it('passes parameter in last component of path', async function () {
+        it('retrieves the data', async function () {
             const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' });
             expect(res.status).to.equal(200);
             expect(res.data).to.eql(contents);
-
-            // expect(res).to.satisfyApiSpec;
         });
     })
 });
@@ -79,36 +150,104 @@ describe("body with content-type application/xml", function () {
     before(async function () {
         await util.login()
     })
-    after(function () {
-        return util.logout()
+    after(async function () {
+        await util.logout()
     })
 
     describe("with valid content", function () {
         let uploadResponse
+        const filename = 'valid.xml'
+        const contents = Buffer.from('<root/>')
         before(function () {
-            return util.axios.post('api/paths/valid.xml', Buffer.from('<root/>'), {
+            return util.axios.post('api/paths/' + filename, contents, {
                 headers: { 'Content-Type': 'application/xml' }
             })
             .then(r => uploadResponse = r)
-            .catch(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
         })
-        it("is accepted", function () {
+        it("is uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
-        })    
+            expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
+        })
+        it('can be retrieved', async function () {
+            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' });
+            expect(res.status).to.equal(200);
+            expect(res.data).to.eql(contents);
+        });
     })
 
     describe("with invalid content", function () {
-        let upload
+        let uploadResponse
         before(async function () {
             return util.axios.post('api/paths/invalid.xml', Buffer.from('<invalid>asdf'), {
                 headers: { 'Content-Type': 'application/xml' }
             })
-            .then(r => upload = r)
-            .catch(r => upload = r)
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
         })
-        it("is rejected", function () {
-            expect(upload.response.status).to.equal(500)
-        })        
+        it("is rejected as Bad Request", function () {
+            expect(uploadResponse.status).to.equal(400)
+        })
+        it("with the correct error code", function () {
+            expect(uploadResponse.data.code).to.equal('errors:BODY_CONTENT_TYPE')
+        })
+        it("with a human readable description", function () {
+            expect(uploadResponse.data.description).to.equal('Invalid XML')
+        })
+    })
+})
+
+describe("body with content-type application/json", function () {
+    before(async function () {
+        await util.login()
+    })
+    after(async function () {
+        await util.logout()
+    })
+    describe("with valid content", function () {
+        let uploadResponse
+        const filename = 'valid.json'
+        const contents = Buffer.from('{"valid":[]}')
+        before(function () {
+            return util.axios.post(
+                'api/paths/' + filename, 
+                contents, 
+                { headers: { 'Content-Type': 'application/json'} }
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
+        })
+        it("is uploaded", function () {
+            expect(uploadResponse.status).to.equal(201)
+            expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
+        })
+        it('can be retrieved', async function () {
+            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' });
+            expect(res.status).to.equal(200);
+            expect(res.data).to.eql(contents);
+        });
+    })
+
+    describe("with invalid content", function () {
+        let uploadResponse
+        before(function () {
+            return util.axios.post(
+                'api/paths/invalid.json',
+                '{"invalid: ()',
+                { headers: { 'Content-Type': 'application/json' } }
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
+        })
+        it("is rejected as Bad Request", function () {
+            expect(uploadResponse.status).to.equal(400)
+        })
+        it("with the correct error code", function () {
+            expect(uploadResponse.data.code).to.equal('errors:BODY_CONTENT_TYPE')
+        })
+        it("with a human readable description", function () {
+            expect(uploadResponse.data.description).to.equal('Invalid JSON')
+        })
     })
 })
 
