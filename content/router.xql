@@ -274,8 +274,8 @@ declare function router:body ($request as map(*)) {
                     return $xml
                 )
                 default return
-                    if (contains($type, '+json')) then request:get-data() => util:binary-to-string() => parse-json() else 
-                    if (contains($type, '+xml')) then (request:get-data() => parse-xml())/node() 
+                    if (contains($content-type-header, '+json')) then request:get-data() => util:binary-to-string() => parse-json() else 
+                    if (contains($content-type-header, '+xml')) then (request:get-data() => parse-xml())/node() 
                     else request:get-data()
             
             )
