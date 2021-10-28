@@ -185,9 +185,15 @@ describe("body with content-type application/xml", function () {
             .then(r => uploadResponse = r)
             .catch(e => uploadResponse = e.response)
         })
-        it("is rejected", function () {
-            expect(uploadResponse.status).to.equal(500)
-        })        
+        it("is rejected as Bad Request", function () {
+            expect(uploadResponse.status).to.equal(400)
+        })
+        it("with the correct error code", function () {
+            expect(uploadResponse.data.code).to.equal('errors:BODY_CONTENT_TYPE')
+        })
+        it("with a human readable description", function () {
+            expect(uploadResponse.data.description).to.equal('Invalid XML')
+        })
     })
 })
 
@@ -233,9 +239,15 @@ describe("body with content-type application/json", function () {
             .then(r => uploadResponse = r)
             .catch(e => uploadResponse = e.response)
         })
-        it("is rejected", function () {
-            expect(uploadResponse.status).to.equal(500)
-        })        
+        it("is rejected as Bad Request", function () {
+            expect(uploadResponse.status).to.equal(400)
+        })
+        it("with the correct error code", function () {
+            expect(uploadResponse.data.code).to.equal('errors:BODY_CONTENT_TYPE')
+        })
+        it("with a human readable description", function () {
+            expect(uploadResponse.data.description).to.equal('Invalid JSON')
+        })
     })
 })
 
