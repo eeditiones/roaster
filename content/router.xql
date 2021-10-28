@@ -261,18 +261,23 @@ declare function router:body ($request as map(*)) {
             if (map:contains($request?config?requestBody?content, $content-type-header))
             then (
                 switch ($content-type-header)
-                    case "multipart/form-data" return
-                        () (: TODO: implement form-data handling? :)
-                    case "application/json" return
-                        request:get-data() => util:binary-to-string() => parse-json()
-                    case "application/xml" return (
-                        let $data := request:get-data()
-                        let $test := parse-xml($data)
-                        let $xml := $data/node()
-                        return $xml
-                    )
-                    default return
-                        request:get-data()
+                case "multipart/form-data" return
+                    () (: TODO: implement form-data handling? :)
+                case "application/json" 
+                case "application/json-patch+json" return 
+                    (: RFC 6902 https://datatracker.ietf.org/doc/html/rfc6902/ :)
+                    request:get-data() => util:binary-to-string() => parse-json()
+                case "application/xml" return (
+                    let $data := request:get-data()
+                    let $test := parse-xml($data)
+                    let $xml := $data/node()
+                    return $xml
+                )
+                default return
+                    if (contains($type, '+json')) then request:get-data() => util:binary-to-string() => parse-json() else 
+                    if (contains($type, '+xml')) then (request:get-data() => parse-xml())/node() 
+                    else request:get-data()
+            
             )
             else 
                 error($errors:BODY_CONTENT_TYPE,
@@ -509,7 +514,10 @@ declare %private function router:method-for-content-type ($type as xs:string) as
         case "text/text" return "text"
         case "application/octet-stream" return "text"
         case "application/xml" return "xml"
-        default return "xml"
+        default return (
+            if (contains($type, '+json')) then "json" else 
+            if (contains($type, '+xml')) then "xml" else "xml" (: ? :)
+        )
 };
 
 
