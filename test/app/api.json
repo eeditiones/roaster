@@ -468,6 +468,24 @@
                 }
             }
         },
+        "/api/avatar": {
+            "get": {
+                "summary": "Retrieve avatar as SVG",
+                "operationId": "api:avatar",
+                "responses": {
+                    "200": {
+                        "description": "Not found",
+                        "content": {
+                            "image/svg+xml":{
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/errors/handle": {
             "get": {
                 "summary": "Test error handler",

@@ -239,59 +239,105 @@ function router:middleware-reducer (
     array { apply($next-middleware, $args) }
 };
 
+declare %private function router:content-type ($request as map(*)) as map(*) {
+    if (not(exists($request?config?requestBody?content)))
+    then (map{}) (: this route expects no body, return an empty map :)
+    else if (not($request?config?requestBody?content instance of map(*)))
+    then error($errors:OPERATION, "requestBody.content is not defined correctly", $request?config)
+    else (
+        let $defined-content-types := map:keys($request?config?requestBody?content)
+
+        let $raw-content-type-header-value := request:get-header("Content-Type")
+        let $media-type :=
+            if (contains($raw-content-type-header-value, ";"))
+            then substring-before($raw-content-type-header-value, ";")
+            else $raw-content-type-header-value
+        
+        let $charset :=
+            if (contains($raw-content-type-header-value, "charset="))
+            then (
+                substring-after($raw-content-type-header-value, "charset=")
+                => lower-case()
+                => replace("^([a-z0-9\-]+).*$", "$1")
+            )
+            else ()
+
+        let $registry := substring-before($media-type, "/")
+        let $format-hint := substring-after($media-type, "+")
+
+        return
+            if (
+                $media-type = $defined-content-types or (
+                    $defined-content-types = "*/*" and
+                    $registry = (
+                        "application", "audio", "example", "font", "image",
+                        "message", "model", "multipart", "text", "video"
+                    )
+                )
+            )
+            then map {
+                "media-type": $media-type,
+                "charset": $charset,
+                "registry": $registry,
+                "format": 
+                    if ($media-type = ("application/json", "text/json")) 
+                    then "json" 
+                    else if ($media-type = ("application/xml", "text/xml"))
+                    then "xml"
+                    else if ($media-type = "multipart/form-data")
+                    then "form-data"
+                    else if ($format-hint) 
+                    then $format-hint 
+                    else "binary"
+            }
+            else error(
+                $errors:BODY_CONTENT_TYPE,
+                "Body with media-type '" || $media-type || "' is not allowed", 
+                $request
+            )
+    )
+};
+
 (:~
  : Try to retrieve and convert the request body if specified
  :)
 declare function router:body ($request as map(*)) {
-    if (
-        not(map:contains($request?config, "requestBody")) or
-        not(map:contains($request?config?requestBody, "content"))
-    )
+    if (not(exists($request?media-type)))
     then () (: this route expects no body, return an empty sequence :)
     else (
-        let $content-type-header := (: strip charset info from mime-type if present :)
-            request:get-header("Content-Type")
-            => replace("^([^;]+);?.*$", "$1")
-        
-        let $definition := $request?config?requestBody?content
-
-        return
-            if (
-                map:contains($definition, $content-type-header) or 
-                map:contains($definition, "*/*")
+        try {
+            switch ($request?format)
+            (: Q: do we need to handle form-data? :)
+            case "form-data" return () 
+            (:
+                Parse body contents to XQuery data structure for media types
+                that were identified as being in JSON format.
+                NOTE: The data needs to be serialized again before it can be stored.
+            :)
+            case "json" return
+                request:get-data() 
+                => util:binary-to-string()
+                => parse-json()
+            (: 
+                Workaround for eXist-DB specific behaviour, 
+                this way we will get parse errors as early as possible
+                while still having access to the data afterwards.
+                NOTE: Returns the root node instead of a document (fragment).
+            :)
+            case "xml" return 
+                let $data := request:get-data()
+                let $_test := parse-xml($data)
+                return $data/node()
+            (: Treat everything else as binary data :)
+            default return request:get-data()
+        }
+        catch * {
+            error(
+                $errors:BODY_CONTENT_TYPE, 
+                "Body with media type '" || $request?media-type || "' could not be parsed (invalid " || upper-case($request?format) || ").",
+                $err:description
             )
-            then (
-                switch ($content-type-header)
-                    case "multipart/form-data" return
-                        () (: TODO: implement form-data handling? :)
-                    case "application/json" return
-                        try {
-                            request:get-data() => util:binary-to-string() => parse-json()
-                        }
-                        catch * {
-                            error($errors:BODY_CONTENT_TYPE, "Invalid JSON", $err:description)
-                        }
-                    case "application/xml" return 
-                        try {
-                            (: 
-                             : workaround for eXist-DB specific behaviour, 
-                             : this way we will get parse errors as early as possible
-                             : while still having access to the data afterwards
-                             :)
-                            let $data := request:get-data()
-                            let $_test := parse-xml($data)
-                            (: return root node instead of a document fragment :)
-                            return $data/node() 
-                        }
-                        catch * {
-                            error($errors:BODY_CONTENT_TYPE, "Invalid XML", $err:description)
-                        }
-                    default return
-                        request:get-data()
-            )
-            else 
-                error($errors:BODY_CONTENT_TYPE,
-                    "Passed in Content-Type " || $content-type-header || " not allowed")
+        }
     )
 };
 
@@ -304,7 +350,8 @@ declare %private function router:execute-handler ($base-request as map(*), $use,
         error($errors:OPERATION, "Operation does not define an operationId", $base-request?config)
     else
         try {
-            let $request-with-body := map:put($base-request, "body", router:body($base-request))
+            let $request-with-content-type := map:merge(($base-request, router:content-type($base-request)))
+            let $request-with-body := map:put($request-with-content-type, "body", router:body($request-with-content-type))
 
             let $request-response-array :=
                 fold-left($use, [$request-with-body, map {}], router:middleware-reducer#2)
@@ -523,17 +570,34 @@ declare %private function router:safe-set-header ($header as xs:string, $value a
 
 (:~
  : Q: binary types?
+ : XSLT default values: "xml", "xhtml", "html", "text", "json", "adaptive"
+ : "html5" is an eXist-DB provided extension
  :)
 declare %private function router:method-for-content-type ($type as xs:string) as xs:string {
-    switch($type)
-        case "application/json" return "json"
-        case "text/html" return "html5"
-        case "text/text" return "text"
-        case "application/octet-stream" return "text"
-        case "application/xml" return "xml"
-        default return "xml"
+    switch (substring-before($type, "/"))
+        case "application" return
+            if (ends-with($type, "json")) then "json" (: matches application/json and any type ending in +json :)
+            else if (ends-with($type, "xhtml+xml")) then "xhtml"
+            else if (ends-with($type, "xml")) then "xml" (: matches application/xml and any type ending in +xml :)
+            else "text"
+        case "text" return
+            if (ends-with($type, "/xml")) then "xml"
+            else if (ends-with($type, "/html")) then "html5"
+            else "text"
+        case "image" return
+            if (ends-with($type, "/svg+xml")) then "xml"
+            else "text"
+        case "multipart"
+        case "audio"
+        case "font"
+        case "example"
+        case "message"
+        case "model"
+        case "video" return 
+            "text" (: assume binary content :)
+        default return 
+            error($errors:OPERATION, "Unknown media type '" || $type || '"')  
 };
-
 
 (: helpers :)
 
