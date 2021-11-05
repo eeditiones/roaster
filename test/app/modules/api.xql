@@ -2,6 +2,7 @@ xquery version "3.1";
 
 declare namespace api="http://e-editiones.org/roasted/test-api";
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
+declare namespace svg="http://www.w3.org/2000/svg";
 
 import module namespace roaster="http://e-editiones.org/roaster";
 
@@ -98,6 +99,17 @@ declare function api:get-uploaded-data ($request as map(*)) {
     )
 };
 
+declare function api:avatar ($request as map(*)) {
+    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <g fill="darkgreen" stroke="lime" stroke-width=".25" transform="skewX(4) skewY(8) translate(0,.5)">{
+            for $pos in 1 to 10
+            let $zero-based := $pos - 1
+            let $x := $zero-based mod 4 * 3 + 2
+            let $y := $zero-based idiv 4 * 3 + 2
+            return <rect x="{$x}" y="{$y}" width="2" height="2" rx=".5" ry=".5" />
+        }</g>
+    </svg>
+};
 
 (: end of route handlers :)
 
@@ -110,4 +122,5 @@ declare function api:lookup ($name as xs:string) {
     function-lookup(xs:QName($name), 1)
 };
 
+(: util:declare-option("output:indent", "no"), :)
 roaster:route($api:definitions, api:lookup#1)
