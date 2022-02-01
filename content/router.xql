@@ -326,7 +326,8 @@ declare function router:body ($request as map(*)) {
             :)
             case "xml" return 
                 let $data := request:get-data()
-                let $_test := parse-xml($data)
+                let $_seq-type := $data => util:get-sequence-type()
+                let $_test := if ($_seq-type = 'string') then parse-xml($data) else $data => serialize() => parse-xml()
                 return $data/node()
             (: Treat everything else as binary data :)
             default return request:get-data()

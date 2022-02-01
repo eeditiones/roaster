@@ -62,7 +62,7 @@ describe("body with content-type application/xml", function () {
     describe("with valid content", function () {
         let uploadResponse
         const filename = 'valid.xml'
-        const contents = Buffer.from('<root/>')
+        const contents = Buffer.from('<root><p>valid xml</p></root>')
         before(function () {
             return util.axios.post('api/paths/' + filename, contents, {
                 headers: { 'Content-Type': 'application/xml' }
@@ -202,8 +202,8 @@ describe("body with content-type application/json", function () {
         const contents = Buffer.from('{"valid":[]}')
         before(function () {
             return util.axios.post(
-                'api/paths/' + filename, 
-                contents, 
+                'api/paths/' + filename,
+                contents,
                 { headers: { 'Content-Type': 'application/json'} }
             )
             .then(r => uploadResponse = r)
@@ -250,7 +250,7 @@ describe("with invalid content-type header", function () {
             'api/paths/invalid.stuff',
             'asd;lfkjdas;flkja',
             {
-                headers: { 
+                headers: {
                     'Content-Type': 'my/thing',
                     'Authorization': 'Basic YWRtaW46'
                 }
@@ -272,7 +272,7 @@ describe("with invalid content-type header", function () {
 
 describe("Retrieving an SVG image", function () {
     let response
-    const avatarImage = 
+    const avatarImage =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\n' +
         '    <g fill="darkgreen" stroke="lime" stroke-width=".25" transform="skewX(4) skewY(8) translate(0,.5)">\n' +
         '        <rect x="2" y="2" width="2" height="2" rx=".5" ry=".5"/>\n' +
@@ -287,7 +287,7 @@ describe("Retrieving an SVG image", function () {
         '        <rect x="5" y="8" width="2" height="2" rx=".5" ry=".5"/>\n' +
         '    </g>\n' +
         '</svg>'
-    
+
     before(async function () {
         response = await util.axios.get('api/avatar')
     })
