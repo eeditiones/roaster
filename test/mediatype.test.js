@@ -6,7 +6,7 @@ const fs = require('fs')
 const dbUploadCollection = '/db/apps/roasted/uploads/'
 
 describe("Binary up and download", function () {
-    const contents = fs.readFileSync("./roasted.xar")
+    const contents = fs.readFileSync("./dist/roasted.xar")
 
     describe("using basic authentication", function () {
         const filename = 'roasted.xar'
