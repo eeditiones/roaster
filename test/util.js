@@ -39,22 +39,15 @@ async function login() {
         params
     });
 
-    expect(res.status).to.equal(200);
-    expect(res.data.user).to.equal('tei');
-
     const cookie = res.headers['set-cookie'];
     axiosInstance.defaults.headers.Cookie = cookie[0];
     // console.log('Logged in as %s: %s', res.data.user, res.statusText);
 }
 
-function logout(done) {
-    // console.log('Logging out ...');
-    axiosInstance.request({
-        url: 'login',
-        method: 'post',
-        params: {
-            logout: 'true'
-        }
+async function logout(done) {
+    const res = await axiosInstance.request({
+        url: 'logout',
+        method: 'get'
     })
 
     const cookie = res.headers["set-cookie"]
