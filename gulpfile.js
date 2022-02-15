@@ -36,7 +36,12 @@ const library = {
 
 // test application metadata
 const testApp = {
-    files: ['test/app/*.*', "test/app/modules/*"],
+    files: [
+        'test/app/*.*',
+        'test/app/modules/*',
+        "test/app/resources/*",
+        "test/app/uploads/*"
+    ],
     packageFilename: "roasted.xar",
     build: 'test/app/build',
     base: 'test/app'
@@ -129,7 +134,7 @@ function xar () {
  * create XAR package in repo root
  */
 function packageTestApp () {
-    return src(testApp.files, {base: testApp.base})
+    return src(testApp.files, {base: testApp.base, dot:true})
         .pipe(zip(testApp.packageFilename))
         .pipe(dest(distFolder))
 }
