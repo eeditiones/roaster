@@ -62,7 +62,7 @@ describe("body with content-type application/xml", function () {
     describe("with valid content", function () {
         let uploadResponse
         const filename = 'valid.xml'
-        const contents = Buffer.from('<root/>')
+        const contents = Buffer.from('<root>\n\t<nested>text</nested>\n</root>')
         before(function () {
             return util.axios.post('api/paths/' + filename, contents, {
                 headers: { 'Content-Type': 'application/xml' }
@@ -78,9 +78,9 @@ describe("body with content-type application/xml", function () {
             expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
         })
         it('can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
-            expect(res.status).to.equal(200)
-            expect(res.data).to.eql(contents)
+            const {status, data} = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            expect(status).to.equal(200)
+            expect(data).to.eql(contents)
         })
     })
 
@@ -146,7 +146,7 @@ describe("body with content-type application/tei+xml", function () {
     describe("with valid content", function () {
         let uploadResponse
         const filename = 'valid.tei.xml'
-        const contents = Buffer.from('<TEI/>')
+        const contents = Buffer.from('<TEI xmlns="http://www.tei-c.org/ns/1.0">\n\t<teiHeader/>\n\t<text>some text</text>\n</TEI>')
         before(function () {
             return util.axios.post('api/paths/' + filename, contents, {
                 headers: { 'Content-Type': 'application/tei+xml' }

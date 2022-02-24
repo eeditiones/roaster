@@ -326,8 +326,10 @@ declare function router:body ($request as map(*)) {
             :)
             case "xml" return 
                 let $data := request:get-data()
-                let $_test := parse-xml($data)
-                return $data/node()
+                return
+                    typeswitch ($data)
+                    case node() return $data/node()
+                    default return parse-xml($data)
             (: Treat everything else as binary data :)
             default return request:get-data()
         }
