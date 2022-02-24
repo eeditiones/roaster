@@ -13,7 +13,7 @@
     ["@semantic-release/github", {
       "assets": [
         {
-          "path": "./roaster-*.xar", 
+          "path": "dist/roaster-*.xar", 
           "name": "roaster-${nextRelease.version}.xar",
           "label": "Expath package (roaster-${nextRelease.version}.xar)"
         }
