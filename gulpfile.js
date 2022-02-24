@@ -1,77 +1,79 @@
 /**
- * an example gulpfile to make ant-less existdb package builds a reality
+ * build, watch, deploy tasks
+ * for the library and example application package
  */
 const { src, dest, watch, series, parallel } = require('gulp')
-const { createClient } = require('@existdb/gulp-exist')
 const rename = require('gulp-rename')
 const zip = require("gulp-zip")
-const replace = require('@existdb/gulp-replace-tmpl')
 const del = require('delete')
 
+const { createClient, readOptionsFromEnv } = require('@existdb/gulp-exist')
+const replace = require('@existdb/gulp-replace-tmpl')
+
 // read metadata from package.json and .existdb.json
-const { version, license } = require('./package.json')
-const { package, servers } = require('./.existdb.json')
+const { version, license, app } = require('./package.json')
 
 // .tmpl replacements to include 
 // first value wins
-const replacements = [package, {version, license}]
+const replacements = [app, {version, license}]
 
-const serverInfo = servers.localhost
-const { port, hostname } = new URL(serverInfo.server)
-const connectionOptions = {
-    basic_auth: {
-        user: serverInfo.user, 
-        pass: serverInfo.password
-    },
-    host: hostname,
-    port
-}
+const defaultOptions = { basic_auth: { user: "admin", pass: "" } }
+const connectionOptions = Object.assign(defaultOptions, readOptionsFromEnv())
 const existClient = createClient(connectionOptions);
 
-const static = [
-    "content/*",
-    "icon.svg"
-]
+const distFolder = 'dist'
+
+const library = {
+    static: [
+        "content/*",
+        "icon.svg"
+    ],
+    allBuildFiles: 'build/**/*',
+    build: 'build',
+    templates: '*.tmpl'
+}
+
 
 // test application metadata
-const testAppNs = "http://e-editiones.org/roasted"
-const testAppFiles = [
-    'test/app/**/*.*',      // all non-dotfiles
-    'test/app/**/.keep',    // explicitly include .keep file(s)
-    '!test/app/build.xml'   // exclude build.xml
-]
-const testAppPackageName = "roasted.xar"
-
+const testApp = {
+    files: [
+        'test/app/*.*',
+        'test/app/modules/*',
+        "test/app/resources/*",
+        "test/app/uploads/*"
+    ],
+    packageFilename: "roasted.xar",
+    build: 'test/app/build',
+    base: 'test/app'
+}
 // construct the current xar name from available data
-const packageName = () => `${package.target}-${version}.xar`
+const packageFilename = `${app.target}-${version}.xar`
 
 /**
  * helper function that uploads and installs a built XAR
  */
-function installXar (packageName, packageUri) {
-    return src(packageName)
-        .pipe(existClient.install({ packageUri }))
+function installXar (packageFilename) {
+    return src(packageFilename, {cwd: distFolder})
+        .pipe(existClient.install())
 }
 
-/**
- * Use the `delete` module directly, instead of using gulp-rimraf
- */
+function cleanDist (cb) {
+    del([distFolder], cb);
+}
+exports['clean:dist'] = cleanDist
+
 function cleanLibrary (cb) {
-    del(['build'], cb);
+    del([library.build], cb);
 }
 exports['clean:library'] = cleanLibrary
-/**
- * Use the `delete` module directly, instead of using gulp-rimraf
- */
+
 function cleanTest (cb) {
-    del(['test/app/build'], cb);
+    del([testApp.build], cb);
 }
 exports['clean:test'] = cleanTest
-/**
- * Use the `delete` module directly, instead of using gulp-rimraf
- */
+
 function cleanAll (cb) {
-    del(['build', 'test/app/build'], cb);
+    del([distFolder, library.build, testApp.build], cb);
 }
 exports['clean:all'] = cleanAll
 
@@ -83,16 +85,16 @@ exports.clean = cleanAll
  * output to build/*.xml
  */
 function templates() {
-    return src('*.tmpl')
+    return src(library.templates)
         .pipe(replace(replacements, { unprefixed: true }))
         .pipe(rename(path => { path.extname = "" }))
-        .pipe(dest('build/'))
+        .pipe(dest(library.build))
 }
 
 exports.templates = templates
 
 function watchTemplates () {
-    watch('*.tmpl', series(templates))
+    watch(library.templates, series(templates))
 }
 exports["watch:tmpl"] = watchTemplates
 
@@ -100,12 +102,12 @@ exports["watch:tmpl"] = watchTemplates
  * copy html templates, XSL stylesheet, XMLs and XQueries to 'build'
  */
 function copyStatic () {
-    return src(static, {base: '.'}).pipe(dest('build'))
+    return src(library.static, {base: '.'}).pipe(dest(library.build))
 }
 exports.copy = copyStatic
 
 function watchStatic () {
-    watch(static, series(copyStatic));
+    watch(library.static, series(copyStatic));
 }
 exports["watch:static"] = watchStatic
 
@@ -116,25 +118,25 @@ exports["watch:static"] = watchStatic
  * This is why the xar will be installed instead
  */
 function watchBuild () {
-    watch('build/**/*', series(xar, installLibraryXar))
+    watch(library.allBuildFiles, series(xar, installLibraryXar))
 }
 
 /**
  * create XAR package in repo root
  */
 function xar () {
-    return src('build/**/*', {base: 'build'})
-        .pipe(zip(packageName()))
-        .pipe(dest('.'))
+    return src(library.allBuildFiles, {base: library.build})
+        .pipe(zip(packageFilename))
+        .pipe(dest(distFolder))
 }
 
 /**
  * create XAR package in repo root
  */
 function packageTestApp () {
-    return src(testAppFiles, {base: 'test/app', dot: true})
-        .pipe(zip(testAppPackageName))
-        .pipe(dest('.'))
+    return src(testApp.files, {base: testApp.base, dot:true})
+        .pipe(zip(testApp.packageFilename))
+        .pipe(dest(distFolder))
 }
 exports["build:test"] = series(cleanTest, packageTestApp)
 
@@ -142,12 +144,12 @@ exports["build:test"] = series(cleanTest, packageTestApp)
  * upload and install a built XAR
  */
 function installTestAppXar () {
-    return installXar(testAppPackageName, testAppNs)
+    return installXar(testApp.packageFilename)
 }
 exports["install:test"] = series(cleanTest, packageTestApp, installTestAppXar)
 
 function watchTestApp () {
-    watch(testAppFiles, series(packageTestApp, installTestAppXar));
+    watch(testApp.files, series(packageTestApp, installTestAppXar));
 }
 exports["watch:test"] = watchTestApp
 
@@ -155,7 +157,7 @@ exports["watch:test"] = watchTestApp
  * upload and install the latest built XAR
  */
 function installLibraryXar () {
-    return installXar(packageName(), package.namespace)
+    return installXar(packageFilename)
 }
 
 // composed tasks

@@ -14,9 +14,9 @@ jobs:
     services:
       # Label used to access the service container
       exist:
-        image: existdb/existdb:${{ matrix.exist-version}}
+        image: existdb/existdb:${{ matrix.exist-version }}
         ports:
-          - 8080:8080
+          - 8443:8443
     steps:
       - uses: actions/checkout@v2
       - name: Use Node.js 14

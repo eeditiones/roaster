@@ -1,6 +1,7 @@
 const util = require('./util.js')
 const chai = require('chai')
 const expect = chai.expect
+const fs = require('fs')
 
 describe('Request methods on api/$op-er+ation*! route', function (){
     const route = 'api/$op-er+ation*!'
@@ -77,8 +78,8 @@ describe('Prefixed known path', function () {
     });
 });
 
-describe('On Login', function () {
-    let response
+describe("Binary up and download", function () {
+    const contents = fs.readFileSync("./dist/roasted.xar")
 
     before(async function () {
         await util.login()
