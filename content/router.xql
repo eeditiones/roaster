@@ -284,7 +284,7 @@ declare %private function router:content-type ($request as map(*)) as map(*) {
                     then "json" 
                     else if ($media-type = ("application/xml", "text/xml"))
                     then "xml"
-                    else if ($media-type = "multipart/form-data")
+                    else if ($media-type = ("multipart/form-data", "application/x-www-form-urlencoded"))
                     then "form-data"
                     else if ($format-hint) 
                     then $format-hint 
@@ -308,7 +308,12 @@ declare function router:body ($request as map(*)) {
         try {
             switch ($request?format)
             (: Q: do we need to handle form-data? :)
-            case "form-data" return () 
+            case "form-data" return
+                map:merge(
+                    for $key in request:get-parameter-names()
+                    let $value := request:get-parameter($key, ())
+                    return map { $key : $value }
+                )
             (:
                 Parse body contents to XQuery data structure for media types
                 that were identified as being in JSON format.
