@@ -1,3 +1,4 @@
+                    "content": {
 # Uploading files from an HTML form
 
 When uploading a file from an HTML form, the file content is not sent as the request body.
