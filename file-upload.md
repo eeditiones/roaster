@@ -47,7 +47,7 @@ The form is at the URL `static/upload.html`, which is why the relative URL for u
 
 The OpenAPI specification for the upload is:
 
-```json:
+```json
         "/upload-text/{path}": {
             "post": {
                 "summary": "Upload a text file.",
