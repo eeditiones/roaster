@@ -75,14 +75,14 @@ npm install
 npm test
 ```
 
-More extensive tests for this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app/tree/feature/open-api/test) repository.
+Additional tests that cover this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app) repository.
 
 ## How it works
 
 eXist applications usually have a controller as main entry point. The 
-[controller.xql](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/controller.xql) in TEI Publisher only handles requests to static resources, but forwards all other requests to an XQuery script [api.xql](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/lib/api.xql). This script imports the OpenAPI router module and calls `roaster:route`, passing it one or more Open API specifications in JSON format.
+[controller.xql](test/app/controller.xql) in the example application only handles requests to static resources, but forwards all other requests to an XQuery script [api.xql](test/app/modules/api.xql). This script imports the OpenAPI router module and calls `roaster:route`, passing it one or more Open API specifications in JSON format.
 
-TEI Publisher uses two specifications: [api.json](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/lib/api.json) and [custom-api.json](https://github.com/eeditiones/tei-publisher-app/blob/feature/open-api/modules/custom-api.json). This is done to make it easier for users to extend the default API. It is also possible to overwrite a route from `api.json` by placing it into `custom-api.json`.
+TEI Publisher uses two specifications: [api.json](https://github.com/eeditiones/tei-publisher-app/tree/master/modules/lib/api.json) and [custom-api.json](https://github.com/eeditiones/tei-publisher-app/tree/master/modules/custom-api.json). This is done to make it easier for users to extend the default API. It is also possible to overwrite a route from `api.json` by placing it into `custom-api.json`.
 
 Each route in the specification _must_ have an `operationId` property.
 This is the name of the XQuery function that will handle the request to the given route. The XQuery function must be resolved by the $lookup function in one of the modules which are visible at the point where `roaster:route` is called. Consequently, [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
@@ -94,7 +94,7 @@ The XQuery handler function _must_ expect exactly one argument: `$request as map
 * _body_: the body of the request (if ~requestBody~ was used), cast to the specified media type (currently application/json or application/xml).
 * _config_: the JSON object corresponding to the Open API path configuration for the current route and method
 * _user_: contains the authenticated user, if any authentication was successful
-* _method_: PUT, POST, GET, ...
+* _method_: GET, POST, PUT, DELETE, HEAD...
 * _path_: the requested path
 * _spec_: the entire API definition this route is defined in
 
