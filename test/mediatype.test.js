@@ -199,11 +199,11 @@ describe("body with content-type application/json", function () {
     describe("with valid content", function () {
         let uploadResponse
         const filename = 'valid.json'
-        const contents = Buffer.from('{"valid":[]}')
+        const contents = Buffer.from('{"valid":["json","data"]}')
         before(function () {
             return util.axios.post(
                 'api/paths/' + filename, 
-                contents, 
+                contents,
                 { headers: { 'Content-Type': 'application/json'} }
             )
             .then(r => uploadResponse = r)
@@ -225,8 +225,12 @@ describe("body with content-type application/json", function () {
         before(function () {
             return util.axios.post(
                 'api/paths/invalid.json',
-                '{"invalid: ()',
-                { headers: { 'Content-Type': 'application/json' } }
+                '{"invalid: ()}',
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    // override default request transformation to send raw data
+                    transformRequest: [data => data]
+                }
             )
             .then(r => uploadResponse = r)
             .catch(e => uploadResponse = e.response)
