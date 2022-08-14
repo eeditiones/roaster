@@ -342,6 +342,17 @@
                 "requestBody": {
                     "required": true,
                     "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "array",
+                                "properties": {
+                                  "file": {
+                                    "type": "string",
+                                    "format": "binary"
+                                  }
+                                }
+                            }
+                        },
                         "*/*": {
                             "schema": {
                                 "type": "string",

@@ -68,16 +68,29 @@ declare function api:handle-error($error as map(*)) as element(html) {
 };
 
 declare function api:upload-data ($request as map(*)) {
-    let $body :=
-        if (
-            $request?body instance of array(*) or
-            $request?body instance of map(*)
-        )
-        then ($request?body => serialize(map { "method": "json" }))
-        else ($request?body)
+    if ($request?body instance of map(*) and $request?body?__multipart)
+    then (
+        let $names := request:get-uploaded-file-name('file')
+        let $contents := request:get-uploaded-file-data('file')
 
-    let $stored := xmldb:store("/db/apps/roasted/uploads", $request?parameters?path, $body)
-    return roaster:response(201, $stored)
+        let $stored :=
+            for $name at $index in $names
+            let $content := $contents[$index]
+            return xmldb:store("/db/apps/roasted/uploads", $name, $content)
+        return roaster:response(201, string-join($stored, '&#10;'))
+    )
+    else (
+        let $body :=
+            if (
+                $request?body instance of array(*) or
+                $request?body instance of map(*)
+            )
+            then ($request?body => serialize(map { "method": "json" }))
+            else ($request?body)
+
+        let $stored := xmldb:store("/db/apps/roasted/uploads", $request?parameters?path, $body)
+        return roaster:response(201, $stored)
+    )
 };
 
 declare function api:get-uploaded-data ($request as map(*)) {
