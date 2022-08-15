@@ -68,15 +68,11 @@ declare function api:handle-error($error as map(*)) as element(html) {
 };
 
 declare function api:upload-data ($request as map(*)) {
-    if ($request?body instance of map(*) and $request?body?__multipart)
+    if ($request?body instance of map(*) and exists($request?body?file))
     then (
-        let $names := request:get-uploaded-file-name('file')
-        let $contents := request:get-uploaded-file-data('file')
-
         let $stored :=
-            for $name at $index in $names
-            let $content := $contents[$index]
-            return xmldb:store("/db/apps/roasted/uploads", $name, $content)
+            for $file in $request?body?file
+            return xmldb:store("/db/apps/roasted/uploads", $file?name, $file?data)
         return roaster:response(201, string-join($stored, '&#10;'))
     )
     else (
