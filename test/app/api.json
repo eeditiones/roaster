@@ -344,11 +344,14 @@
                     "content": {
                         "multipart/form-data": {
                             "schema": {
-                                "type": "array",
+                                "type": "object",
                                 "properties": {
                                   "file": {
-                                    "type": "string",
-                                    "format": "binary"
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "format": "binary"                    
+                                    }
                                   }
                                 }
                             }
