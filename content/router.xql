@@ -309,15 +309,48 @@ declare function router:body ($request as map(*)) {
             switch ($request?format)
             case "form-data" return (
                 if (request:is-multipart-content())
-                then (map { "__multipart": true() })
-                else 
-                    map:merge(
-                        for $key in request:get-parameter-names()
-                        let $value := request:get-parameter($key, ())
-                        return (
-                            map { $key : $value }
-                        )
+                then (
+                    let $properties := $request?config?requestBody?content?("multipart/form-data")?schema?properties
+                    return map:merge(
+                        for $name in map:keys($properties)
+                        let $property := $properties?($name)
+                        let $is-array := $property?type = "array"
+                        let $is-binary :=
+                            if ($is-array)
+                            then $property?items?format = "binary"
+                            else $property?format = "binary"
+                        return
+                            (: TODO: throw if not $is-array but more than one item received :)
+                            (: TODO: throw if not nullable but no item received :)
+                            if ($is-binary)
+                            then 
+                                let $names := request:get-uploaded-file-name($name)                                
+                                let $data := request:get-uploaded-file-data($name)
+                                let $sizes := request:get-uploaded-file-size($name)
+                                return map { $name : 
+                                    for $name at $index in $names
+                                    return map {
+                                        "name": $name,
+                                        "data": $data[$index],
+                                        "size": $sizes[$index]
+                                    }
+                                }
+                            else
+                                let $value := request:get-parameter($name, ())
+                                return map { $name : $value }
                     )
+                )
+                else (
+                    let $properties := $request?config?requestBody?content?("application/x-www-form-urlencoded")?schema?properties
+                    return
+                        map:merge(
+                            for $name in map:keys($properties)
+                            let $value := request:get-parameter($name, ())
+                            return (
+                                map { $name : $value }
+                            )
+                        )
+                )
             )
             (:
                 Parse body contents to XQuery data structure for media types
