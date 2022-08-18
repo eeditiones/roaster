@@ -23,14 +23,12 @@ declare function upload:single ($request as map(*)) {
 
 declare function upload:batch ($request as map(*)) {
     try {
-        let $stored :=
-            array {
-                for $file in $request?body?file
-                return xmldb:store($upload:collection, $file?name, $file?data)
-            }
+        let $stored as xs:string+ :=
+            for $file in $request?body?file
+            return xmldb:store($upload:collection, $file?name, $file?data)
 
         return
-            roaster:response(201, map{ "uploaded": $stored })
+            roaster:response(201, map{ "uploaded": array{ $stored }})
     }
     catch * {
         roaster:response(400, map { "error": $err:description })        
