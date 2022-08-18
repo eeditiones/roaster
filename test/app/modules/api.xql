@@ -10,6 +10,7 @@ import module namespace auth="http://e-editiones.org/roaster/auth";
 import module namespace rutil="http://e-editiones.org/roaster/util";
 import module namespace errors="http://e-editiones.org/roaster/errors";
 
+import module namespace upload="http://e-editiones.org/roasted/upload" at "upload.xqm";
 
 (:~
  : list of definition files to use
@@ -68,25 +69,16 @@ declare function api:handle-error($error as map(*)) as element(html) {
 };
 
 declare function api:upload-data ($request as map(*)) {
-    if ($request?body instance of map(*) and exists($request?body?file))
-    then (
-        let $stored :=
-            for $file in $request?body?file
-            return xmldb:store("/db/apps/roasted/uploads", $file?name, $file?data)
-        return roaster:response(201, string-join($stored, '&#10;'))
-    )
-    else (
-        let $body :=
-            if (
-                $request?body instance of array(*) or
-                $request?body instance of map(*)
-            )
-            then ($request?body => serialize(map { "method": "json" }))
-            else ($request?body)
+    let $body :=
+        if (
+            $request?body instance of array(*) or
+            $request?body instance of map(*)
+        )
+        then ($request?body => serialize(map { "method": "json" }))
+        else ($request?body)
 
-        let $stored := xmldb:store("/db/apps/roasted/uploads", $request?parameters?path, $body)
-        return roaster:response(201, $stored)
-    )
+    let $stored := xmldb:store("/db/apps/roasted/uploads", $request?parameters?path, $body)
+    return roaster:response(201, $stored)
 };
 
 declare function api:get-uploaded-data ($request as map(*)) {

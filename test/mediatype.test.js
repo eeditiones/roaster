@@ -276,7 +276,7 @@ test.
 
         before(function () {
             return util.axios.post(
-                'api/paths/' + filename,
+                'upload/single/' + filename,
                 data,
                 { headers }                
             )
@@ -285,7 +285,8 @@ test.
         })
         it("is uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
-            expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
+            expect(uploadResponse.data.uploaded).to.exist
+            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + filename)
         })
         it('can be retrieved', async function () {
             const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
@@ -316,7 +317,7 @@ test.
 
         before(function () {
             return util.axios.post(
-                'api/paths/' + filename,
+                'upload/single/' + filename,
                 data,
                 { headers }                
             )
@@ -325,7 +326,8 @@ test.
         })
         it("is uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
-            expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
+            expect(uploadResponse.data.uploaded).to.exist
+            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + filename)
         })
         it('can be retrieved', async function () {
             const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
@@ -350,7 +352,7 @@ test.
 
         before(function () {
             return util.axios.post(
-                'api/paths/' + filename,
+                'upload/single/' + filename,
                 data,
                 { headers }                
             )
@@ -359,7 +361,8 @@ test.
         })
         it("is uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
-            expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
+            expect(uploadResponse.data.uploaded).to.exist
+            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + filename)
         })
         it('can be retrieved', async function () {
             const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
@@ -392,7 +395,7 @@ test.
 
         before(function () {
             return util.axios.post(
-                'api/paths/batch',
+                'upload/batch',
                 data,
                 { headers }                
             )
@@ -401,10 +404,11 @@ test.
         })
         it("both were uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
-            expect(uploadResponse.data).to.equal(
-              dbUploadCollection + firstFileName + '\n' +
-              dbUploadCollection + secondFileName
-            )
+            expect(uploadResponse.data.uploaded).to.exist
+            expect(uploadResponse.data.uploaded).to.deep.equal([
+                dbUploadCollection + firstFileName,
+                dbUploadCollection + secondFileName
+            ])
         })
         it('both can be retrieved', async function () {
             const res = await util.axios.get('api/paths/' + firstFileName, { responseType: 'arraybuffer' })
