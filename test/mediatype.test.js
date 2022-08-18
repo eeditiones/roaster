@@ -5,6 +5,7 @@ const expect = chai.expect
 const fs = require('fs')
 const FormData = require('form-data')
 const dbUploadCollection = '/db/apps/roasted/uploads/'
+const downloadApiEndpoint = 'api/paths/'
 
 describe("Binary up and download", function () {
     const contents = fs.readFileSync("./dist/roasted.xar")
@@ -22,7 +23,7 @@ describe("Binary up and download", function () {
             expect(res.data).to.equal(dbUploadCollection + filename)
         })
         it('retrieves the data', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(downloadApiEndpoint + filename, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data).to.eql(contents)
         })
@@ -45,7 +46,7 @@ describe("Binary up and download", function () {
             expect(res.data).to.equal(dbUploadCollection + filename)
         })
         it('retrieves the data', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(downloadApiEndpoint + filename, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data).to.eql(contents)
         })
@@ -79,7 +80,7 @@ describe("body with content-type application/xml", function () {
             expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
         })
         it('can be retrieved', async function () {
-            const {status, data} = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const {status, data} = await util.axios.get(downloadApiEndpoint + filename, { responseType: 'arraybuffer' })
             expect(status).to.equal(200)
             expect(data).to.eql(contents)
         })
@@ -109,7 +110,7 @@ describe("body with content-type application/xml", function () {
             expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
         })
         it('can is stored encoded in UTF-8 and normalized', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(downloadApiEndpoint + filename, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data.toString('utf-8')).to.equal(dbNormalizedValue)
         })
@@ -163,7 +164,7 @@ describe("body with content-type application/tei+xml", function () {
             expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
         })
         it('can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(downloadApiEndpoint + filename, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data).to.eql(contents)
         })
@@ -215,7 +216,7 @@ describe("body with content-type application/json", function () {
             expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
         })
         it('can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(downloadApiEndpoint + filename, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data).to.eql(contents)
         })
@@ -286,10 +287,10 @@ test.
         it("is uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
             expect(uploadResponse.data.uploaded).to.exist
-            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + filename)
+            expect(uploadResponse.data.uploaded).to.equal(downloadApiEndpoint + filename)
         })
         it('can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(uploadResponse.data.uploaded, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data).to.eql(contents)
         })
@@ -327,10 +328,10 @@ test.
         it("is uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
             expect(uploadResponse.data.uploaded).to.exist
-            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + filename)
+            expect(uploadResponse.data.uploaded).to.equal(downloadApiEndpoint + filename)
         })
         it('can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(uploadResponse.data.uploaded, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data.toString()).to.eql(contents.toString())
         })
@@ -362,10 +363,10 @@ test.
         it("is uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
             expect(uploadResponse.data.uploaded).to.exist
-            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + filename)
+            expect(uploadResponse.data.uploaded).to.equal(downloadApiEndpoint + filename)
         })
         it('can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(uploadResponse.data.uploaded, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data.length).to.eql(contents.length)
         })
@@ -406,16 +407,16 @@ test.
             expect(uploadResponse.status).to.equal(201)
             expect(uploadResponse.data.uploaded).to.exist
             expect(uploadResponse.data.uploaded).to.deep.equal([
-                dbUploadCollection + firstFileName,
-                dbUploadCollection + secondFileName
+                downloadApiEndpoint + firstFileName,
+                downloadApiEndpoint + secondFileName
             ])
         })
         it('both can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + firstFileName, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(uploadResponse.data.uploaded[0], { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data.toString()).to.eql(firstFileContent, 'Contents of first file differs')
 
-            const secondRes = await util.axios.get('api/paths/' + secondFileName, { responseType: 'arraybuffer' })
+            const secondRes = await util.axios.get(uploadResponse.data.uploaded[1], { responseType: 'arraybuffer' })
             expect(secondRes.status).to.equal(200)
             expect(secondRes.data.toString()).to.eql(secondFileContent, 'Second of first file differs')
         })
@@ -447,10 +448,10 @@ test.
         it("was uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
             expect(uploadResponse.data.uploaded).to.exist
-            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + fileName)
+            expect(uploadResponse.data.uploaded).to.equal(downloadApiEndpoint + fileName)
         })
         it('can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + fileName, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(uploadResponse.data.uploaded, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data).to.eql(fileContent, 'Content of file does not match')
         })
@@ -483,10 +484,10 @@ test.
         it("was uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
             expect(uploadResponse.data.uploaded).to.exist
-            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + dbResourceName)
+            expect(uploadResponse.data.uploaded).to.equal(downloadApiEndpoint + dbResourceName)
         })
         it('can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + dbResourceName, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(uploadResponse.data.uploaded, { responseType: 'arraybuffer' })
             // console.log(res)
             expect(res.status).to.equal(200)
             expect(res.data.toString()).to.equal(fileContent.toString())
@@ -521,10 +522,10 @@ test.
         it("was uploaded", function () {
             expect(uploadResponse.status).to.equal(201)
             expect(uploadResponse.data.uploaded).to.exist
-            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + filename)
+            expect(uploadResponse.data.uploaded).to.equal(downloadApiEndpoint + filename)
         })
         it('can be retrieved', async function () {
-            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            const res = await util.axios.get(uploadResponse.data.uploaded, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
             expect(res.data.toString()).to.eql(fileContent.toString(), 'Content of file does not match')
         })
