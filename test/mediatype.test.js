@@ -421,6 +421,115 @@ test.
         })
     })
 
+    describe("text sent base64 encoded", function () {
+        let uploadResponse
+        const data = new FormData()
+
+        const fileName = 'sent-base64-encoded.txt'
+        const fileContent = Buffer.from('first text')
+        data.append('file', fileContent, {
+            knownLength: fileContent.length,
+            filename: fileName,
+            contentType: 'application/octet-stream'
+        })
+        data.append('data', fileContent.toString('base64'))
+        const headers = data.getHeaders();
+
+        before(function () {
+            return util.axios.post(
+                'upload/base64',
+                data,
+                { headers }                
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response )
+        })
+        it("was uploaded", function () {
+            expect(uploadResponse.status).to.equal(201)
+            expect(uploadResponse.data.uploaded).to.exist
+            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + fileName)
+        })
+        it('can be retrieved', async function () {
+            const res = await util.axios.get('api/paths/' + fileName, { responseType: 'arraybuffer' })
+            expect(res.status).to.equal(200)
+            expect(res.data).to.eql(fileContent, 'Content of file does not match')
+        })
+    })
+
+    // there is an issue with uploading binary data encoded as base64
+    describe("png sent base64 encoded", function () {
+        let uploadResponse
+        const data = new FormData()
+
+        const dbResourceName = 'roaster-router-logo-base64.png'
+        const fileContent = fs.readFileSync('test/app/resources/roaster-router-logo.png')
+        data.append('file', fileContent, {
+            knownLength: fileContent.length,
+            filename: dbResourceName,
+            contentType: 'image/png'
+        })
+        data.append('data', fileContent.toString('base64'))
+        const headers = data.getHeaders()
+
+        before(function () {
+            return util.axios.post(
+                'upload/base64',
+                data,
+                { headers }                
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response )
+        })
+        it("was uploaded", function () {
+            expect(uploadResponse.status).to.equal(201)
+            expect(uploadResponse.data.uploaded).to.exist
+            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + dbResourceName)
+        })
+        it('can be retrieved', async function () {
+            const res = await util.axios.get('api/paths/' + dbResourceName, { responseType: 'arraybuffer' })
+            // console.log(res)
+            expect(res.status).to.equal(200)
+            expect(res.data.toString()).to.equal(fileContent.toString())
+        })
+    })
+
+    describe("xml sent base64 encoded", function () {
+        let uploadResponse
+        const data = new FormData()
+
+        const filename = 'sent-base64-encoded.xml'
+        const fileContent = Buffer.from(`<root>
+    <nested/>
+</root>`)
+        data.append('file', fileContent, {
+            knownLength: fileContent.length,
+            filename,
+            contentType: 'application/octet-stream'
+        })
+        data.append('data', fileContent.toString('base64'))
+        const headers = data.getHeaders()
+
+        before(function () {
+            return util.axios.post(
+                'upload/base64',
+                data,
+                { headers }                
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response )
+        })
+        it("was uploaded", function () {
+            expect(uploadResponse.status).to.equal(201)
+            expect(uploadResponse.data.uploaded).to.exist
+            expect(uploadResponse.data.uploaded).to.equal(dbUploadCollection + filename)
+        })
+        it('can be retrieved', async function () {
+            const res = await util.axios.get('api/paths/' + filename, { responseType: 'arraybuffer' })
+            expect(res.status).to.equal(200)
+            expect(res.data.toString()).to.eql(fileContent.toString(), 'Content of file does not match')
+        })
+    })
+
 })
 
 describe("with invalid content-type header", function () {

@@ -315,15 +315,15 @@ declare function router:body ($request as map(*)) {
                         for $name in map:keys($properties)
                         let $property := $properties?($name)
                         let $is-array := $property?type = "array"
-                        let $is-binary :=
+                        let $format :=
                             if ($is-array)
-                            then $property?items?format = "binary"
-                            else $property?format = "binary"
+                            then $property?items?format
+                            else $property?format
                         return
                             (: TODO: throw if not $is-array but more than one item received :)
                             (: TODO: throw if not nullable but no item received :)
-                            if ($is-binary)
-                            then 
+                            switch ($format)
+                            case 'binary' return
                                 let $names := request:get-uploaded-file-name($name)                                
                                 let $data := request:get-uploaded-file-data($name)
                                 let $sizes := request:get-uploaded-file-size($name)
@@ -335,7 +335,11 @@ declare function router:body ($request as map(*)) {
                                         "size": $sizes[$index]
                                     }
                                 }
-                            else
+                            case 'base64' return
+                                let $value := request:get-parameter($name, ())
+                                return map { $name : xs:base64Binary($value) }
+
+                            default return
                                 let $value := request:get-parameter($name, ())
                                 return map { $name : $value }
                     )

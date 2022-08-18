@@ -38,9 +38,9 @@ declare function upload:batch ($request as map(*)) {
 };
 
 declare function upload:base64 ($request as map(*)) {
-    let $file-name as xs:string := $request?body?file?name
+    let $file-name as xs:string := $request?body?file[1]?name
     let $file-content as xs:base64Binary := $request?body?data
-    let $stored as xs:boolean :=
+    let $stored as xs:string :=
         xmldb:store('/db/apps/roasted/uploads', $file-name, $file-content)
 
     return
