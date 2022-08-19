@@ -372,6 +372,66 @@ test.
         })
     })
 
+    describe("with no data", function () {
+        let uploadResponse
+        const data = new FormData()
+        const headers = data.getHeaders();
+
+        before(function () {
+            return util.axios.post(
+                'upload/single/nothing',
+                data,
+                { headers }                
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response )
+        })
+        it("is rejected", function () {
+            expect(uploadResponse.status).to.equal(400)
+            expect(uploadResponse.data.code).to.equal('errors:BODY_CONTENT_TYPE')
+            expect(uploadResponse.data.value).to.equal('Property "file" is required!')
+        })
+    })
+
+    describe("with two files when only one is allowed", function () {
+        let uploadResponse
+        const data = new FormData()
+
+        // first file
+        const firstFileName = 'first-file.txt'
+        const firstFileContent = 'first text'
+        data.append('file', firstFileContent, {
+            knownLength: firstFileContent.length,
+            filename: firstFileName,
+            contentType: 'text/plain'
+        })
+        // second file
+        const secondFileName = 'second-file.txt'
+        const secondFileContent = 'some additional text'
+        data.append('file', secondFileContent, {
+            knownLength: secondFileContent.length,
+            filename: secondFileName,
+            contentType: 'text/plain'
+        })
+        const headers = data.getHeaders();
+
+        before(function () {
+            return util.axios.post(
+                'upload/single/abcd',
+                data,
+                { headers }                
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
+        })
+        it("request is rejected", function () {
+            expect(uploadResponse.status).to.equal(400)
+            expect(uploadResponse.data.code).to.equal('errors:BODY_CONTENT_TYPE')
+            expect(uploadResponse.data.value).to.equal('Property "file" only allows one item. Got 2')
+        })
+    })
+
+
     describe("with two files", function () {
         let uploadResponse
         const data = new FormData()
