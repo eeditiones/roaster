@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <h1>Roaster File Upload Examples</h1>
+        <article>
+            <h2>Upload a single file.</h2>
+            <p>
+                In this example, the filename is part of the URL, so the form action is modified.
+                The filename is also sent in the form-data, so this is not really necessary.
+            </p>
+            <form name="singleFileUploadForm" 
+                action="#"
+                method="POST" 
+                enctype="multipart/form-data"
+                onsubmit="return uploadSingleFile(event)"
+            >
+                <input type="file" name="file" id="singleFileUploadInput"/>
+                <br/>
+                <input type="submit" value="Upload a single file"/>
+            </form>
+            <script>
+                function uploadSingleFile (event) {
+                    const input = document.getElementById('singleFileUploadInput')
+                    const fileName = input.files[0].name;
+
+                    const form = event.target
+                    form.action = `../upload/single/${fileName}`;
+                    // Return true to submit immediately.
+                    return true;
+                }
+            </script>
+        </article>
+
+        <article>
+            <h2>Upload multiple files</h2>
+            <p>
+                Since we upload one or more files the filename cannot be part of the URL.
+                Now, we need to use the filename(s) sent in the form-data.
+            </p>
+            <form action="../upload/batch" method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" multiple="true"/><br/>
+                <input type="submit" value="Upload files"/>
+            </form>
+        </article>
+
+        <article>
+            <h2>Upload a file encoded as base64</h2>
+            <form action="../upload/base64" method="POST" 
+                enctype="multipart/form-data"
+                id="base64FileUploadForm"
+                onsubmit="submitBase64FileUpload">
+                <input type="file" name="file" id="base64FileUploadInput"/>
+                <br/>
+                <input type="submit" value="Upload binary file as base64"/>
+                <!-- A hidden field is used for sending the base64 encoded data. -->
+                <input type="hidden" name="data" id="base64FileUploadData"/>
+            </form>
+            <script>
+                function submitBase64FileUpload (event) {
+                    event.preventDefault();
+                    const input = document.getElementById('base64FileUploadInput')
+                    const file = input.files[0];
+                    const reader = new FileReader();
+                    
+                    reader.onloadend = function () {
+                        // The reader makes a data: URI; remove the prefix and only keep the base64 string.
+                        const base64 = reader.result.replace(/^data:.+;base64,/, '');
+                        document.getElementById('base64FileUploadData').value = base64;
+                        document.getElementById('base64FileUploadForm').submit();
+                    };
+                    reader.readAsDataURL(file);
+                    // Return true to not submit, but wait for the reader to finish.
+                    return false;
+                }
+            </script>
+        </article>
+    </body>
+</html>

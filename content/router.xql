@@ -284,7 +284,7 @@ declare %private function router:content-type ($request as map(*)) as map(*) {
                     then "json" 
                     else if ($media-type = ("application/xml", "text/xml"))
                     then "xml"
-                    else if ($media-type = "multipart/form-data")
+                    else if ($media-type = ("multipart/form-data", "application/x-www-form-urlencoded"))
                     then "form-data"
                     else if ($format-hint) 
                     then $format-hint 
@@ -307,8 +307,55 @@ declare function router:body ($request as map(*)) {
     else (
         try {
             switch ($request?format)
-            (: Q: do we need to handle form-data? :)
-            case "form-data" return () 
+            case "form-data" return (
+                if (request:is-multipart-content())
+                then (
+                    let $properties := $request?config?requestBody?content?("multipart/form-data")?schema?properties
+                    return map:merge(
+                        for $name in map:keys($properties)
+                        let $property := $properties?($name)
+                        let $is-array := $property?type = "array"
+                        let $format :=
+                            if ($is-array)
+                            then $property?items?format
+                            else $property?format
+                        return
+                            (: TODO: throw if not $is-array but more than one item received :)
+                            (: TODO: throw if not nullable but no item received :)
+                            switch ($format)
+                            case 'binary' return
+                                let $names := request:get-uploaded-file-name($name)                                
+                                let $data := request:get-uploaded-file-data($name)
+                                let $sizes := request:get-uploaded-file-size($name)
+                                return map { $name : 
+                                    for $name at $index in $names
+                                    return map {
+                                        "name": $name,
+                                        "data": $data[$index],
+                                        "size": $sizes[$index]
+                                    }
+                                }
+                            case 'base64' return
+                                let $value := request:get-parameter($name, ())
+                                return map { $name : xs:base64Binary($value) }
+
+                            default return
+                                let $value := request:get-parameter($name, ())
+                                return map { $name : $value }
+                    )
+                )
+                else (
+                    let $properties := $request?config?requestBody?content?("application/x-www-form-urlencoded")?schema?properties
+                    return
+                        map:merge(
+                            for $name in map:keys($properties)
+                            let $value := request:get-parameter($name, ())
+                            return (
+                                map { $name : $value }
+                            )
+                        )
+                )
+            )
             (:
                 Parse body contents to XQuery data structure for media types
                 that were identified as being in JSON format.

@@ -10,6 +10,7 @@ import module namespace auth="http://e-editiones.org/roaster/auth";
 import module namespace rutil="http://e-editiones.org/roaster/util";
 import module namespace errors="http://e-editiones.org/roaster/errors";
 
+import module namespace upload="http://e-editiones.org/roasted/upload" at "upload.xqm";
 
 (:~
  : list of definition files to use

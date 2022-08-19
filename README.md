@@ -4,7 +4,6 @@
 
 ![Test and Release](https://github.com/eeditiones/roaster/workflows/Test%20and%20Release/badge.svg) [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 
-
 ## OpenAPI Router for eXist
 
 Reads an [OpenAPI 3.0](https://swagger.io/docs/specification/about/) specification from JSON and routes requests to handler functions written in XQuery.
@@ -14,78 +13,34 @@ Since it is also the routing library used by TEI Publisher 7 you will find some 
 
 ![TEI Publisher API](https://teipublisher.com/exist/apps/tei-publisher/doc/api-spec.png)
 
-## Requirements
+## Installation
 
--  [node](https://nodejs.org/en/): `v12+`
--  [exist-db](https://www.exist-db.org): `v5.0.0+`
--  [Ant](https://ant.apache.org): `v1.10.9+` (optional)
-
-## Building and Installation
-
-Roaster uses Gulp as its build tool which itself builds on NPM. 
-To initialize the project and load dependencies run
-
-```npm i```
-
-> Note: the `install` commands below assume that you have a local eXist-db running on port 8080. However the database connection can be modified in .existdb.json.
-
-| Run | Description |
-|---------|-------------|
-|```gulp build```|to just build the roaster routing lib. |
-|```gulp build:all```|to build the routing lib and the demo app.|
-|```gulp install```|To build and install the lib in one go|
-|```gulp install:all```|To build and install lib and demo app run|
-
-The resulting xar(s) are found in the root of the project.
-
-ant-task is still defined, but will use gulp (through `npm run build`).
-
-## Demo App
-
-The demo app 'Roasted' is a barebones eXist-db application using the Roaster router. It serves a good starting-point for playing, learning and as a 'template' for your own apps.
-
-## Contributing
-
-Roaster uses [Angular Commit Message Conventions](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines) to determine semantic versioning of releases, see these examples:
-
-| Commit message  | Release type |
-|-----------------|--------------|
-| `fix(pencil): stop graphite breaking when too much pressure applied` | Patch Release |
-| `feat(pencil): add 'graphiteWidth' option` | ~~Minor~~ Feature Release |
-| `perf(pencil): remove graphiteWidth option`<br/><br/>`BREAKING CHANGE: The graphiteWidth option has been removed.`<br/>`The default graphite width of 10mm is always used for performance reasons.` | ~~Major~~ Breaking Release |
-
-
-
-### Development
-
-Running `gulp watch` will build and install the library and watch
-for file changes. Whenever one of the watched files is changed a 
-fresh version of the xar will be installed in the database.
-This included the test application in `test/app`.
-
-### Testing
-
-To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. To test against a different port, edit `.existdb.json`.
-
-
-Run the test suite with
-
-```shell
-npm install
-npm test
-```
-
-Additional tests that cover this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app) repository.
+This library XAR can be either downloaded from the [releases](https://github.com/eeditiones/roaster/releases) and is also available
+on [eXist-db's public package repository](https://exist-db.org/exist/apps/public-repo/packages/roaster).
 
 ## How it works
 
 eXist applications usually have a controller as main entry point. The 
 [controller.xql](test/app/controller.xql) in the example application only handles requests to static resources, but forwards all other requests to an XQuery script [api.xql](test/app/modules/api.xql). This script imports the OpenAPI router module and calls `roaster:route`, passing it one or more Open API specifications in JSON format.
 
-TEI Publisher uses two specifications: [api.json](https://github.com/eeditiones/tei-publisher-app/tree/master/modules/lib/api.json) and [custom-api.json](https://github.com/eeditiones/tei-publisher-app/tree/master/modules/custom-api.json). This is done to make it easier for users to extend the default API. It is also possible to overwrite a route from `api.json` by placing it into `custom-api.json`.
+The [demo app](#demo-app), included in this repository, uses two specifications:
+
+- [api.json](test/app/api.json)
+  demonstrates basic usage like parameters in path, query and body
+  as well as file up- and downloads
+- [api-jwt.json](test/app/api-jwt.json)
+  introduces more advanced use-cases like custom authentication and middlewares
+
+Splitting up your api specifications can help keeping each focussed on specific tasks and also split up really long ones.
+
+TEI Publisher has [api.json](https://github.com/eeditiones/tei-publisher-app/tree/master/modules/lib/api.json) and [custom-api.json](https://github.com/eeditiones/tei-publisher-app/tree/master/modules/custom-api.json). There, it is done to make it easier for users to extend the default API.
+It is also possible to overwrite a route from `api.json` by placing it into `custom-api.json`.
 
 Each route in the specification _must_ have an `operationId` property.
-This is the name of the XQuery function that will handle the request to the given route. The XQuery function must be resolved by the $lookup function in one of the modules which are visible at the point where `roaster:route` is called. Consequently, [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
+This is the name of the XQuery function that will handle the request to the given route. Several routes _can_ use the same handler function, where applicable.
+The XQuery function will be resolved by the lookup-function passed to  `roaster:route`. In order for that to work all route handler functions need to be available in the context of that function. This is why [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
+
+## Route Handling
 
 The XQuery handler function _must_ expect exactly one argument: `$request as map(*)`. This is a map with a number of keys:
 
@@ -224,6 +179,82 @@ declare function custom-router:use-beep-boop ($request as map(*), $response as m
 };
 ```
 
+## File Uploads
+
+Roaster transparently handles data from multipart/form-data requests to keep route handlers short and readable.
+Please see the [file upload documentation](doc/file-upload.md) for more details on this.
+
 ## Limitations
 
-The library does not support `$ref` references in the Open API specification.
+The library does not support yet support following OpenAPI feature(s): 
+
+- `$ref` references in the Open API specification ([issue](https://github.com/eeditiones/roaster/issues/39))
+
+## Development
+
+Clone this repository and switch to your local working directory.
+
+### Requirements
+
+-  [node](https://nodejs.org/en/): `v14+`
+-  [exist-db](https://www.exist-db.org): `v5.0.0+`
+-  [Ant](https://ant.apache.org): `v1.10.9+` (optional)
+
+### Building and Installation
+
+Roaster uses Gulp as its build tool which itself builds on NPM. 
+To initialize the project and load dependencies run
+
+```bash
+npm i
+```
+
+> Note: the `install` commands below assume that you have a local eXist-db running on port 8080. However the database connection can be modified in .existdb.json.
+
+| Run | Description |
+|---------|-------------|
+|```gulp build```|to just build the roaster routing lib. |
+|```gulp build:all```|to build the routing lib and the demo app.|
+|```gulp install```|To build and install the lib in one go|
+|```gulp install:all```|To build and install lib and demo app run|
+
+The resulting xar(s) are found in the root of the project.
+
+An ant-task is still defined, but will use gulp in the end (through `npm run build`).
+
+### Demo App
+
+The repository contains a demo and test application, 'Roasted', which is using the Roaster router. It serves a good starting-point for playing, learning and as a 'template' for your own apps.
+
+Run `gulp install:all` to install both the library and the testapp.
+Now navigate to http://localhost:8080/exist/apps/roasted/
+This will open a form dynamically created from the definition files [api.json](test/app/api.json) _and_ [api-jwt.json](test/app/api-jwt.json).
+
+### Development
+
+Running `gulp watch` will build and install the library and watch
+for file changes. Whenever one of the watched files is changed a 
+fresh version of the xar will be installed in the database.
+This included the test application in `test/app`.
+
+### Testing
+
+To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. To test against a different different server, or use a different user or password you can copy `.env.example` to `.env` and edit it to your needs.
+
+Run the test suite with
+
+```shell
+npm test
+```
+
+Additional tests that cover this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app) repository.
+
+## Contributing
+
+Roaster uses [Angular Commit Message Conventions](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines) to determine semantic versioning of releases, see these examples:
+
+| Commit message  | Release type |
+|-----------------|--------------|
+| `fix(pencil): stop graphite breaking when too much pressure applied` | Patch Release |
+| `feat(pencil): add 'graphiteWidth' option` | ~~Minor~~ Feature Release |
+| `perf(pencil): remove graphiteWidth option`<br/><br/>`BREAKING CHANGE: The graphiteWidth option has been removed.`<br/>`The default graphite width of 10mm is always used for performance reasons.` | ~~Major~~ Breaking Release |
