@@ -12,11 +12,15 @@ jobs:
       matrix:
         exist-version: [latest, release, 5.4.1, 5.0.0]
     services:
-      # Label used to access the service container
       exist:
         image: existdb/existdb:${{ matrix.exist-version }}
         ports:
           - 8443:8443
+        volumes:
+          # point autodeploy to a folder without any XARs
+          - ${{ github.workspace }}/doc:/exist/autodeploy
+        options: >-
+          --health-interval 4s
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js 16
