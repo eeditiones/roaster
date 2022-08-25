@@ -310,48 +310,82 @@ declare function router:body ($request as map(*)) {
             case "form-data" return (
                 if (request:is-multipart-content())
                 then (
-                    let $properties := $request?config?requestBody?content?("multipart/form-data")?schema?properties
+                    let $schema := $request?config?requestBody?content?("multipart/form-data")?schema
+                    let $required-props :=
+                        if (map:contains($schema, 'required'))
+                        then $schema?required?*
+                        else ()
+                    let $properties := $schema?properties
+
                     return map:merge(
                         for $name in map:keys($properties)
                         let $property := $properties?($name)
                         let $is-array := $property?type = "array"
+                        let $is-required := $name = $required-props
                         let $format :=
                             if ($is-array)
                             then $property?items?format
                             else $property?format
                         return
-                            (: TODO: throw if not $is-array but more than one item received :)
-                            (: TODO: throw if not nullable but no item received :)
                             switch ($format)
                             case 'binary' return
                                 let $names := request:get-uploaded-file-name($name)                                
                                 let $data := request:get-uploaded-file-data($name)
                                 let $sizes := request:get-uploaded-file-size($name)
-                                return map { $name : 
-                                    for $name at $index in $names
-                                    return map {
-                                        "name": $name,
-                                        "data": $data[$index],
-                                        "size": $sizes[$index]
-                                    }
+                                return
+                                    (: check if number of items received is expected :)
+                                    if (count($names) = 0 and $is-required)
+                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
+                                    else if (count($names) > 1 and not($is-array))
+                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($names), $names)
+                                    else map { $name :
+                                        for $_name at $index in $names
+                                        return map {
+                                            "name": $_name,
+                                            "data": $data[$index],
+                                            "size": $sizes[$index]
+                                        }
                                 }
                             case 'base64' return
                                 let $value := request:get-parameter($name, ())
-                                return map { $name : xs:base64Binary($value) }
+                                return
+                                    (: check if number of items received is expected :)
+                                    if (not(exists($value)) and $is-required)
+                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
+                                    else if (count($value) > 1 and not($is-array))
+                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
+                                    else map { $name : xs:base64Binary($value) }
 
                             default return
                                 let $value := request:get-parameter($name, ())
-                                return map { $name : $value }
+                                return
+                                    if (not(exists($value)) and $is-required)
+                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
+                                    else if (count($value) > 1 and not($is-array))
+                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
+                                    else map { $name : $value }
                     )
                 )
                 else (
-                    let $properties := $request?config?requestBody?content?("application/x-www-form-urlencoded")?schema?properties
+                    let $schema := $request?config?requestBody?content?("application/x-www-form-urlencoded")?schema
+                    let $required-props :=
+                        if (map:contains($schema, 'required'))
+                        then $schema?required?*
+                        else ()
+                    let $properties := $schema?properties
                     return
                         map:merge(
                             for $name in map:keys($properties)
+                            let $property := $properties?($name)
+                            let $is-array := $property?type = "array"
+                            let $is-required := $name = $required-props
                             let $value := request:get-parameter($name, ())
                             return (
-                                map { $name : $value }
+                                if (not(exists($value)) and $is-required)
+                                then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
+                                else if (count($value) > 1 and not($is-array))
+                                then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
+                                else map { $name : $value }
                             )
                         )
                 )
