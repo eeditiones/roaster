@@ -2,25 +2,23 @@
     <head>
         <meta charset="utf-8"/>
         <title>roasted - OpenAPI Router Testapplication</title>
-        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@3/swagger-ui.css"/>
-        <script src="https://unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js" charset="UTF-8"></script>
+        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4/swagger-ui.css"/>
+        <script src="https://unpkg.com/swagger-ui-dist@4/swagger-ui-bundle.js" charset="UTF-8"></script>
     </head>
     <body>
+        <div id="basic"/>
         <div id="custom"/>
-        <div id="swagger"/>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 SwaggerUIBundle({
                     url: 'api.json',
-                    dom_id: '#swagger',
+                    dom_id: '#basic',
                     displayOperationId: true,
                     displayRequestDuration: true,
                     showExtensions: true,
                     withCredentials: true
                 });
 
-                // show custom API only when the element was commented in
-                if (!document.getElementById('custom')) { return }
                 SwaggerUIBundle({
                     url: 'api-jwt.json',
                     dom_id: '#custom',

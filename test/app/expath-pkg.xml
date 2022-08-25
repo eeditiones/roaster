@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <package 
   xmlns="http://expath.org/ns/pkg" name="http://e-editiones.org/roasted"
-  abbrev="roasted" version="2.0.0" spec="1.0">
+  abbrev="roasted" version="2.1.0" spec="1.0">
   <title>roasted - OpenAPI Router Test Application</title>
   <dependency processor="http://exist-db.org" semver-min="5.0.0"/>
-  <dependency package="http://e-editiones.org/roaster" semver-min="1.0.0"/>
+  <dependency package="http://e-editiones.org/roaster" semver-min="1.7.1"/>
   <dependency package="http://existsolutions.com/ns/jwt" semver-min="1.1.2"/>
 </package>

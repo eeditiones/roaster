@@ -1,14 +1,33 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "version": "1.0.0",
+        "version": "1.1.0",
         "title": "Custom Authorization API",
         "description": "Example how to use exist-JWT with roaster"
     },
     "servers": [
         {
-            "description": "Endpoint for testing on localhost",
-            "url": "http://localhost:8080/exist/apps/roasted"
+            "url": "/exist/apps/roasted",
+            "description": "Relative URL using the current host and port"
+        }
+    ],
+    "tags": [
+		{
+			"name": "restricted",
+			"description": "You need to be authenticated"
+		},
+		{
+			"name": "public",
+			"description": "Anyone can access this route"
+		},
+        {
+            "name": "without-security-scheme",
+            "description": "Do not read user info"
+        }
+	],
+    "security": [
+        {
+            "JWTAuth": []
         }
     ],
     "components": {
@@ -28,6 +47,7 @@
                 "x-constraints": {
                     "groups": ["dba"]
                 },
+                "tags": ["restricted"],
                 "responses": {
                     "200": {
                         "description": "Access Token valid",
@@ -77,6 +97,7 @@
                 "security": [],
                 "summary": "Issue a JWT access token",
                 "operationId": "jwt-auth:issue-token",
+                "tags": ["without-security-scheme"],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -142,8 +163,10 @@
             "get": {
                 "summary": "Public route example",
                 "operationId": "rutil:debug",
+                "tags": ["public"],
                 "parameters": [
                     {
+                        "required": true,
                         "name": "path",
                         "in": "path",
                         "schema":{
@@ -165,10 +188,5 @@
                 }
             }
         }
-    },
-    "security": [
-        {
-            "JWTAuth": []
-        }
-    ]
+    }
 }
