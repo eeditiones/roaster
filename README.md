@@ -1,17 +1,22 @@
-<img alt="roaster router logo" src="icon.svg" width="84" />
 
-# roaster
+# Roaster
+<img alt="roaster router logo" src="icon.svg" width="128" />
+
+> **Define** your API, **then** implement it.
 
 ![Test and Release](https://github.com/eeditiones/roaster/workflows/Test%20and%20Release/badge.svg) [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 
 ## OpenAPI Router for eXist
 
-Reads an [OpenAPI 3.0](https://swagger.io/docs/specification/about/) specification from JSON and routes requests to handler functions written in XQuery.
 
-It is a generic router to be used in any exist-db application. 
-Since it is also the routing library used by TEI Publisher 7 you will find some examples referring to it.
+Roaster is a generic router to be used in any exist-db application. It reads an [OpenAPI 3.0](https://oai.github.io/Documentation/) specification from a JSON file and routes requests to handler functions written in XQuery.
 
-![TEI Publisher API](https://teipublisher.com/exist/apps/tei-publisher/doc/api-spec.png)
+![Roasted API](doc/roasted-api.png)
+
+From any valid API specification you can generate an interactive documentation as the one above.
+This is also very helpful for exploratory testing of your implementation (see [demo app](#demo-app)).
+
+Roaster is the routing library powering [TEI Publisher](https://teipublisher.com). So, make sure to also check there for additional [documentation](https://teipublisher.com/exist/apps/tei-publisher/doc/documentation.xml?odd=docbook.odd&id=api) and examples.
 
 ## Installation
 
