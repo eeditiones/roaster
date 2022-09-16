@@ -249,6 +249,69 @@ describe("body with content-type application/json", function () {
     })
 })
 
+describe("body with content-type application/json-patch+json", function () {
+    before(async function () {
+        await util.login()
+    })
+    after(async function () {
+        await util.logout()
+    })
+    describe("with valid content", function () {
+        let uploadResponse
+        const filename = 'valid-patch.json'
+        const contents = Buffer.from('[{"op":"test","value":"foo","path":"/a/b/c"},{"op":"remove","path":"/a/b/c"}]')
+
+        before(function () {
+            return util.axios.post(
+                'api/paths/' + filename, 
+                contents,
+                { headers: { 'Content-Type': 'application/json-patch+json'} }
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
+        })
+        it("is uploaded", function () {
+            expect(uploadResponse.status).to.equal(201)
+            expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
+        })
+        it('can be retrieved', async function () {
+            const res = await util.axios.get(downloadApiEndpoint + filename, { responseType: 'json' })
+            expect(res.status).to.equal(200)
+            expect(res.data.length).to.equal(2)
+            expect(res.data).to.deep.equal([
+                {"op":"test","value":"foo","path":"/a/b/c"},
+                {"op":"remove","path":"/a/b/c"}
+            ])
+        })
+    })
+
+    describe("with invalid content", function () {
+        let uploadResponse
+        before(function () {
+            return util.axios.post(
+                'api/paths/invalid-path.json',
+                '[{"op":"test","value":"foo","',
+                {
+                    headers: { 'Content-Type': 'application/json-patch+json' },
+                    // override default request transformation to send raw data
+                    transformRequest: [data => data]
+                }
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response)
+        })
+        it("is rejected as Bad Request", function () {
+            expect(uploadResponse.status).to.equal(400)
+        })
+        it("with the correct error code", function () {
+            expect(uploadResponse.data.code).to.equal('errors:BODY_CONTENT_TYPE')
+        })
+        it("with a human readable description", function () {
+            expect(uploadResponse.data.description).to.equal('Body with media type \'application/json-patch+json\' could not be parsed (invalid JSON).')
+        })
+    })
+})
+
 describe("body with content-type multipart/form-data", function () {
     before(async function () {
         await util.login()
