@@ -394,10 +394,15 @@ declare function router:body ($request as map(*)) {
                 Parse body contents to XQuery data structure for media types
                 that were identified as being in JSON format.
                 NOTE: The data needs to be serialized again before it can be stored.
+                NOTE: For application/json-patch+json request:get-data returns an xs:string.
             :)
             case "json" return
-                request:get-data() 
-                => util:binary-to-string()
+                let $data := request:get-data()
+                return
+                    typeswitch($data)
+                    case xs:string return parse-json($data)
+                    default return
+                        util:binary-to-string($data)
                 => parse-json()
             (: 
                 Workaround for eXist-DB specific behaviour, 
