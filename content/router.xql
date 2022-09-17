@@ -245,7 +245,8 @@ declare %private function router:content-type ($request as map(*)) as map(*) {
     else if (not($request?config?requestBody?content instance of map(*)))
     then error($errors:OPERATION, "requestBody.content is not defined correctly", $request?config)
     else (
-        let $defined-content-types := map:keys($request?config?requestBody?content)
+        let $content := $request?config?requestBody?content
+        let $defined-content-types := map:keys($content)
 
         let $raw-content-type-header-value := request:get-header("Content-Type")
         let $media-type :=
@@ -263,7 +264,6 @@ declare %private function router:content-type ($request as map(*)) as map(*) {
             else ()
 
         let $registry := substring-before($media-type, "/")
-        let $format-hint := substring-after($media-type, "+")
 
         return
             if (
@@ -279,15 +279,19 @@ declare %private function router:content-type ($request as map(*)) as map(*) {
                 "media-type": $media-type,
                 "charset": $charset,
                 "registry": $registry,
+                "schema": $content?($media-type)?schema,
                 "format": 
                     if ($media-type = ("application/json", "text/json")) 
                     then "json" 
-                    else if ($media-type = ("application/xml", "text/xml"))
+                    else if ($media-type = ("application/xml", "text/xml", "image/svg+xml"))
                     then "xml"
                     else if ($media-type = ("multipart/form-data", "application/x-www-form-urlencoded"))
                     then "form-data"
-                    else if ($format-hint) 
-                    then $format-hint 
+                    else if (
+                        starts-with($media-type, "application/") and 
+                        (ends-with($media-type, "+json") or ends-with($media-type, "+xml"))
+                    ) 
+                    then substring-after($media-type, "+")
                     else "binary"
             }
             else error(
@@ -296,6 +300,96 @@ declare %private function router:content-type ($request as map(*)) as map(*) {
                 $request
             )
     )
+};
+
+declare %private
+function router:get-form-data-value ($name as xs:string, $format as xs:string?) as item()* {
+    switch ($format)
+    case 'binary' return
+        if (request:is-multipart-content())
+        then
+            let $names := request:get-uploaded-file-name($name)                                
+            let $data := request:get-uploaded-file-data($name)
+            let $sizes := request:get-uploaded-file-size($name)
+            return
+                for $_name at $index in $names
+                return map {
+                    "name": $_name,
+                    "data": $data[$index],
+                    "size": $sizes[$index]
+                }
+        else
+            request:get-parameter($name, ())
+
+    case 'base64' return 
+        xs:base64Binary(request:get-parameter($name, ()))
+
+    default return
+        request:get-parameter($name, ())
+};
+
+declare %private
+function router:additional-property ($name as xs:string) as map(*) {
+    map { $name : request:get-parameter($name, ()) }
+};
+
+declare %private
+function router:validate-value ($schema as map(*)) as function(*) {
+    let $required-props := $schema?required?*
+    let $property-definitions := $schema?properties
+    return function ($name as xs:string) as map(*) {
+        if (not(map:contains($property-definitions, $name)))
+        (: additional property, no validation :)
+        then router:additional-property($name)
+        else
+            let $property := $property-definitions?($name)
+            let $is-array := $property?type = "array"
+            (: only needed to check here as required props must be defined in schema :)
+            let $is-required := $name = $required-props
+            let $format :=
+                if ($property?type = "array")
+                then $property?items?format
+                else $property?format
+            let $value := router:get-form-data-value($name, $format)
+            return
+                if (not(exists($value)) and $is-required)
+                then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
+                else if (count($value) > 1 and not($is-array))
+                then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
+                else map:entry($name, $value)
+    }
+};
+
+(:~
+ : extra check needed to ensure required properties are set
+ :)
+declare %private
+function router:ensure-required-properties ($received-property-names as xs:string*, $required-properties as xs:string*) as xs:string* {
+    for-each($required-properties, function ($required-prop-name as xs:string) as empty-sequence() {
+        if ($required-properties = $received-property-names)
+        then ()
+        else error($errors:BAD_REQUEST, 'Property "' || $required-prop-name || '" is required!')
+    }),
+    $received-property-names
+};
+
+(:~
+ : parse form-data in body
+ : some basic schema validation is done when $schema is set
+ :)
+declare %private
+function router:parse-form-data ($schema as map(*)?) as map(*) {
+    if (exists($schema))
+    then
+        map:merge(
+            for-each(
+                router:ensure-required-properties(
+                    request:get-parameter-names(), $schema?required?*),
+                router:validate-value($schema)))
+    else
+        map:merge(
+            for-each(
+                request:get-parameter-names(), router:additional-property#1))
 };
 
 (:~
@@ -307,89 +401,8 @@ declare function router:body ($request as map(*)) {
     else (
         try {
             switch ($request?format)
-            case "form-data" return (
-                if (request:is-multipart-content())
-                then (
-                    let $schema := $request?config?requestBody?content?("multipart/form-data")?schema
-                    let $required-props :=
-                        if (map:contains($schema, 'required'))
-                        then $schema?required?*
-                        else ()
-                    let $properties := $schema?properties
-
-                    return map:merge(
-                        for $name in map:keys($properties)
-                        let $property := $properties?($name)
-                        let $is-array := $property?type = "array"
-                        let $is-required := $name = $required-props
-                        let $format :=
-                            if ($is-array)
-                            then $property?items?format
-                            else $property?format
-                        return
-                            switch ($format)
-                            case 'binary' return
-                                let $names := request:get-uploaded-file-name($name)                                
-                                let $data := request:get-uploaded-file-data($name)
-                                let $sizes := request:get-uploaded-file-size($name)
-                                return
-                                    (: check if number of items received is expected :)
-                                    if (count($names) = 0 and $is-required)
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
-                                    else if (count($names) > 1 and not($is-array))
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($names), $names)
-                                    else map { $name :
-                                        for $_name at $index in $names
-                                        return map {
-                                            "name": $_name,
-                                            "data": $data[$index],
-                                            "size": $sizes[$index]
-                                        }
-                                }
-                            case 'base64' return
-                                let $value := request:get-parameter($name, ())
-                                return
-                                    (: check if number of items received is expected :)
-                                    if (not(exists($value)) and $is-required)
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
-                                    else if (count($value) > 1 and not($is-array))
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
-                                    else map { $name : xs:base64Binary($value) }
-
-                            default return
-                                let $value := request:get-parameter($name, ())
-                                return
-                                    if (not(exists($value)) and $is-required)
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
-                                    else if (count($value) > 1 and not($is-array))
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
-                                    else map { $name : $value }
-                    )
-                )
-                else (
-                    let $schema := $request?config?requestBody?content?("application/x-www-form-urlencoded")?schema
-                    let $required-props :=
-                        if (map:contains($schema, 'required'))
-                        then $schema?required?*
-                        else ()
-                    let $properties := $schema?properties
-                    return
-                        map:merge(
-                            for $name in map:keys($properties)
-                            let $property := $properties?($name)
-                            let $is-array := $property?type = "array"
-                            let $is-required := $name = $required-props
-                            let $value := request:get-parameter($name, ())
-                            return (
-                                if (not(exists($value)) and $is-required)
-                                then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
-                                else if (count($value) > 1 and not($is-array))
-                                then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
-                                else map { $name : $value }
-                            )
-                        )
-                )
-            )
+            case "form-data" return
+                router:parse-form-data($request?schema)
             (:
                 Parse body contents to XQuery data structure for media types
                 that were identified as being in JSON format.
@@ -403,7 +416,7 @@ declare function router:body ($request as map(*)) {
                     case xs:string return parse-json($data)
                     default return
                         util:binary-to-string($data)
-                => parse-json()
+                        => parse-json()
             (: 
                 Workaround for eXist-DB specific behaviour, 
                 this way we will get parse errors as early as possible
@@ -665,7 +678,7 @@ declare %private function router:method-for-content-type ($type as xs:string) as
     switch (substring-before($type, "/"))
         case "application" return
             if (ends-with($type, "json")) then "json" (: matches application/json and any type ending in +json :)
-            else if (ends-with($type, "xhtml+xml")) then "xhtml"
+            else if (ends-with($type, "/xhtml+xml")) then "xhtml"
             else if (ends-with($type, "xml")) then "xml" (: matches application/xml and any type ending in +xml :)
             else "text"
         case "text" return

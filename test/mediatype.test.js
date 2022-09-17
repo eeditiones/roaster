@@ -312,6 +312,45 @@ describe("body with content-type application/json-patch+json", function () {
     })
 })
 
+describe("body with content-type application/x-www-form-urlencoded", function () {
+    before(async function () {
+        await util.login()
+    })
+    after(async function () {
+        await util.logout()
+    })
+
+    describe("validated against no defined schema", function () {
+        let uploadResponse
+        const filename = 'schemaless-form-data.json'
+        const data = new FormData()
+        data.append("string", "Hello World!")
+        data.append("array", 1)
+        data.append("array", 2)
+        data.append("array", 3)
+        data.append("number", 123)
+        before(function () {
+            return util.axios.post('api/paths/' + filename, data, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            })
+            .then(r => uploadResponse = r)
+            .catch(e => {
+                console.error(e.response.data)
+                uploadResponse = e.response
+            })
+        })
+        it("is uploaded", function () {
+            expect(uploadResponse.status).to.equal(201)
+            expect(uploadResponse.data).to.equal(dbUploadCollection + filename)
+        })
+        it('can be retrieved', async function () {
+            const {status, data} = await util.axios.get(downloadApiEndpoint + filename, { responseType: 'json' })
+            expect(status).to.equal(200)
+            expect(data).to.deep.equal({ string: 'Hello World!', number: '123', array: [ '1', '2', '3' ] })
+        })
+    })
+})
+
 describe("body with content-type multipart/form-data", function () {
     before(async function () {
         await util.login()
