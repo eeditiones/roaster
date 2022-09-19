@@ -24,6 +24,7 @@ module namespace router="http://e-editiones.org/roaster/router";
 
 import module namespace errors="http://e-editiones.org/roaster/errors";
 import module namespace parameters="http://e-editiones.org/roaster/parameters";
+import module namespace body="http://e-editiones.org/roaster/body";
 
 
 declare variable $router:RESPONSE_CODE := xs:QName("router:RESPONSE_CODE");
@@ -239,191 +240,6 @@ function router:middleware-reducer (
     array { apply($next-middleware, $args) }
 };
 
-declare %private function router:content-type ($request as map(*)) as map(*) {
-    if (not(exists($request?config?requestBody?content)))
-    then (map{}) (: this route expects no body, return an empty map :)
-    else if (not($request?config?requestBody?content instance of map(*)))
-    then error($errors:OPERATION, "requestBody.content is not defined correctly", $request?config)
-    else (
-        let $defined-content-types := map:keys($request?config?requestBody?content)
-
-        let $raw-content-type-header-value := request:get-header("Content-Type")
-        let $media-type :=
-            if (contains($raw-content-type-header-value, ";"))
-            then substring-before($raw-content-type-header-value, ";")
-            else $raw-content-type-header-value
-        
-        let $charset :=
-            if (contains($raw-content-type-header-value, "charset="))
-            then (
-                substring-after($raw-content-type-header-value, "charset=")
-                => lower-case()
-                => replace("^([a-z0-9\-]+).*$", "$1")
-            )
-            else ()
-
-        let $registry := substring-before($media-type, "/")
-        let $format-hint := substring-after($media-type, "+")
-
-        return
-            if (
-                $media-type = $defined-content-types or (
-                    $defined-content-types = "*/*" and
-                    $registry = (
-                        "application", "audio", "example", "font", "image",
-                        "message", "model", "multipart", "text", "video"
-                    )
-                )
-            )
-            then map {
-                "media-type": $media-type,
-                "charset": $charset,
-                "registry": $registry,
-                "format": 
-                    if ($media-type = ("application/json", "text/json")) 
-                    then "json" 
-                    else if ($media-type = ("application/xml", "text/xml"))
-                    then "xml"
-                    else if ($media-type = ("multipart/form-data", "application/x-www-form-urlencoded"))
-                    then "form-data"
-                    else if ($format-hint) 
-                    then $format-hint 
-                    else "binary"
-            }
-            else error(
-                $errors:BODY_CONTENT_TYPE,
-                "Body with media-type '" || $media-type || "' is not allowed", 
-                $request
-            )
-    )
-};
-
-(:~
- : Try to retrieve and convert the request body if specified
- :)
-declare function router:body ($request as map(*)) {
-    if (not(exists($request?media-type)))
-    then () (: this route expects no body, return an empty sequence :)
-    else (
-        try {
-            switch ($request?format)
-            case "form-data" return (
-                if (request:is-multipart-content())
-                then (
-                    let $schema := $request?config?requestBody?content?("multipart/form-data")?schema
-                    let $required-props :=
-                        if (map:contains($schema, 'required'))
-                        then $schema?required?*
-                        else ()
-                    let $properties := $schema?properties
-
-                    return map:merge(
-                        for $name in map:keys($properties)
-                        let $property := $properties?($name)
-                        let $is-array := $property?type = "array"
-                        let $is-required := $name = $required-props
-                        let $format :=
-                            if ($is-array)
-                            then $property?items?format
-                            else $property?format
-                        return
-                            switch ($format)
-                            case 'binary' return
-                                let $names := request:get-uploaded-file-name($name)                                
-                                let $data := request:get-uploaded-file-data($name)
-                                let $sizes := request:get-uploaded-file-size($name)
-                                return
-                                    (: check if number of items received is expected :)
-                                    if (count($names) = 0 and $is-required)
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
-                                    else if (count($names) > 1 and not($is-array))
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($names), $names)
-                                    else map { $name :
-                                        for $_name at $index in $names
-                                        return map {
-                                            "name": $_name,
-                                            "data": $data[$index],
-                                            "size": $sizes[$index]
-                                        }
-                                }
-                            case 'base64' return
-                                let $value := request:get-parameter($name, ())
-                                return
-                                    (: check if number of items received is expected :)
-                                    if (not(exists($value)) and $is-required)
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
-                                    else if (count($value) > 1 and not($is-array))
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
-                                    else map { $name : xs:base64Binary($value) }
-
-                            default return
-                                let $value := request:get-parameter($name, ())
-                                return
-                                    if (not(exists($value)) and $is-required)
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
-                                    else if (count($value) > 1 and not($is-array))
-                                    then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
-                                    else map { $name : $value }
-                    )
-                )
-                else (
-                    let $schema := $request?config?requestBody?content?("application/x-www-form-urlencoded")?schema
-                    let $required-props :=
-                        if (map:contains($schema, 'required'))
-                        then $schema?required?*
-                        else ()
-                    let $properties := $schema?properties
-                    return
-                        map:merge(
-                            for $name in map:keys($properties)
-                            let $property := $properties?($name)
-                            let $is-array := $property?type = "array"
-                            let $is-required := $name = $required-props
-                            let $value := request:get-parameter($name, ())
-                            return (
-                                if (not(exists($value)) and $is-required)
-                                then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
-                                else if (count($value) > 1 and not($is-array))
-                                then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
-                                else map { $name : $value }
-                            )
-                        )
-                )
-            )
-            (:
-                Parse body contents to XQuery data structure for media types
-                that were identified as being in JSON format.
-                NOTE: The data needs to be serialized again before it can be stored.
-            :)
-            case "json" return
-                request:get-data() 
-                => util:binary-to-string()
-                => parse-json()
-            (: 
-                Workaround for eXist-DB specific behaviour, 
-                this way we will get parse errors as early as possible
-                while still having access to the data afterwards.
-                NOTE: Returns the root node instead of a document (fragment).
-            :)
-            case "xml" return 
-                let $data := request:get-data()
-                return
-                    typeswitch ($data)
-                    case node() return $data/node()
-                    default return parse-xml($data)
-            (: Treat everything else as binary data :)
-            default return request:get-data()
-        }
-        catch * {
-            error(
-                $errors:BODY_CONTENT_TYPE, 
-                "Body with media type '" || $request?media-type || "' could not be parsed (invalid " || upper-case($request?format) || ").",
-                $err:description
-            )
-        }
-    )
-};
-
 (:~
  : Look up the XQuery function whose name matches property "operationId".
  : If found, call it and pass the request map as single parameter.
@@ -433,8 +249,8 @@ declare %private function router:execute-handler ($base-request as map(*), $use,
         error($errors:OPERATION, "Operation does not define an operationId", $base-request?config)
     else
         try {
-            let $request-with-content-type := map:merge(($base-request, router:content-type($base-request)))
-            let $request-with-body := map:put($request-with-content-type, "body", router:body($request-with-content-type))
+            let $request-with-content-type := map:merge(($base-request, body:content-type($base-request)))
+            let $request-with-body := map:put($request-with-content-type, "body", body:parse($request-with-content-type))
 
             let $request-response-array :=
                 fold-left($use, [$request-with-body, map {}], router:middleware-reducer#2)
@@ -660,7 +476,7 @@ declare %private function router:method-for-content-type ($type as xs:string) as
     switch (substring-before($type, "/"))
         case "application" return
             if (ends-with($type, "json")) then "json" (: matches application/json and any type ending in +json :)
-            else if (ends-with($type, "xhtml+xml")) then "xhtml"
+            else if (ends-with($type, "/xhtml+xml")) then "xhtml"
             else if (ends-with($type, "xml")) then "xml" (: matches application/xml and any type ending in +xml :)
             else "text"
         case "text" return
