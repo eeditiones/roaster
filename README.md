@@ -231,9 +231,30 @@ An ant-task is still defined, but will use gulp in the end (through `npm run bui
 
 The repository contains a demo and test application, 'Roasted', which is using the Roaster router. It serves a good starting-point for playing, learning and as a 'template' for your own apps.
 
-Run `gulp install:all` to install both the library and the testapp.
-Now navigate to http://localhost:8080/exist/apps/roasted/
-This will open a form dynamically created from the definition files [api.json](test/app/api.json) _and_ [api-jwt.json](test/app/api-jwt.json).
+The demo app is now available for download as an artefact of a [release](https://github.com/eeditiones/roaster/releases/latest).
+
+1. download the **roasted.xar**
+2. install it in your eXist-db instance
+
+    You can use the **upload** feature of the dashboard. 
+    The roaster library will be installed as a dependency in the required version.
+
+1. open http://localhost:8080/exist/apps/roasted/
+
+    If your instance is running on a different domain replace `localhost:8080` with the correct one.
+    This will open a form dynamically created from the definition files [api.json](test/app/api.json) _and_ [api-jwt.json](test/app/api-jwt.json).
+
+#### Building the demo application from source
+
+If you want to make modifications to the demo app and test them
+
+1. `gulp install:all`
+
+    will create both the library and the testapp XAR and install them.
+
+1. open http://localhost:8080/exist/apps/roasted/
+
+    This will open a form dynamically created from the definition files [api.json](test/app/api.json) _and_ [api-jwt.json](test/app/api-jwt.json).
 
 ### Development
 
