@@ -1,6 +1,6 @@
 {
   "name": "roaster",
-  "version": "1.7.5",
+  "version": "1.7.6",
   "description": "roaster - OpenAPI Router for eXist",
   "scripts": {
     "test": "dotenv gulp install:all && dotenv mocha --exit",
@@ -53,8 +53,8 @@
     "title": "roaster - OpenAPI Router",
     "license": "GPLv3"
   },
-	"overrides": {
-		"chokidar": "$chokidar",
-		"glob-stream": "$glob-stream"
-	}
+  "overrides": {
+    "chokidar": "$chokidar",
+    "glob-stream": "$glob-stream"
+  }
 }
