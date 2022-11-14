@@ -5,7 +5,7 @@
     "@semantic-release/release-notes-generator",
     ["@semantic-release/exec", {
       "prepareCmd": "npm version ${nextRelease.version} --no-git-tag-version --allow-same-version && npm i --package-lock-only",
-      "publishCmd": "npm run build"
+      "publishCmd": "npm run build:all"
     }],
     ["@semantic-release/git", {
       "assets": ["package.json", "package-lock.json"],
