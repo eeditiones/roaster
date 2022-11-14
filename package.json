@@ -7,7 +7,7 @@
     "test:watch": "dotenv mocha --watch",
     "test:install": "dotenv gulp test:install",
     "build": "gulp build",
-    "build:all": "gulp build && gulp test:build",
+    "build:all": "gulp build:all",
     "deploy": "dotenv gulp install",
     "develop": "dotenv gulp"
   },
