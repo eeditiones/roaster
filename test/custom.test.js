@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const chai = require('chai');
 const expect = chai.expect;
-const chaiResponseValidator = require('chai-openapi-response-validator');
+const chaiResponseValidator = require('chai-openapi-response-validator').default;
 
 const spec = path.resolve("./test/app/api-jwt.json");
 chai.use(chaiResponseValidator(spec));
