@@ -4,7 +4,7 @@
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
     ["@semantic-release/exec", {
-      "prepareCmd": "npm version ${nextRelease.version} --no-git-tag-version --allow-same-version",
+      "prepareCmd": "npm version ${nextRelease.version} --no-git-tag-version --allow-same-version && npm i --package-lock-only",
       "publishCmd": "npm run build"
     }],
     ["@semantic-release/git", {
@@ -16,7 +16,12 @@
         {
           "path": "dist/roaster-*.xar", 
           "name": "roaster-${nextRelease.version}.xar",
-          "label": "Expath package (roaster-${nextRelease.version}.xar)"
+          "label": "Library Expath package (roaster-${nextRelease.version}.xar)"
+        },
+        {
+          "path": "dist/roasted.xar", 
+          "name": "roasted.xar",
+          "label": "Demo application Expath package (roasted.xar)"
         }
       ]
     }]
