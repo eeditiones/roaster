@@ -58,7 +58,7 @@ declare function body:parse ($request as map(*)) {
                 let $data := request:get-data()
                 return
                     typeswitch ($data)
-                    case node() return $data/node()
+                    case node() return $data
                     default return parse-xml($data)
             (: Treat everything else as binary data :)
             default return request:get-data()
