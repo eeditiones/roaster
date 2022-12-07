@@ -52,7 +52,6 @@ declare function body:parse ($request as map(*)) {
                 Workaround for eXist-DB specific behaviour, 
                 this way we will get parse errors as early as possible
                 while still having access to the data afterwards.
-                NOTE: Returns the root node instead of a document (fragment).
             :)
             case "xml" return 
                 let $data := request:get-data()
