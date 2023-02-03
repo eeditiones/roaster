@@ -88,7 +88,7 @@ declare function router:route ($api-files as xs:string+, $lookup as function(xs:
     }
 
     return (
-        util:log("info", ``[[`{$request-data?id}`] request `{$request-data?method}` `{$request-data?path}`]``),
+        util:log("debug", ``[[`{$request-data?id}`] request `{$request-data?method}` `{$request-data?path}`]``),
         try {
             (: load router definitions :)
             let $specs :=
@@ -114,7 +114,7 @@ declare function router:route ($api-files as xs:string+, $lookup as function(xs:
                     $matching-routes
                 else (
                     (: if there are multiple matches, prefer the one matching the longest pattern and the highest priority :)
-                    util:log("warn", "ambigous route: " || $request-data?path),
+                    util:log("debug", "ambigous route: " || $request-data?path),
                     head(sort($matching-routes, (), router:route-specificity#1))
                 )
 
@@ -227,7 +227,7 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
 
     return (
         router:write-response($status, $response, $route),
-        util:log("info", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
+        util:log("debug", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
     )
 };
 
