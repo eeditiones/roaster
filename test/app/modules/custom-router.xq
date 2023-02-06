@@ -66,4 +66,14 @@ declare variable $custom-router:use := (
     custom-router:use-beep-boop#2
 );
 
-roaster:route($custom-router:definitions, custom-router:lookup#1, $custom-router:use)
+declare function custom-router:log-std ($level as xs:string, $message as item()*) as empty-sequence() {
+    switch(lower-case($level))
+    case 'error' return util:log-system-err($message)
+    default return util:log-system-out($message)
+};
+
+declare function custom-router:log-app ($level as xs:string, $message as item()*) as empty-sequence() {
+    util:log-app($level, "custom.log", $message)
+};
+
+roaster:route($custom-router:definitions, custom-router:lookup#1, $custom-router:use, custom-router:log-std#2)
