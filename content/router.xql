@@ -85,7 +85,8 @@ declare function router:resolve-pointer($config as map(*), $ref as xs:string*) {
 declare function router:route(
     $api-files as xs:string+,
     $lookup as function (xs:string) as function(*)?,
-    $middlewares as function(*)*
+    $middlewares as (function (map(*), map(*)) as map(*)+)*,
+    $logger as function (xs:string, item()*) as empty-sequence()
 ) {
     let $controller := request:get-attribute("$exist:controller")
     let $base-collection := ``[`{repo:get-root()}`/`{$controller}`/]``
@@ -97,7 +98,7 @@ declare function router:route(
     }
 
     return (
-        util:log("debug", ``[[`{$request-data?id}`] request `{$request-data?method}` `{$request-data?path}`]``),
+        $logger("debug", ``[[`{$request-data?id}`] request `{$request-data?method}` `{$request-data?path}`]``),
         try {
             (: load router definitions :)
             let $specs :=
@@ -123,7 +124,7 @@ declare function router:route(
                 (: if there are multiple matches, prefer the one matching the longest pattern and the highest priority :)
                 let $matching-routes-with-specificity := for-each($matching-routes, router:add-specificity#1)
                 return (
-                    util:log(
+                    $logger(
                         "debug",
                         map {
                             "ambiguous route": $request-data?path,
@@ -143,7 +144,7 @@ declare function router:route(
                 )
             )
 
-            return router:process-request($first-match, $lookup, $middlewares)
+            return router:process-request($first-match, $lookup, $middlewares, $logger)
         } catch * {
             let $error := if (router:is-rethrown-error($err:value)) then
                 $err:value
@@ -167,7 +168,7 @@ declare function router:route(
             else
                 errors:get-status-code-from-error($err:code)
 
-            return router:error($status-code, $error, $lookup)
+            return router:error($status-code, $error, $lookup, $logger)
         }
     )
 };
@@ -242,7 +243,8 @@ declare %private function router:sort-by-specificity-and-priority($route as map(
 declare %private function router:process-request(
     $pattern-map as map(*),
     $lookup as function(*),
-    $custom-middlewares as function(*)*
+    $custom-middlewares as function(*)*,
+    $logger as function (xs:string, item()*) as empty-sequence()
 ) {
     let $route := if (map:contains($pattern-map?config, $pattern-map?method)) then
         $pattern-map?config?($pattern-map?method)
@@ -268,7 +270,7 @@ declare %private function router:process-request(
 
     return (
         router:write-response($status, $response, $route),
-        util:log("debug", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
+        $logger("debug", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
     )
 };
 
@@ -451,9 +453,10 @@ declare %private function router:error-description(
 declare %private function router:error(
     $code as xs:integer,
     $error as map(*),
-    $lookup as function (xs:string) as function(*)?
+    $lookup as function (xs:string) as function(*)?,
+    $logger as function (xs:string, item()*) as empty-sequence()
 ) {
-    router:log-error($code, $error),
+    router:log-error($code, $error, $logger),
     (: unwrap error data :)
     let $route := $error?_request?config
     let $error := $error?_error
@@ -490,7 +493,7 @@ declare %private function router:error(
                 "line": $err:line-number,
                 "column": $err:column-number
             }
-            return (router:log-error(500, $_error), router:default-error-handler(500, $_error))
+            return (router:log-error(500, $_error, $logger), router:default-error-handler(500, $_error))
         }
     ) (: default error handler :) else
         router:default-error-handler($code, $error)
@@ -624,9 +627,13 @@ declare %private function router:is-rethrown-error($value as item()*) as xs:bool
     count($value) eq 1 and $value instance of map(*) and map:contains($value, "_error")
 };
 
-declare %private function router:log-error($code as xs:integer, $data as map(*)) as empty-sequence() {
+declare %private function router:log-error(
+    $code as xs:integer,
+    $data as map(*),
+    $logger as function (xs:string, item()*) as empty-sequence()
+) as empty-sequence() {
     let $error := $data?_error => serialize(map {"method": "json"})
-    return util:log(
+    return $logger(
         "error",
         ``[[`{$data?_request?id}`] `{$data?_request?method}` `{$data?_request?path}`: `{$code}`
             `{$error}`]``
