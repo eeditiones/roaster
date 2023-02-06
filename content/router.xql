@@ -77,7 +77,12 @@ declare function router:resolve-pointer($config as map(*), $ref as xs:string*) {
  : 2. use the matching route with the longest normalized pattern
  : 3. If two paths have the same (normalized) length, prioritize by appearance in API files, first one wins
  :)
-declare function router:route ($api-files as xs:string+, $lookup as function(xs:string) as function(*)?, $middlewares as function(*)*) {
+declare function router:route (
+    $api-files as xs:string+,
+    $lookup as function(xs:string) as function(*)?,
+    $middlewares as (function(map(*), map(*)) as map(*)+)*,
+    $logger as function(xs:string, item()*) as empty-sequence()
+) {
     let $controller := request:get-attribute("$exist:controller")
     let $base-collection := ``[`{repo:get-root()}`/`{$controller}`/]``
 
@@ -88,7 +93,7 @@ declare function router:route ($api-files as xs:string+, $lookup as function(xs:
     }
 
     return (
-        util:log("debug", ``[[`{$request-data?id}`] request `{$request-data?method}` `{$request-data?path}`]``),
+        $logger("debug", ``[[`{$request-data?id}`] request `{$request-data?method}` `{$request-data?path}`]``),
         try {
             (: load router definitions :)
             let $specs :=
@@ -116,7 +121,7 @@ declare function router:route ($api-files as xs:string+, $lookup as function(xs:
                     (: if there are multiple matches, prefer the one matching the longest pattern and the highest priority :)
                     let $matching-routes-with-specificity := for-each($matching-routes, router:add-specificity#1)
                     return (
-                        util:log("debug", map {
+                        $logger("debug", map {
                             "ambiguous route" : $request-data?path,
                             "method" : $request-data?method,
                             "matching definitions" : array { 
@@ -135,7 +140,7 @@ declare function router:route ($api-files as xs:string+, $lookup as function(xs:
                 )
 
             return
-                router:process-request($first-match, $lookup, $middlewares)
+                router:process-request($first-match, $lookup, $middlewares, $logger)
 
         } catch * {
             let $error :=
@@ -158,7 +163,7 @@ declare function router:route ($api-files as xs:string+, $lookup as function(xs:
                     errors:get-status-code-from-error($err:code)
 
             return
-                router:error($status-code, $error, $lookup)
+                router:error($status-code, $error, $lookup, $logger)
         }
     )
 };
@@ -222,7 +227,12 @@ declare %private function router:sort-by-specificity-and-priority ($route as map
     $route?priority (: sort ascending :)
 };
 
-declare %private function router:process-request ($pattern-map as map(*), $lookup as function(*), $custom-middlewares as function(*)*) {
+declare %private function router:process-request (
+    $pattern-map as map(*),
+    $lookup as function(*),
+    $custom-middlewares as function(*)*,
+    $logger as function(xs:string, item()*) as empty-sequence()
+) {
     let $route :=
         if (map:contains($pattern-map?config, $pattern-map?method)) then 
             $pattern-map?config?($pattern-map?method)
@@ -249,7 +259,7 @@ declare %private function router:process-request ($pattern-map as map(*), $looku
 
     return (
         router:write-response($status, $response, $route),
-        util:log("debug", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
+        $logger("debug", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
     )
 };
 
@@ -401,8 +411,13 @@ declare %private function router:error-description ($description as xs:string?, 
  : OAS configuration for the route and "_response" is the response data provided by the user function
  : in the third argument of error().
  :)
-declare %private function router:error ($code as xs:integer, $error as map(*), $lookup as function(xs:string) as function(*)?) {
-    router:log-error($code, $error),
+declare %private function router:error (
+    $code as xs:integer,
+    $error as map(*),
+    $lookup as function(xs:string) as function(*)?,
+    $logger as function(xs:string, item()*) as empty-sequence()
+) {
+    router:log-error($code, $error, $logger),
     (: unwrap error data :)
     let $route := $error?_request?config
     let $error := $error?_error
@@ -433,7 +448,7 @@ declare %private function router:error ($code as xs:integer, $error as map(*), $
                         "line": $err:line-number, "column": $err:column-number
                     }
                 return (
-                    router:log-error(500, $_error),
+                    router:log-error(500, $_error, $logger),
                     router:default-error-handler(500, $_error)
                 )
             }
@@ -542,10 +557,14 @@ declare %private function router:is-rethrown-error($value as item()*) as xs:bool
     map:contains($value, "_error")
 };
 
-declare %private function router:log-error ($code as xs:integer, $data as map(*)) as empty-sequence() {
+declare %private function router:log-error (
+    $code as xs:integer,
+    $data as map(*),
+    $logger as function(xs:string, item()*) as empty-sequence()
+) as empty-sequence() {
     let $error := $data?_error => serialize(map{"method": "json"})
     return
-        util:log("error", 
+        $logger("error", 
             ``[[`{$data?_request?id}`] `{$data?_request?method}` `{$data?_request?path}`: `{$code}`
             `{$error}`]``)
 };

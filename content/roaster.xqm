@@ -77,11 +77,24 @@ declare function roaster:resolve-pointer ($config as map(*), $ref as xs:string*)
  : 3. If two paths have the same (normalized) length, prioritize by appearance in API files, first one wins
  :)
 declare function roaster:route($api-files as xs:string+, $lookup as function(xs:string) as function(*)?) {
-    router:route($api-files, $lookup, auth:standard-authorization#2)
+    router:route($api-files, $lookup, auth:standard-authorization#2, util:log#2)
 };
 
-declare function roaster:route($api-files as xs:string+, $lookup as function(xs:string) as function(*)?, $middleware) {
-    router:route($api-files, $lookup, $middleware)
+declare function roaster:route(
+    $api-files as xs:string+,
+    $lookup as function(xs:string) as function(*)?,
+    $middleware as (function(map(*), map(*)) as map(*)+)*
+) {
+    router:route($api-files, $lookup, $middleware, util:log#2)
+};
+
+declare function roaster:route(
+    $api-files as xs:string+,
+    $lookup as function(xs:string) as function(*)?,
+    $middleware as (function(map(*), map(*)) as map(*)+)*,
+    $logger as function(xs:string, item()*) as empty-sequence()
+) {
+    router:route($api-files, $lookup, $middleware, $logger)
 };
 
 declare function roaster:accepted-content-types () as xs:string* {
