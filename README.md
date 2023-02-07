@@ -189,6 +189,11 @@ declare function custom-router:use-beep-boop ($request as map(*), $response as m
 Roaster transparently handles data from multipart/form-data requests to keep route handlers short and readable.
 Please see the [file upload documentation](doc/file-upload.md) for more details on this.
 
+## Logging
+
+Roaster allows to pass in a fourth parameter to `roaster:route#4`.
+It defaults to using util:log as before.
+
 ## Limitations
 
 The library does not support yet support following OpenAPI feature(s): 
