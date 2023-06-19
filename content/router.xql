@@ -114,8 +114,24 @@ declare function router:route ($api-files as xs:string+, $lookup as function(xs:
                     $matching-routes
                 else (
                     (: if there are multiple matches, prefer the one matching the longest pattern and the highest priority :)
-                    util:log("debug", "ambigous route: " || $request-data?path),
-                    head(sort($matching-routes, (), router:route-specificity#1))
+                    let $matching-routes-with-specificity := for-each($matching-routes, router:add-specificity#1)
+                    return (
+                        util:log("debug", map {
+                            "ambiguous route" : $request-data?path,
+                            "method" : $request-data?method,
+                            "matching definitions" : array { 
+                                $matching-routes-with-specificity ! map {
+                                    "priority": .?priority,
+                                    "specificity": .?specificity,
+                                    "pattern": .?pattern
+                                }
+                            }
+                        }),
+                        head(
+                            sort(
+                                $matching-routes-with-specificity, (),
+                                router:sort-by-specificity-and-priority#1))
+                    )
                 )
 
             return
@@ -190,13 +206,19 @@ declare %private function router:create-regex($path as xs:string) as xs:string {
         "^/" || string-join($replaced, "/")
 };
 
+declare %private function router:add-specificity ($route as map(*)) as map(*) {
+    let $specificity := string-length( (: the longer the more specific :)
+                            replace( (: normalize route specificity by replacing path params :)
+                                $route?pattern, $router:path-parameter-matcher, "?")) 
+
+    return map:put($route, "specificity", $specificity)
+};
+
 (:~
  : Sort routes by specificity
  :)
-declare %private function router:route-specificity ($route as map(*)) as xs:integer+ {
-    replace($route?pattern, $router:path-parameter-matcher, "?") (: normalize route specificity by replacing path params :)
-        => (function ($np as xs:string) { - string-length($np) })() (: sort descending :) (: the longer the more specific :)
-    ,
+declare %private function router:sort-by-specificity-and-priority ($route as map(*)) as xs:integer+ {
+    -$route?specificity, (: sort descending :) (: the longer the more specific :)
     $route?priority (: sort ascending :)
 };
 
