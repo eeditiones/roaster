@@ -124,55 +124,59 @@ describe('Request body', function() {
 });
 
 describe('Query parameters', function () {
+    const params = {
+        'num': 165.75,
+        'int': 776,
+        'bool': true,
+        'string': '&a=2 2'
+    }
+    const headers = {
+        "X-start": 22
+    }
+
+
     it('passes query parameters in GET', async function () {
         const res = await util.axios.get('api/parameters', {
-            params: {
-                num: 165.75,
-                int: 776,
-                bool: true,
-                string: '&a=22'
-            },
-            headers: {
-                "X-start": 22
-            }
+            params,
+            headers
         })
         expect(res.status).to.equal(200)
         expect(res.data.parameters.num).to.be.a('number')
-        expect(res.data.parameters.num).to.equal(165.75)
+        expect(res.data.parameters.num).to.equal(params.num)
         expect(res.data.parameters.bool).to.be.a('boolean')
-        expect(res.data.parameters.bool).to.be.true
+        expect(res.data.parameters.bool).to.equal(params.bool)
         expect(res.data.parameters.int).to.be.a('number')
-        expect(res.data.parameters.int).to.equal(776)
-        expect(res.data.parameters.string).to.equal('&a=22')
+        expect(res.data.parameters.int).to.equal(params.int)
+        expect(res.data.parameters.string).to.equal(params.string)
+
+        expect(res.data.parameters['X-start']).to.equal(headers['X-start'])
+
         expect(res.data.parameters.defaultParam).to.equal('abcdefg')
-        expect(res.data.parameters['X-start']).to.equal(22)
     })
 
     it('passes query parameters in POST', async function () {
         const res = await util.axios.request({
             url: 'api/parameters',
             method: 'post',
-            params: {
-                'num': 165.75,
-                'int': 776,
-                'bool': true,
-                'string': '&a=22'
-            },
+            params,
             headers: {
                 "X-start": 22
             }
         })
+
         expect(res.status).to.equal(200)
         expect(res.data.method).to.equal('post')
         expect(res.data.parameters.num).to.be.a('number')
-        expect(res.data.parameters.num).to.equal(165.75)
+        expect(res.data.parameters.num).to.equal(params.num)
         expect(res.data.parameters.bool).to.be.a('boolean')
-        expect(res.data.parameters.bool).to.be.true
+        expect(res.data.parameters.bool).to.equal(params.bool)
         expect(res.data.parameters.int).to.be.a('number')
-        expect(res.data.parameters.int).to.equal(776)
-        expect(res.data.parameters.string).to.equal('&a=22')
+        expect(res.data.parameters.int).to.equal(params.int)
+        expect(res.data.parameters.string).to.equal(params.string)
+
+        expect(res.data.parameters['X-start']).to.equal(headers['X-start'])
+
         expect(res.data.parameters.defaultParam).to.equal('abcdefg')
-        expect(res.data.parameters['X-start']).to.equal(22)
     })
 
     it('handles date parameters', async function () {
