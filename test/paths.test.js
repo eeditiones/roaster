@@ -190,3 +190,20 @@ describe('Query parameters', function () {
         expect(res.data).to.be.true
     })
 })
+
+describe('with percent encoded value in path', function () {
+    const url = 'api/test%20and%20test/test'
+    let res
+
+    before(async function () {
+        res = await util.axios.get(url)
+    })
+
+    it('URL + "' + url + '" resolves', async function () {
+        expect(res.status).to.equal(200)
+    })
+
+    it('passes query parameters in GET', async function () {
+        expect(res.data.parameters.test).to.equal('test and test')
+    })
+})

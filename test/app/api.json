@@ -469,6 +469,35 @@
                 }
             }
         },
+        "/api/{test}/test":{
+            "get": {
+                "summary": "Get path with a fixed ending",
+                "operationId": "rutil:debug",
+                "tags": ["path"],
+                "parameters": [
+                    {
+                        "name": "test",
+                        "in": "path",
+                        "required": true,
+                        "schema":{
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/errors": {
             "get": {
                 "summary": "Reports an error via fn:error function",
