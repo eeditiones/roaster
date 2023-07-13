@@ -8,9 +8,16 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
+      fail-fast: true
       matrix:
-        exist-version: [latest, release, 5.5.1]
+        exist-version: [release, 6.0.1, 5.5.1]
+        experimental: [false]
+        # latest might contain breaking changes
+        include:
+          - exist-version: latest
+            experimental: true
     services:
       exist:
         image: existdb/existdb:${{ matrix.exist-version }}
