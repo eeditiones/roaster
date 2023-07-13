@@ -47,6 +47,7 @@ declare function parameters:in-path ($request as map(*), $response as map(*)) as
                     then (
                         let $value :=
                             $match-path//fn:group[@nr=$pos]/string()
+                            => xmldb:decode()
                             => parameters:cast($path-param-map?($key))
 
                         return map { $key : $value }
