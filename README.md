@@ -9,7 +9,7 @@
 ## OpenAPI Router for eXist
 
 
-Roaster is a generic router to be used in any exist-db application. It reads an [OpenAPI 3.0](https://oai.github.io/Documentation/) specification from a JSON file and routes requests to handler functions written in XQuery.
+Roaster is a generic router to be used in any exist-db application. It reads an [OpenAPI 3.0](https://spec.openapis.org/oas/v3.0.0) specification from a JSON file and routes requests to handler functions written in XQuery.
 
 ![Roasted API](doc/roasted-api.png)
 
