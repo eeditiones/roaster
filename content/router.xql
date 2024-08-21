@@ -360,11 +360,11 @@ declare %private function router:resolve-ref ($config as map(*), $parts as xs:st
  : Add line and source info to error description. To avoid outputting multiple locations
  : for rethrown errors, check if $value is set.
  :)
-declare %private function router:error-description ($description as xs:string, $line as xs:integer?, $column as xs:integer?, $module as xs:string?, $value as item()*) as xs:string {
+declare %private function router:error-description ($description as xs:string?, $line as xs:integer?, $column as xs:integer?, $module as xs:string?, $value as item()*) as xs:string {
     if ($line and $line > 0 and empty($value)) then
         ``[`{$description}` [at line `{$line}` column `{$column}` in module `{head(($module, 'unknown'))}`]]``
     else
-        $description
+        ($description, $value)[1]
 };
 
 (:~
