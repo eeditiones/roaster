@@ -1,6 +1,6 @@
 {
   "name": "roaster",
-  "version": "1.8.3",
+  "version": "1.9.0",
   "description": "roaster - OpenAPI Router for eXist",
   "scripts": {
     "test": "dotenv gulp install:all && dotenv mocha --exit",
