@@ -45,6 +45,7 @@ describe("Binary up and download", function () {
             expect(res.status).to.equal(201)
             expect(res.data).to.equal(dbUploadCollection + filename)
         })
+
         it('retrieves the data', async function () {
             const res = await util.axios.get(downloadApiEndpoint + filename, { responseType: 'arraybuffer' })
             expect(res.status).to.equal(200)
@@ -422,7 +423,7 @@ test.
             return util.axios.post(
                 'upload/single/' + filename,
                 data,
-                { headers }                
+                { headers }
             )
             .then(r => uploadResponse = r)
             .catch(e => uploadResponse = e.response )
