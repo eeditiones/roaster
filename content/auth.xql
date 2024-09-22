@@ -25,7 +25,7 @@ import module namespace session = "http://exist-db.org/xquery/session";
 import module namespace router="http://e-editiones.org/roaster/router";
 import module namespace rutil="http://e-editiones.org/roaster/util";
 import module namespace errors="http://e-editiones.org/roaster/errors";
-import module namespace cookie="http://e-editiones.org/roaster/cookie" at "cookie.xqm";
+import module namespace cookie="http://e-editiones.org/roaster/cookie";
 
 (: API Request Authentication and Authorisation :)
 
