@@ -68,17 +68,7 @@
                 "summary": "User Logout",
                 "description": "End session of the current user",
                 "operationId": "auth:logout",
-                "tags": ["auth", "query"],
-                "parameters": [
-                    {
-                        "name": "logout",
-                        "in": "query",
-                        "description": "Set to some value to log out the current user",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
+                "tags": ["auth"],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -87,18 +77,9 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "success": { "type": "boolean" }
+                                        "success": { "type": "boolean" },
+                                        "message": { "type": "string" }
                                     }
-                                }
-                            }
-                        }
-                    },
-                    "301": {
-                        "description": "Redirect with the logout parameter set.",
-                        "content": {
-                            "text/plain": {
-                                "schema": {
-                                    "type": "string"
                                 }
                             }
                         }
@@ -107,15 +88,171 @@
                 }
             }
         },
+        "/api/logout": {
+            "get": {
+                "summary": "User Logout",
+                "description": "End session of the current user",
+                "operationId": "api:logout",
+                "tags": ["auth"],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": { "type": "string" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": { "description": "unauthorized" }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "summary": "Custom user Login",
+                "description": "Custom login handler using different properties",
+                "tags": ["auth", "body"],
+                "operationId": "api:login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [ "usr" ],
+                                "properties": {
+                                    "usr": {
+                                        "description": "Username",
+                                        "type": "string"
+                                    },
+                                    "pwd": {
+                                        "description": "Password",
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": { "type": "string" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Wrong user or password",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": { "type": "string" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/api/login-xml": {
+            "post": {
+                "summary": "Login with XML",
+                "description": "Custom login handler using XML body",
+                "tags": ["auth", "body"],
+                "operationId": "api:login-xml",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/xml": {
+                            "schema": {
+                                "type": "object",
+                                "required": [ "username" ],
+                                "properties": {
+                                    "username": {
+                                        "description": "Username",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "description": "Password",
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "xml": {
+                                    "wrapped": true,
+                                    "name": "login"
+                                }
+                            }
+                    }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Wrong user or password",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
         "/login": {
             "post": {
                 "summary": "User Login",
-                "description": "Start an authenticated session for the given user",
+                "description": "Start an authenticated session using roaster's login route handler",
                 "tags": ["auth", "body"],
                 "operationId": "auth:login",
                 "requestBody": {
                     "required": true,
                     "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [ "user" ],
+                                "properties": {
+                                    "user": {
+                                        "description": "Name of the user",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        },
                         "multipart/form-data": {
                             "schema": {
                                 "type": "object",
