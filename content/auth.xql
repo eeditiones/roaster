@@ -16,11 +16,16 @@
  :)
 module namespace auth="http://e-editiones.org/roaster/auth";
 
-import module namespace login="http://exist-db.org/xquery/login" at "resource:org/exist/xquery/modules/persistentlogin/login.xql";
+import module namespace plogin="http://exist-db.org/xquery/persistentlogin"
+    at "java:org.exist.xquery.modules.persistentlogin.PersistentLoginModule";
+import module namespace request = "http://exist-db.org/xquery/request";
+import module namespace response = "http://exist-db.org/xquery/response";
+import module namespace session = "http://exist-db.org/xquery/session";
 
 import module namespace router="http://e-editiones.org/roaster/router";
 import module namespace rutil="http://e-editiones.org/roaster/util";
 import module namespace errors="http://e-editiones.org/roaster/errors";
+import module namespace cookie="http://e-editiones.org/roaster/cookie" at "cookie.xqm";
 
 (: API Request Authentication and Authorisation :)
 
@@ -31,6 +36,15 @@ declare variable $auth:DEFAULT_STRATEGIES := map {
     "basicAuth": auth:use-basic-auth#1
 };
 
+declare variable $auth:DEFAULT_LOGIN_OPTIONS := map {
+    "asDba": true(), 
+    "maxAge": xs:dayTimeDuration("P7D"),
+    "Path": request:get-context-path(),
+    "createSession": true() (: this will _also_ set the JSESSIONID cookie :)
+};
+
+declare variable $auth:log-level := "debug";
+
 (:~
  : standard authorization middleware
  : extend request with user information
@@ -40,7 +54,7 @@ declare variable $auth:DEFAULT_STRATEGIES := map {
  : @param $request the current request
  : @return the extended request map
  :)
-declare function auth:standard-authorization($request as map(*), $response as map(*)) as map(*)+ {
+declare function auth:standard-authorization ($request as map(*), $response as map(*)) as map(*)+ {
     auth:authenticate($request, $response, $auth:DEFAULT_STRATEGIES)
 };
 
@@ -53,9 +67,142 @@ declare function auth:standard-authorization($request as map(*), $response as ma
  : @param $strategies the authorization strategies to use
  : @return the authorization middleware that extends the request map
  :)
-declare function auth:use-authorization($strategies as map(*)) as function(*) {
+declare function auth:use-authorization ($strategies as map(*)) as function(*) {
     auth:authenticate(?, ?, $strategies)
 };
+
+(: login-domain must be configured! :)
+declare function auth:add-login-domain ($request as map(*), $auth-options as map(*)) as map(*) {
+    let $login-domain := auth:login-domain($request?spec)
+    return
+        if (empty($login-domain)) then (
+            error($errors:OPERATION, 'Login domain not specified in API-definition!')
+        ) else (
+            map:put($auth-options, 'name', $login-domain)
+        )
+};
+
+(:~
+ : @deprecated Default login handler
+ :
+ : @param $request the current request map
+ : @throws errors:OPERATION if cookieAuth does not provide a login domain 
+ :)
+declare function auth:login ($request as map(*)) as map(*) {
+    let $login-domain := auth:login-domain($request?spec)
+    let $user := auth:login-user(
+        $request?body?user, $request?body?password,
+        map{ "name": $login-domain }
+    )
+
+    return
+        if (exists($user))
+        then
+            map {
+                "user": $user,
+                "groups": array { sm:get-user-groups($user) },
+                "dba": sm:is-dba($user),
+                "domain": $login-domain
+            }
+        else
+            error($errors:UNAUTHORIZED, "Wrong user or password", map {
+                "user": $user,
+                "domain": $login-domain
+            })
+};
+
+(:~
+ : Preferred app-specific login function, that will set a cookie for cookieAuth
+ :)
+declare function auth:login-user ($user as xs:string, $password as xs:string, $options as map(*)) as xs:string? {
+    let $merged-options := map:merge(($auth:DEFAULT_LOGIN_OPTIONS, $options), map{ "duplicates": "use-last" })
+    return (
+        util:log($auth:log-level, ("auth:login-user: ", $user)),
+        plogin:register($user, $password, $merged-options?maxAge,
+            auth:get-register-callback($merged-options))
+    )
+};
+
+(:~
+ : @deprecated Default logout handler
+ :
+ : @param $request the current request map
+ : @throws errors:OPERATION if cookieAuth does not provide a login domain 
+ :)
+declare function auth:logout ($request as map(*)) as map(*) {
+    auth:logout-user(map{ "name": auth:login-domain($request?spec) }),
+    map {
+        "success": true(),
+        "message": "logged out"
+    }
+};
+
+(:~
+ : Preferred logout function for use in app-specific handlers
+ : user session will immediately stop working
+ :)
+declare function auth:logout-user ($options as map(*)) as empty-sequence() {
+    let $token :=
+        if (empty($options?name)) then (
+            error($errors:OPERATION, 'Cookie-name (login-domain) not set in call to auth:logout-user!')
+        ) else (
+            request:get-cookie-value($options?name)
+        )
+
+    return (
+        session:invalidate(),
+        if ($token and $token != "deleted") then (plogin:invalidate($token)) else (),
+        cookie:set(map:merge(
+            ($auth:DEFAULT_LOGIN_OPTIONS, $options, $auth:INVALIDATE_COOKIE),
+            map{ "duplicates": "use-last" }))
+    )
+};
+
+declare %private variable $auth:INVALIDATE_COOKIE := map{ "value": "deleted", "maxAge": xs:dayTimeDuration("-P1D") };
+
+(:~
+ : Read the login domain from components.securitySchemes.cookieAuth.name
+ : @param $spec API definition
+ :)
+declare function auth:login-domain ($spec as map(*)) as xs:string? {
+    router:resolve-pointer($spec, ("components", "securitySchemes", "cookieAuth", "name"))
+};
+
+declare function auth:use-cookie-auth ($request as map(*)) as map(*)? {
+    auth:use-cookie-auth($request, ())
+};
+
+(:~
+ : 
+ : @throws errors:OPERATION if cookieAuth does not provide a login domain 
+ :)
+declare function auth:use-cookie-auth ($request as map(*), $custom-options as map(*)?) as map(*)? {
+    let $login-domain := auth:login-domain($request?spec)
+    let $token := request:get-cookie-value($login-domain)
+
+    let $user :=
+        if (empty($token)) then () else (
+            let $merged-options := map:merge(($auth:DEFAULT_LOGIN_OPTIONS, $custom-options, map{ "name": $login-domain }), map{ "duplicates": "use-last" })
+            let $callback := auth:get-credentials-callback($merged-options)
+            return plogin:login($token, $callback)
+        )
+
+    return (
+        (: util:log($auth:log-level, ("auth:use-cookie-auth: token ", substring-before($token, ":") , ":******** evaluated to ", $user)), :)
+        if (empty($user)) then () else rutil:getDBUser()
+    )
+};
+
+(:~
+ : Basic authentication is handled by Jetty
+ : the user is already authenticated in the database and we just need to
+ : retrieve the information here
+ :)
+declare function auth:use-basic-auth ($request as map(*)) as map(*) {
+    util:log($auth:log-level, sm:id()),
+    rutil:getDBUser()
+};
+
 
 declare %private function auth:is-public-route ($constraints as map(*)?) as xs:boolean {
     not(exists($constraints))
@@ -91,27 +238,9 @@ declare %private function auth:authenticate ($request as map(*), $response as ma
         then ($request?spec?security)
         else ()
 
-    let $methods := $defined-auth-methods 
-        => array:for-each(function ($method-config as map(*)) {
-            let $method-name := map:keys($method-config)
-            (: TODO handle method-parameters for OAuth and openID
-             : let $method-parameters := $method-config?($method-name) :)
-            
-            return
-                if (map:contains($strategies, $method-name))
-                then (
-                    let $auth-method := $strategies($method-name)
-                    return function () {
-                        $auth-method($request)
-                    }
-                )
-                else error(
-                    $errors:OPERATION,
-                    "No strategy found for : '" || $method-name || "'", ($method-config, $strategies)
-                )
-        })
+    let $methods := array:for-each($defined-auth-methods, auth:map-auth-methods(?, $strategies))
 
-    let $user := array:fold-left($methods, (), auth:use-first-matching-method#2)
+    let $user := array:fold-left($methods, (), auth:use-first-matching-method($request))
     let $constraints := $request?config?x-constraints
     return
         if (
@@ -125,90 +254,70 @@ declare %private function auth:authenticate ($request as map(*), $response as ma
         else error($errors:UNAUTHORIZED, "Access denied")
 };
 
-declare function auth:use-first-matching-method ($user as map(*)?, $method as function(*)) as map(*)? {
-    if (exists($user))
-    then $user
-    else $method()
-};
-
-(:~
- : Either login a user (if parameter `user` is specified) or check if the current user is logged in.
- : Setting parameter `logout` to any value will log out the current user.
- :
- : @param $request the current request map
- : @throws errors:OPERATION if cookieAuth does not provide a login domain 
- :)
-declare function auth:login($request as map(*)) {
-    (: login-domain must be configured! :)
-    let $login-domain := auth:login-domain($request?spec)
-
-    let $login := login:set-user($login-domain, (), false())
-
-    let $user := request:get-attribute($login-domain || ".user")
-    (: Work-around for the actual login request  
-     : It is possible that the session is not yet ready 
-     : and sm:id() still reports "guest" as real user
-     :)
+declare %private function auth:map-auth-methods ($method-config as map(*), $strategies as map(*)) as function(*) {
+    let $method-name := map:keys($method-config)
+    (: TODO handle method-parameters for OAuth and openID
+        : let $method-parameters := $method-config?($method-name) :)
+    
     return
+        if (map:contains($strategies, $method-name))
+        then ($strategies($method-name))
+        else error(
+            $errors:OPERATION,
+            "No strategy found for : '" || $method-name || "'", ($method-config, $strategies)
+        )
+};
+
+declare %private function auth:use-first-matching-method ($request as map(*)) as function(*) {
+    function ($user as map(*)?, $method as function(*)) as map(*)? {
         if (exists($user))
-        then
-            map {
-                "user": $user,
-                "groups": array { sm:get-user-groups($user) },
-                "dba": sm:is-dba($user),
-                "domain": $login-domain
-            }
-        else
-            error($errors:UNAUTHORIZED, "Wrong user or password", map {
-                "user": $user,
-                "domain": $login-domain
-            })
+        then $user
+        else $method($request)
+    }
 };
 
-declare function auth:logout ($request as map(*)) {
-    if (empty($request?parameters?logout))
-    then router:response (
-        301, "text/plain", "redirecting", 
-        map { "Location": "?logout=true" })
-    else
-        let $user := 
-            auth:login-domain($request?spec)
-            => concat(".user")
-            => request:get-attribute()
-
-        return map { "success": empty($user) }
+declare %private function auth:get-register-callback ($options as map(*)) {
+    function (
+        $new-token as xs:string?,
+        $user as xs:string,
+        $password as xs:string,
+        $expiration as xs:duration
+    ) {
+        if ($options?asDba and not(sm:is-dba($user))) then (
+            (: raise error here? :)
+            util:log($auth:log-level, 'asDba is set to true() but user is non-DBA // not creating a session')
+        ) else (
+            if ($new-token) then (
+                (: session:invalidate(), :)
+                cookie:set(
+                    map:merge(
+                        ($options, map{ "value": $new-token, "maxAge": $expiration }),
+                        map{ "duplicates": "use-last" }))
+            ) else (),
+            let $_ := xmldb:login("/db", $user, $password, $options?createSession)
+            return $user
+        )
+    }
 };
 
-(:~
- : Read the login domain from components.securitySchemes.cookieAuth.name
- : @param $spec API definition
- : @throws errors:OPERATION if cookieAuth does not provide a login domain 
- :)
-declare function auth:login-domain ($spec as map(*)) as xs:string {
-    router:resolve-pointer($spec, ("components", "securitySchemes", "cookieAuth", "name"))
+declare %private function auth:get-credentials-callback ($options as map(*)) as function(*) {
+    function (
+        $new-token as xs:string?,
+        $user as xs:string,
+        $password as xs:string,
+        $expiration as xs:duration
+    ) as xs:string? {
+        (: util:log($auth:log-level, "auth:credentials-callback: --" || $user || "--"), :)
+        if (empty($new-token)) then (
+            util:log($auth:log-level, "session still valid")
+        ) else (
+            util:log($auth:log-level, "new token"),
+            cookie:set(
+                map:merge(($options, map{ "value": $new-token, "maxAge": $expiration}),
+                    map{ "duplicates": "use-last" }))
+        ),
+        (: util:log($auth:log-level, "USER: --" || $user || "--"), :)
+        $user
+    }
 };
 
-(:~
- : 
- : @throws errors:OPERATION if cookieAuth does not provide a login domain 
- :)
-declare function auth:use-cookie-auth ($request as map(*)) as map(*)? {
-    (: login-domain must be configured! :)
-    let $login-domain := auth:login-domain($request?spec)
-    let $login := login:set-user($login-domain, (), false())
-    let $user := request:get-attribute($login-domain || ".user")
-    return (
-        if ($user)
-        then rutil:getDBUser()
-        else ()
-    )
-};
-
-(:~
- : Basic authentication is handled by Jetty
- : the user is already authenticated in the database and we just need to
- : retrieve the information here
- :)
-declare function auth:use-basic-auth ($request as map(*)) as map(*) {
-    rutil:getDBUser()
-};

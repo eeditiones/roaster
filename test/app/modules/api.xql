@@ -127,6 +127,65 @@ declare function api:arrays-get ($request as map(*)) {
     map { "parameters": $request?parameters }
 };
 
+(:~
+ : override default authentication options
+ :)
+declare variable $api:auth-options := map {
+    "asDba": false(),
+    "createSession": false(),
+    "maxAge": xs:dayTimeDuration("PT10S"), (: set the cookie time-out to 10 seconds :)
+    "Path": "/exist/apps/roasted", (: requests must include this path for the cookie to be included :)
+    "SameSite": "Lax", (: sets the SameSite property to either "None", "Strict" or "Lax"  :)
+    "Secure": true(), (: mark the cookie as secure :)
+    "HttpOnly": true() (: sets the HttpOnly property :)
+};
+
+(:~
+ : Example login route handler using non-standard propertys
+ : within the request body to authenticate users against exist-db.
+ : The data can also be supplied as JSON
+ :)
+declare function api:login ($request as map(*)) {
+    let $user := auth:login-user(
+        $request?body?usr, $request?body?pwd, 
+        auth:add-login-domain($request, $api:auth-options))
+
+    return if (empty($user)) then (
+        roaster:response(401, "application/json",
+            map{ "message": "Wrong user or password" })
+    ) else (
+        (: the request can also be redirected here :)
+        map{ "message": concat("Logged in as ", $user) }
+    )
+};
+
+(:~
+ : Example login route handler using XML
+ :)
+declare function api:login-xml ($request as map(*)) {
+    let $user := auth:login-user(
+        $request?body//user/string(), $request?body//password/string(), 
+        auth:add-login-domain($request, $api:auth-options))
+
+    return if (empty($user)) then (
+        roaster:response(401, "application/xml",
+            <message>Wrong user or password</message>)
+    ) else (
+        (: the request can also be redirected here :)
+        roaster:response(200, "application/xml",
+            <message>Logged in as {$user}</message>)
+    )
+};
+
+(:~
+ : Example logout route handler
+ :)
+declare function api:logout ($request as map(*)) {
+    auth:logout-user(auth:add-login-domain($request, $api:auth-options)),
+    (: the request can also be redirected here :)
+    map{ "message": "Logged out" }
+};
+
 (: end of route handlers :)
 
 (:~
