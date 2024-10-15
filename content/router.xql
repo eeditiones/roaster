@@ -386,7 +386,7 @@ declare %private function router:error-description ($description as xs:string?, 
     if ($line and $line > 0 and empty($value)) then
         ``[`{$description}` [at line `{$line}` column `{$column}` in module `{head(($module, 'unknown'))}`]]``
     else
-        ($description, $value)[1]
+        ($description, $value, 'No description provided.')[1]
 };
 
 (:~
