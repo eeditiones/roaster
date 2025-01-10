@@ -19,7 +19,6 @@ module namespace auth="http://e-editiones.org/roaster/auth";
 import module namespace plogin="http://exist-db.org/xquery/persistentlogin"
     at "java:org.exist.xquery.modules.persistentlogin.PersistentLoginModule";
 import module namespace request = "http://exist-db.org/xquery/request";
-import module namespace response = "http://exist-db.org/xquery/response";
 import module namespace session = "http://exist-db.org/xquery/session";
 
 import module namespace router="http://e-editiones.org/roaster/router";
@@ -302,7 +301,7 @@ declare %private function auth:use-first-matching-method ($request as map(*)) as
     }
 };
 
-declare %private function auth:get-register-callback ($options as map(*)) {
+declare %private function auth:get-register-callback ($options as map(*)) as function(*) {
     function (
         $new-token as xs:string?,
         $user as xs:string,
