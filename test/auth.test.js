@@ -86,7 +86,6 @@ describe('On Login', function () {
 
         before(async function () {
             logoutResponse = await util.axios.get('logout', { headers: { cookie }})
-            console.log(logoutResponse)
             updatedCookie = logoutResponse.headers['set-cookie'];
             parsedCookies = parseCookies(updatedCookie)
             guestResponse = await util.axios.get('api/parameters', { headers: { cookie: updatedCookie }})
