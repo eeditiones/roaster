@@ -71,14 +71,16 @@ declare function auth:use-authorization ($strategies as map(*)) as function(*) {
     auth:authenticate(?, ?, $strategies)
 };
 
-(: login-domain must be configured! :)
-declare function auth:add-login-domain ($request as map(*), $auth-options as map(*)) as map(*) {
-    let $login-domain := auth:login-domain($request?spec)
+(:~ 
+ : helper function that sets the cookie name according to the API definition
+ :)
+declare function auth:add-cookie-name ($request as map(*), $auth-options as map(*)) as map(*) {
+    let $cookie-name := auth:read-cookie-name($request?spec)
     return
-        if (empty($login-domain)) then (
-            error($errors:OPERATION, 'Login domain not specified in API-definition!')
+        if (empty($cookie-name)) then (
+            error($errors:OPERATION, 'Cookie-name not specified in API-definition!')
         ) else (
-            map:put($auth-options, 'name', $login-domain)
+            map:put($auth-options, 'name', $cookie-name)
         )
 };
 
@@ -89,10 +91,10 @@ declare function auth:add-login-domain ($request as map(*), $auth-options as map
  : @throws errors:OPERATION if cookieAuth does not provide a login domain 
  :)
 declare function auth:login ($request as map(*)) as map(*) {
-    let $login-domain := auth:login-domain($request?spec)
+    let $cookie-name := auth:read-cookie-name($request?spec)
     let $user := auth:login-user(
         $request?body?user, $request?body?password,
-        map{ "name": $login-domain }
+        map{ "name": $cookie-name }
     )
 
     return
@@ -102,12 +104,12 @@ declare function auth:login ($request as map(*)) as map(*) {
                 "user": $user,
                 "groups": array { sm:get-user-groups($user) },
                 "dba": sm:is-dba($user),
-                "domain": $login-domain
+                "domain": $cookie-name
             }
         else
             error($errors:UNAUTHORIZED, "Wrong user or password", map {
                 "user": $user,
-                "domain": $login-domain
+                "domain": $cookie-name
             })
 };
 
@@ -115,10 +117,25 @@ declare function auth:login ($request as map(*)) as map(*) {
  : Preferred app-specific login function, that will set a cookie for cookieAuth
  :)
 declare function auth:login-user ($user as xs:string, $password as xs:string, $options as map(*)) as xs:string? {
-    let $merged-options := map:merge(($auth:DEFAULT_LOGIN_OPTIONS, $options), map{ "duplicates": "use-last" })
+    let $merged-options :=
+        if (empty($options?name)) then (
+            error($errors:OPERATION, 'Cookie-name not set in call to auth:login-user!')
+        ) else (
+            map:merge(($auth:DEFAULT_LOGIN_OPTIONS, $options), map{ "duplicates": "use-last" })
+        )
+
+    let $ttl :=
+        if ($merged-options?maxAge instance of xs:dayTimeDuration) then (
+            $merged-options?maxAge
+        ) else if ($merged-options?maxAge instance of xs:integer) then (
+            xs:dayTimeDuration('PT' || $merged-options?maxAge || 'S')
+        ) else (
+            error($errors:OPERATION, "the maxAge option value cannot be used", $merged-options?maxAge)
+        )
+
     return (
         util:log($auth:log-level, ("auth:login-user: ", $user)),
-        plogin:register($user, $password, $merged-options?maxAge,
+        plogin:register($user, $password, $ttl,
             auth:get-register-callback($merged-options))
     )
 };
@@ -130,7 +147,7 @@ declare function auth:login-user ($user as xs:string, $password as xs:string, $o
  : @throws errors:OPERATION if cookieAuth does not provide a login domain 
  :)
 declare function auth:logout ($request as map(*)) as map(*) {
-    auth:logout-user(map{ "name": auth:login-domain($request?spec) }),
+    auth:logout-user(map{ "name": auth:read-cookie-name($request?spec) }),
     map {
         "success": true(),
         "message": "logged out"
@@ -144,7 +161,7 @@ declare function auth:logout ($request as map(*)) as map(*) {
 declare function auth:logout-user ($options as map(*)) as empty-sequence() {
     let $token :=
         if (empty($options?name)) then (
-            error($errors:OPERATION, 'Cookie-name (login-domain) not set in call to auth:logout-user!')
+            error($errors:OPERATION, 'Cookie-name not set in call to auth:logout-user!')
         ) else (
             request:get-cookie-value($options?name)
         )
@@ -163,8 +180,17 @@ declare %private variable $auth:INVALIDATE_COOKIE := map{ "value": "deleted", "m
 (:~
  : Read the login domain from components.securitySchemes.cookieAuth.name
  : @param $spec API definition
+ : @deprecated use auth:read-cookie-name instead
  :)
 declare function auth:login-domain ($spec as map(*)) as xs:string? {
+    auth:read-cookie-name($spec)
+};
+
+(:~
+ : Read the cookie name from the API definition
+ : @param $spec API definition
+ :)
+declare function auth:read-cookie-name ($spec as map(*)) as xs:string? {
     router:resolve-pointer($spec, ("components", "securitySchemes", "cookieAuth", "name"))
 };
 
@@ -177,12 +203,12 @@ declare function auth:use-cookie-auth ($request as map(*)) as map(*)? {
  : @throws errors:OPERATION if cookieAuth does not provide a login domain 
  :)
 declare function auth:use-cookie-auth ($request as map(*), $custom-options as map(*)?) as map(*)? {
-    let $login-domain := auth:login-domain($request?spec)
-    let $token := request:get-cookie-value($login-domain)
+    let $cookie-name := auth:read-cookie-name($request?spec)
+    let $token := request:get-cookie-value($cookie-name)
 
     let $user :=
         if (empty($token)) then () else (
-            let $merged-options := map:merge(($auth:DEFAULT_LOGIN_OPTIONS, $custom-options, map{ "name": $login-domain }), map{ "duplicates": "use-last" })
+            let $merged-options := map:merge(($auth:DEFAULT_LOGIN_OPTIONS, $custom-options, map{ "name": $cookie-name }), map{ "duplicates": "use-last" })
             let $callback := auth:get-credentials-callback($merged-options)
             return plogin:login($token, $callback)
         )
