@@ -20,6 +20,13 @@ import module namespace response="http://exist-db.org/xquery/response";
 import module namespace errors="http://e-editiones.org/roaster/errors";
 
 declare %private variable $cookie:enforce-rfc2109 := "[/()<>@,;:\\""\[\]\?=\{\} \t]";
+declare variable $cookie:properties := map{
+    "Domain": "xs:string",
+    "Path": "xs:string",
+    "SameSite": ("None", "Lax", "Strict"),
+    "Secure": "xs:boolean",
+    "HttpOnly": "xs:boolean"
+};
 
 (:~
  : Custom implementation of response:set-cookie in XQuery
@@ -47,11 +54,11 @@ declare %private variable $cookie:enforce-rfc2109 := "[/()<>@,;:\\""\[\]\?=\{\} 
 declare function cookie:set($options as map(*)) as empty-sequence() {
     response:set-header('Set-Cookie', string-join(
         (
-            cookie:name-and-value($options),
-            cookie:lifetime($options),
+            cookie:name-and-value($options?name, $options?value),
+            cookie:lifetime($options?maxAge),
+            cookie:samesite($options?SameSite),
             cookie:add-property($options, "Domain"),
             cookie:add-property($options, "Path"),
-            cookie:add-property($options, "SameSite"),
             cookie:add-flag($options, "Secure"),
             cookie:add-flag($options, "HttpOnly")
         ),
@@ -59,25 +66,43 @@ declare function cookie:set($options as map(*)) as empty-sequence() {
     ))
 };
 
-declare %private function cookie:name-and-value($options as map(*)) as xs:string {
-    if (empty($options?("name")) or empty($options?("value"))) then (
-        error($errors:OPERATION, "Cookie name and value must be set", $options)
-    ) else if (matches($options?name, $cookie:enforce-rfc2109)) then (
-        error($errors:OPERATION, "Cookie name contains illegal charecters", $options)
-    ) else if ($options?name = ("Domain", "Path", "SameSite", "Secure", "HttpOnly")) then (
-        error($errors:OPERATION, "Cookie name cannot be equal to property name", $options)
+declare %private function cookie:name-and-value($name as xs:string?, $value as xs:string?) as xs:string {
+    if (empty($name) or empty($value)) then (
+        error($errors:OPERATION, "cookie:set: Cookie name and value must be set", ($name, $value))
+    ) else
+    if (matches($name, $cookie:enforce-rfc2109)) then (
+        error($errors:OPERATION, "cookie:set: Cookie name contains illegal charecters", $name)
+    ) else if ($name = map:keys($cookie:properties)) then (
+        error($errors:OPERATION, "cookie:set: Cookie name cannot be equal to property name", $name)
     ) else (
-        $options?name || "=" || $options?value
+        $name || "=" || $value
     )
 };
 
-declare %private function cookie:lifetime($options as map(*)) as xs:string* {
-    if (empty($options?maxAge)) then ()
-    else if (not($options?maxAge instance of xs:dayTimeDuration)) then (
-        error($errors:OPERATION, "maxAge must be an instance of xs:dayTimeDuration", $options)
+declare %private function cookie:lifetime($maxAge as item()?) as xs:string* {
+    if (empty($maxAge)) then (
+        (: the cookie will not expire :) 
+    ) else if (
+        not($maxAge instance of xs:dayTimeDuration)
+        and not($maxAge castable as xs:integer)
+    ) then (
+        error($errors:OPERATION, "cookie:set: maxAge must be an instance of xs:dayTimeDuration or xs:integer", $maxAge)
+    ) else if ($maxAge instance of xs:integer) then (
+        "Max-Age=" || $maxAge,
+        "Expires=" || string(current-dateTime() + xs:dayTimeDuration('PT' || $maxAge || 'S'))
     ) else (
-        "Max-Age=" || ($options?maxAge div xs:dayTimeDuration('PT1S')),
-        "Expires=" || string(current-dateTime() + $options?maxAge)
+        "Max-Age=" || ($maxAge div xs:dayTimeDuration('PT1S')),
+        "Expires=" || string(current-dateTime() + $maxAge)
+    )
+};
+
+declare %private function cookie:samesite($samesite as xs:string?) as xs:string? {
+    if (empty($samesite)) then (
+        (: unset :)
+    ) else if (not($samesite = $cookie:properties?SameSite)) then (
+        error($errors:OPERATION, "cookie:set: SameSite must be one of " || string-join($cookie:properties?SameSite, ", "), $samesite)
+    ) else (
+        "SameSite=" || $samesite
     )
 };
 

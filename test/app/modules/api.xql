@@ -118,7 +118,7 @@ declare function api:avatar ($request as map(*)) {
 declare variable $api:auth-options := map {
     "asDba": false(),
     "createSession": false(),
-    "maxAge": xs:dayTimeDuration("PT10S"), (: set the cookie time-out to 10 seconds :)
+    "maxAge": 10, (: set the cookie time-out to 10 seconds using an integer literal :)
     "Path": "/exist/apps/roasted", (: requests must include this path for the cookie to be included :)
     "SameSite": "Lax", (: sets the SameSite property to either "None", "Strict" or "Lax"  :)
     "Secure": true(), (: mark the cookie as secure :)
@@ -132,8 +132,8 @@ declare variable $api:auth-options := map {
  :)
 declare function api:login ($request as map(*)) {
     let $user := auth:login-user(
-        $request?body?usr, $request?body?pwd, 
-        auth:add-login-domain($request, $api:auth-options))
+        $request?body?usr, $request?body?pwd,
+        auth:add-cookie-name($request, $api:auth-options))
 
     return if (empty($user)) then (
         roaster:response(401, "application/json",
@@ -150,7 +150,7 @@ declare function api:login ($request as map(*)) {
 declare function api:login-xml ($request as map(*)) {
     let $user := auth:login-user(
         $request?body//user/string(), $request?body//password/string(), 
-        auth:add-login-domain($request, $api:auth-options))
+        auth:add-cookie-name($request, $api:auth-options))
 
     return if (empty($user)) then (
         roaster:response(401, "application/xml",
@@ -166,7 +166,7 @@ declare function api:login-xml ($request as map(*)) {
  : Example logout route handler
  :)
 declare function api:logout ($request as map(*)) {
-    auth:logout-user(auth:add-login-domain($request, $api:auth-options)),
+    auth:logout-user(auth:add-cookie-name($request, $api:auth-options)),
     (: the request can also be redirected here :)
     map{ "message": "Logged out" }
 };
