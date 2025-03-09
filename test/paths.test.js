@@ -1,5 +1,7 @@
 const util = require('./util.js')
 const chai = require('chai')
+const assertArrays = require('chai-arrays');
+chai.use(assertArrays);
 const expect = chai.expect
 const fs = require('fs')
 
@@ -128,7 +130,11 @@ describe('Query parameters', function () {
         'num': 165.75,
         'int': 776,
         'bool': true,
-        'string': '&a=2 2'
+        'string': '&a=2 2',
+        'array-string-form-not-explode' : 'blue,black',
+        'array-string-form-explode' : ['green', 'red'],
+        'array-integer-form-not-explode' : '1,2',
+        'array-integer-form-explode' : ['10', '20']
     }
     const headers = {
         "X-start": 22
@@ -138,7 +144,10 @@ describe('Query parameters', function () {
     it('passes query parameters in GET', async function () {
         const res = await util.axios.get('api/parameters', {
             params,
-            headers
+            headers,
+            paramsSerializer: {
+                indexes: null // by default: false
+              }
         })
         expect(res.status).to.equal(200)
         expect(res.data.parameters.num).to.be.a('number')
@@ -152,6 +161,18 @@ describe('Query parameters', function () {
         expect(res.data.parameters['X-start']).to.equal(headers['X-start'])
 
         expect(res.data.parameters.defaultParam).to.equal('abcdefg')
+
+        expect(res.data.parameters['array-string-form-not-explode']).to.be.equalTo(['blue','black'])
+        expect(res.data.parameters['array-string-form-not-explode']).to.be.array()
+
+        expect(res.data.parameters['array-string-form-explode']).to.be.equalTo(['green','red'])
+        expect(res.data.parameters['array-string-form-explode']).to.be.array()
+        
+        expect(res.data.parameters['array-integer-form-not-explode']).to.be.equalTo([1,2])
+        expect(res.data.parameters['array-integer-form-not-explode']).to.be.array()
+
+        expect(res.data.parameters['array-integer-form-explode']).to.be.equalTo([10,20])
+        expect(res.data.parameters['array-integer-form-explode']).to.be.array()
     })
 
     it('passes query parameters in POST', async function () {
