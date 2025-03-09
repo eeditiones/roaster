@@ -140,9 +140,20 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
     for $value in $values
     return
         switch($config?schema?type)
+            case "array" return
+                if($config?style = "form" and not($config?explode)) then
+                    for $token in tokenize($value, ',') 
+                                return parameters:cast-value($token, $config?schema?items?type, $config?schema?items?format)
+                else parameters:cast-value(string($value), $config?schema?items?type, $config?schema?items?format)
+            default return
+                parameters:cast-value($value, $config?schema?type, $config?schema?format)
+};
+
+declare %private function parameters:cast-value ($value as xs:string, $type as xs:string?, $format as xs:string?) {
+    switch($type)
             case "integer" return
-                if ($config?schema?format) then
-                    switch ($config?schema?format)
+                if ($format) then
+                    switch ($format)
                         case "int32" case "int64" return
                             xs:int($value)
                         default return
@@ -150,8 +161,8 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
                 else
                     xs:integer($value)
             case "number" return
-                if ($config?schema?format) then
-                    switch ($config?schema?format)
+                if ($format) then
+                    switch ($format)
                         case "float" return
                             xs:float($value)
                         case "double" return
@@ -163,8 +174,8 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
             case "boolean" return
                 xs:boolean($value)
             case "string" return
-                if ($config?schema?format) then
-                    switch ($config?schema?format)
+                if ($format) then
+                    switch ($format)
                         case "date" return
                             xs:date($value)
                         case "date-time" return
