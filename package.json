@@ -58,6 +58,5 @@
     "glob-stream": "$glob-stream"
   },
   "dependencies": {
-    "chai-arrays": "^2.2.0"
   }
 }
