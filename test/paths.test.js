@@ -145,8 +145,8 @@ describe('Query parameters in GET request', function () {
             params,
             headers,
             paramsSerializer: {
-                indexes: null // by default: false
-              }
+                indexes: null // render array parameter names without square brackets
+            }
         })
         parameters = res?.data?.parameters
     })
@@ -232,7 +232,10 @@ describe('Query parameters in POST request', function () {
             url: 'api/parameters',
             method: 'post',
             params,
-            headers
+            headers,
+            paramsSerializer: {
+                indexes: null // render array parameter names without square brackets
+            }
         })
         parameters = res?.data?.parameters
     })
