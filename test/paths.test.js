@@ -210,6 +210,89 @@ describe('Query parameters in GET request', function () {
 
 });
 
+describe('empty array parameters in GET request', function () {
+    const params = {
+        'array-string-form-not-explode' : 'u',
+        'array-string-form-explode' : [],
+        'array-integer-form-not-explode' : [],
+        'array-integer-form-explode' : []
+    }
+
+    let res, parameters
+
+    before(async function () {
+        try {
+            res = await util.axios.get('api/parameters', {
+                params,
+                paramsSerializer: {
+                    indexes: null // render array parameter names without square brackets
+                }
+            })
+            parameters = res?.data?.parameters
+        } catch (e) {
+            console.log(e)
+        }
+    })
+
+    it('the query succeeds', async function () {
+        expect(res.status).to.equal(200)
+    })
+
+    it('paremeter array-string-form-not-explode is parsed as array with one entry', async function () {
+        const p = parameters['array-string-form-not-explode']
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal(['u'])
+    })
+
+    it('paremeter array-string-form-explode is null', async function () {
+        const p = parameters['array-string-form-explode']
+        expect(p).to.equal(null)
+    })
+
+    it('paremeter array-integer-form-not-explode is null', async function () {
+        const p = parameters['array-integer-form-not-explode']
+        expect(p).to.equal(null)
+    })
+
+    it('paremeter array-integer-form-explode defualts to an array with one item', async function () {
+        const p = parameters['array-integer-form-explode']
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal([123])
+    })
+});
+
+describe('unset required array parameter in POST request', function () {
+    const params = {
+        'array-string-form-not-explode' : []
+    }
+
+    let status
+
+    before(async function () {
+        try {
+            res = await util.axios.post('api/parameters', {
+                params,
+                paramsSerializer: {
+                    indexes: null // render array parameter names without square brackets
+                }
+            })
+            status = res.status
+        } catch (e) {
+            status = e.response.status
+            message = e.response.data.description
+        }
+    })
+
+    it('the query fails with bad request', async function () {
+        expect(status).to.equal(400)
+    })
+
+    it('the response contains an actionable error message', async function () {
+        expect(message.startsWith('Parameter array-string-form-not-explode is required [')).to.be.true
+    })
+
+});
+
 describe('Query parameters in POST request', function () {
     const params = {
         'num': 165.75,

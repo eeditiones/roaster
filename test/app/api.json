@@ -233,6 +233,7 @@
                         "description": "Array parameters requested as color=blue,black,brown",
                         "schema":{
                             "type": "array",
+                            "default": [],
                             "items": {
                                 "type": "string"
                             },
@@ -276,6 +277,7 @@
                         "description": "Array parameters requested as height=40&height=50&height=60",
                         "schema":{
                             "type": "array",
+                            "default": [123],
                             "items": {
                                 "type": "integer",
                                 "format": "int64"
@@ -352,6 +354,7 @@
                         "name": "array-string-form-not-explode",
                         "in": "query",
                         "description": "Array parameters requested as color=blue,black,brown",
+                        "required": true,
                         "schema":{
                             "type": "array",
                             "items": {
