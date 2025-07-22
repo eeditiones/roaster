@@ -37,6 +37,7 @@ declare variable $errors:UNSUPPORTED_MEDIA_TYPE := xs:QName("errors:UNSUPPORTED_
 (: https://datatracker.ietf.org/doc/html/rfc4918#section-11.2 :)
 declare variable $errors:UNPROCESSABLE_ENTITY := xs:QName("errors:UNPROCESSABLE_ENTITY_422");
 declare variable $errors:SERVER_ERROR := xs:QName("errors:SERVER_ERROR_500");
+declare variable $errors:NOT_IMPLEMENTED := xs:QName("errors:NOT_IMPLEMENTED_501");
 
 declare function errors:get-status-code-from-error($error as xs:QName) as xs:integer {
     switch($error)
@@ -53,5 +54,6 @@ declare function errors:get-status-code-from-error($error as xs:QName) as xs:int
 
         case $errors:OPERATION (: fall-through :)
         case $errors:SERVER_ERROR return 500 (: no fall-through possible :)
+        case $errors:NOT_IMPLEMENTED return 501 (: no fall-through possible :)
         default return 500
 };
