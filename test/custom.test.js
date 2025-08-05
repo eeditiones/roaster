@@ -1,6 +1,5 @@
 const util = require('./util.js');
 const path = require('path');
-const fs = require('fs');
 const chai = require('chai');
 const expect = chai.expect;
 const chaiResponseValidator = require('chai-openapi-response-validator').default;

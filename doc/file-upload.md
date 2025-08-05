@@ -64,7 +64,7 @@ The OpenAPI specification for the upload is:
                         "properties": {
                             "file": {
                                 "type": "string",
-                                "format": "binary"                    
+                                "format": "binary"
                             }
                         }
                     }
@@ -128,7 +128,7 @@ In order to allow batch uploads only very few modifications to the above example
         "type": "array",
         "items": {
             "type": "string",
-            "format": "binary"                    
+            "format": "binary"
         }
     }
     ```
@@ -160,7 +160,7 @@ In order to allow batch uploads only very few modifications to the above example
                                     "type": "array",
                                     "items": {
                                         "type": "string",
-                                        "format": "binary"                    
+                                        "format": "binary"
                                     }
                                 }
                             }
