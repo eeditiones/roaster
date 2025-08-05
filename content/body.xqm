@@ -141,7 +141,7 @@ function body:get-form-data-value ($name as xs:string, $format as xs:string?) as
     case 'binary' return
         if (request:is-multipart-content())
         then
-            let $names := request:get-uploaded-file-name($name)                                
+            let $names := request:get-uploaded-file-name($name)
             let $data := request:get-uploaded-file-data($name)
             let $sizes := request:get-uploaded-file-size($name)
             return

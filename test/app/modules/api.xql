@@ -87,6 +87,7 @@ declare function api:get-uploaded-data ($request as map(*)) {
     then (
         unparsed-text("/db/apps/roasted/uploads/" || $request?parameters?path)
         => util:base64-encode()
+        => xs:base64Binary()
         => response:stream-binary("application/octet-stream", $request?parameters?path)
     )
     (: anything else :)

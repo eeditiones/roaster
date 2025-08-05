@@ -381,7 +381,7 @@ test.
             return util.axios.post(
                 'upload/single/' + filename,
                 data,
-                { headers }                
+                { headers }
             )
             .then(r => uploadResponse = r)
             .catch(e => uploadResponse = e.response )
@@ -483,7 +483,7 @@ test.
             return util.axios.post(
                 'upload/single/nothing',
                 data,
-                { headers }                
+                { headers }
             )
             .then(r => uploadResponse = r)
             .catch(e => uploadResponse = e.response )
