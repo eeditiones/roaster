@@ -111,22 +111,24 @@ declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? 
     then ()
     else
         let $name := $parameter?name
-        let $default := parameters:get-parameter-default-value($parameter?schema)
         let $values := 
             switch ($parameter?in)
-                (: TODO case "body" :)
                 case "header" return
-                    head((request:get-header($name), $default))
+                    try { request:get-header($name) } catch * { () }
                 case "cookie" return
-                    head((request:get-cookie-value($name), $default))
+                    request:get-cookie-value($name)
                 default return
-                    request:get-parameter($name, $default)
+                    request:get-parameter($name, ())
 
-        return
-            if ($parameter?required and empty($values)) then
+        return (
+            if (exists($parameter?style) and $parameter?style = ("simple", "label", "matrix", "spaceDelimited", "pipeDelimited")) then (
+                error($errors:NOT_IMPLEMENTED, "Unsupported parameter style " || $parameter?style || " for parameter " || $name || ".")
+            ) else if ($parameter?required and empty($values)) then (
                 error($errors:REQUIRED_PARAM, "Parameter " || $name || " is required")
-            else
+            ) else (
                 map { $name : parameters:cast($values, $parameter) }
+            )
+        )
 };
 
 declare %private function parameters:get-parameter-default-value ($schema as map(*)?) as item()? {
@@ -136,47 +138,78 @@ declare %private function parameters:get-parameter-default-value ($schema as map
 };
 
 declare %private function parameters:cast ($values as xs:string*, $config as map(*)) as item()* {
-    (: TODO handle $ref :)
-    for $value in $values
-    return
-        switch($config?schema?type)
-            case "integer" return
-                if ($config?schema?format) then
-                    switch ($config?schema?format)
-                        case "int32" case "int64" return
-                            xs:int($value)
-                        default return
-                            xs:integer($value)
-                else
+    switch($config?schema?type)
+        case "object" return 
+            error($errors:NOT_IMPLEMENTED, "Parameter '" || $config?name || "' is of type 'object', which is not supported yet.")
+        case "array" return
+            parameters:cast-array($values, $config)
+        default return (
+            head((
+                $values,
+                parameters:get-parameter-default-value($config?schema)
+            )) ! parameters:cast-value(., $config?schema)
+        )
+};
+
+declare %private function parameters:cast-array($values as xs:string*, $config as map(*)) as array(*)? {
+    let $default := parameters:get-parameter-default-value($config?schema)
+    let $cast := parameters:cast-value(?, $config?schema?items)
+    (: for style "form", explode is true by default, false otherwise :)
+    let $explode := boolean($config?explode) or ($config?style = "form" and empty($config?explode))
+
+    return if (empty($values) and empty($default)) then (
+        (: null :)
+    ) else if (empty($values)) then (
+        array:for-each($default, $cast)
+    ) else if ($explode) then (
+        array {
+            for-each($values, $cast)
+        }
+    ) else (
+        array {
+            for-each(tokenize($values, ','), $cast)
+        }
+    )
+};
+
+declare %private function parameters:cast-value ($value as item()?, $schema as map(*)) as item()? {
+    switch($schema?type)
+        case "integer" return
+            switch ($schema?format)
+                case "int32"
+                case "int64" return
+                    xs:int($value)
+
+                default return
                     xs:integer($value)
-            case "number" return
-                if ($config?schema?format) then
-                    switch ($config?schema?format)
-                        case "float" return
-                            xs:float($value)
-                        case "double" return
-                            xs:double($value)
-                        default return
-                            number($value)
-                else
+
+        case "number" return
+            switch ($schema?format)
+                case "float" return
+                    xs:float($value)
+                case "double" return
+                    xs:double($value)
+
+                default return
                     number($value)
-            case "boolean" return
-                xs:boolean($value)
-            case "string" return
-                if ($config?schema?format) then
-                    switch ($config?schema?format)
-                        case "date" return
-                            xs:date($value)
-                        case "date-time" return
-                            xs:dateTime($value)
-                        case "binary" return
-                            xs:base64Binary($value)
-                        case "byte" return
-                            util:binary-to-string(xs:base64Binary($value))
-                        default return
-                            string($value)
-                else
+
+        case "boolean" return
+            xs:boolean($value)
+
+        case "string" return
+            switch ($schema?format)
+                case "date" return
+                    xs:date($value)
+                case "date-time" return
+                    xs:dateTime($value)
+                case "binary" return
+                    xs:base64Binary($value)
+                case "byte" return
+                    util:binary-to-string(xs:base64Binary($value))
+
+                default return
                     string($value)
-            default return
-                string($value)
+
+        default return
+            string($value)
 };

@@ -226,6 +226,66 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "array-string-form-not-explode",
+                        "in": "query",
+                        "description": "Array parameters requested as color=blue,black,brown",
+                        "schema":{
+                            "type": "array",
+                            "default": [],
+                            "items": {
+                                "type": "string"
+                            },
+                            "nullable": true
+                        },
+                        "style" : "form",
+                        "explode" : false
+                    },
+                    {
+                        "name": "array-string-form-explode",
+                        "in": "query",
+                        "description": "Array parameters requested as color=blue&color=black&color=brown",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "nullable": true
+                        },
+                        "style" : "form",
+                        "explode" : true
+                    },
+                    {
+                        "name": "array-integer-form-not-explode",
+                        "in": "query",
+                        "description": "Array parameters requested as height=10,20,30",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "nullable": true
+                        },
+                        "style" : "form",
+                        "explode" : false
+                    },
+                    {
+                        "name": "array-integer-form-explode",
+                        "in": "query",
+                        "description": "Array parameters requested as height=40&height=50&height=60",
+                        "schema":{
+                            "type": "array",
+                            "default": [123],
+                            "items": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "nullable": true
+                        },
+                        "style" : "form",
+                        "explode" : true
                     }
                 ],
                 "responses": {
@@ -289,6 +349,65 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "array-string-form-not-explode",
+                        "in": "query",
+                        "description": "Array parameters requested as color=blue,black,brown",
+                        "required": true,
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "nullable": true
+                        },
+                        "style" : "form",
+                        "explode" : false
+                    },
+                    {
+                        "name": "array-string-form-explode",
+                        "in": "query",
+                        "description": "Array parameters requested as color=blue&color=black&color=brown",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "nullable": true
+                        },
+                        "style" : "form",
+                        "explode" : true
+                    },
+                    {
+                        "name": "array-integer-form-not-explode",
+                        "in": "query",
+                        "description": "Array parameters requested as height=10,20,30",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "nullable": true
+                        },
+                        "style" : "form",
+                        "explode" : false
+                    },
+                    {
+                        "name": "array-integer-form-explode",
+                        "in": "query",
+                        "description": "Array parameters requested as height=40&height=50&height=60",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "nullable": true
+                        },
+                        "style" : "form",
+                        "explode" : true
                     }
                 ],
                 "responses": {

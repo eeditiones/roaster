@@ -123,60 +123,78 @@ describe('Request body', function() {
     })
 });
 
-describe('Query parameters', function () {
+describe('Query parameters in GET request', function () {
     const params = {
         'num': 165.75,
         'int': 776,
         'bool': true,
-        'string': '&a=2 2'
+        'string': '&a=2 2',
+        'array-string-form-not-explode' : 'blue,black',
+        'array-string-form-explode' : ['green', 'red'],
+        'array-integer-form-not-explode' : '1,2',
+        'array-integer-form-explode' : ['10', '20']
     }
     const headers = {
         "X-start": 22
     }
 
+    let res, parameters
 
-    it('passes query parameters in GET', async function () {
-        const res = await util.axios.get('api/parameters', {
+    before(async function () {
+        res = await util.axios.get('api/parameters', {
             params,
-            headers
-        })
-        expect(res.status).to.equal(200)
-        expect(res.data.parameters.num).to.be.a('number')
-        expect(res.data.parameters.num).to.equal(params.num)
-        expect(res.data.parameters.bool).to.be.a('boolean')
-        expect(res.data.parameters.bool).to.equal(params.bool)
-        expect(res.data.parameters.int).to.be.a('number')
-        expect(res.data.parameters.int).to.equal(params.int)
-        expect(res.data.parameters.string).to.equal(params.string)
-
-        expect(res.data.parameters['X-start']).to.equal(headers['X-start'])
-
-        expect(res.data.parameters.defaultParam).to.equal('abcdefg')
-    })
-
-    it('passes query parameters in POST', async function () {
-        const res = await util.axios.request({
-            url: 'api/parameters',
-            method: 'post',
-            params,
-            headers: {
-                "X-start": 22
+            headers,
+            paramsSerializer: {
+                indexes: null // render array parameter names without square brackets
             }
         })
+        parameters = res?.data?.parameters
+    })
 
+    it('the query succeeds', async function () {
         expect(res.status).to.equal(200)
-        expect(res.data.method).to.equal('post')
-        expect(res.data.parameters.num).to.be.a('number')
-        expect(res.data.parameters.num).to.equal(params.num)
-        expect(res.data.parameters.bool).to.be.a('boolean')
-        expect(res.data.parameters.bool).to.equal(params.bool)
-        expect(res.data.parameters.int).to.be.a('number')
-        expect(res.data.parameters.int).to.equal(params.int)
-        expect(res.data.parameters.string).to.equal(params.string)
+    })
 
-        expect(res.data.parameters['X-start']).to.equal(headers['X-start'])
+    it('passes query parameters', async function () {
+        expect(parameters.num).to.be.a('number')
+        expect(parameters.num).to.equal(params.num)
+        expect(parameters.bool).to.be.a('boolean')
+        expect(parameters.bool).to.equal(params.bool)
+        expect(parameters.int).to.be.a('number')
+        expect(parameters.int).to.equal(params.int)
+        expect(parameters.string).to.equal(params.string)
+    })
 
-        expect(res.data.parameters.defaultParam).to.equal('abcdefg')
+    it('passes header', async function () {
+        expect(parameters['X-start']).to.equal(headers['X-start'])
+    })
+
+    it('adds default parameter', async function () {
+        expect(parameters.defaultParam).to.equal('abcdefg')
+    })
+
+    it('paremeter array-string-form-not-explode is parsed correctly', async function () {
+        const p = parameters['array-string-form-not-explode']
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal(['blue','black'])
+    })
+
+    it('paremeter array-string-form-explode is parsed correctly', async function () {
+        const p = parameters['array-string-form-explode']
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal(['green','red'])
+    })
+
+    it('paremeter array-integer-form-not-explode is parsed correctly', async function () {
+        const p = parameters['array-integer-form-not-explode']
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal([1,2])
+    })
+
+    it('paremeter array-integer-form-explode is parsed correctly', async function () {
+        const p = parameters['array-integer-form-explode']
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal([10,20])
     })
 
     it('handles date parameters', async function () {
@@ -188,6 +206,143 @@ describe('Query parameters', function () {
         })
         expect(res.status).to.equal(200)
         expect(res.data).to.be.true
+    })
+
+});
+
+describe('empty array parameters in GET request', function () {
+    const params = {
+        'array-string-form-not-explode' : 'u',
+        'array-string-form-explode' : [],
+        'array-integer-form-not-explode' : [],
+        'array-integer-form-explode' : []
+    }
+
+    let res, parameters
+
+    before(async function () {
+        try {
+            res = await util.axios.get('api/parameters', {
+                params,
+                paramsSerializer: {
+                    indexes: null // render array parameter names without square brackets
+                }
+            })
+            parameters = res?.data?.parameters
+        } catch (e) {
+            console.log(e)
+        }
+    })
+
+    it('the query succeeds', async function () {
+        expect(res.status).to.equal(200)
+    })
+
+    it('paremeter array-string-form-not-explode is parsed as array with one entry', async function () {
+        const p = parameters['array-string-form-not-explode']
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal(['u'])
+    })
+
+    it('paremeter array-string-form-explode is null', async function () {
+        const p = parameters['array-string-form-explode']
+        expect(p).to.equal(null)
+    })
+
+    it('paremeter array-integer-form-not-explode is null', async function () {
+        const p = parameters['array-integer-form-not-explode']
+        expect(p).to.equal(null)
+    })
+
+    it('paremeter array-integer-form-explode defualts to an array with one item', async function () {
+        const p = parameters['array-integer-form-explode']
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal([123])
+    })
+});
+
+describe('unset required array parameter in POST request', function () {
+    const params = {
+        'array-string-form-not-explode' : []
+    }
+
+    let status
+
+    before(async function () {
+        try {
+            res = await util.axios.post('api/parameters', {
+                params,
+                paramsSerializer: {
+                    indexes: null // render array parameter names without square brackets
+                }
+            })
+            status = res.status
+        } catch (e) {
+            status = e.response.status
+            message = e.response.data.description
+        }
+    })
+
+    it('the query fails with bad request', async function () {
+        expect(status).to.equal(400)
+    })
+
+    it('the response contains an actionable error message', async function () {
+        expect(message.startsWith('Parameter array-string-form-not-explode is required [')).to.be.true
+    })
+
+});
+
+describe('Query parameters in POST request', function () {
+    const params = {
+        'num': 165.75,
+        'int': 776,
+        'bool': true,
+        'string': '&a=2 2',
+        'array-string-form-not-explode' : 'blue,black',
+        'array-string-form-explode' : ['green', 'red'],
+        'array-integer-form-not-explode' : '1,2',
+        'array-integer-form-explode' : ['10', '20']
+    }
+    const headers = {
+        "X-start": 22
+    }
+
+    let res, parameters
+
+    before(async function () {
+        res = await util.axios.request({
+            url: 'api/parameters',
+            method: 'post',
+            params,
+            headers,
+            paramsSerializer: {
+                indexes: null // render array parameter names without square brackets
+            }
+        })
+        parameters = res?.data?.parameters
+    })
+
+    it('the query succeeds', async function () {
+        expect(res.status).to.equal(200)
+    })
+
+    it('passes body parameters', async function () {
+        expect(parameters.num).to.be.a('number')
+        expect(parameters.num).to.equal(params.num)
+        expect(parameters.bool).to.be.a('boolean')
+        expect(parameters.bool).to.equal(params.bool)
+        expect(parameters.int).to.be.a('number')
+        expect(parameters.int).to.equal(params.int)
+        expect(parameters.string).to.equal(params.string)
+    })
+
+    it('passes header', async function () {
+        expect(parameters['X-start']).to.equal(headers['X-start'])
+    })
+
+    it('adds default parameter', async function () {
+        expect(parameters.defaultParam).to.equal('abcdefg')
     })
 })
 
