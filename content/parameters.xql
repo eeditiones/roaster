@@ -106,10 +106,22 @@ declare function parameters:in-request ($request as map(*), $response as map(*))
         )
 };
 
+(:https://swagger.io/docs/specification/v3_0/serialization/
+  Path parameters support the following style values:
+  simple – (default) comma-separated values. Corresponds to the {param_name} URI template.
+  label – dot-prefixed values, also known as label expansion. Corresponds to the {.param_name} URI template.
+  matrix – semicolon-prefixed values, also known as path-style expansion. Corresponds to the {;param_name} URI template.
+  
+  Query parameters support the following style values:
+  form – (default) ampersand-separated values, also known as form-style query expansion. Corresponds to the {?param_name} URI template.
+  spaceDelimited – space-separated array values. Same as collectionFormat: ssv in OpenAPI 2.0. Has effect only for non-exploded arrays (explode: false), that is, the space separates the array values if the array is a single parameter, as in arr=a b c.
+  pipeDelimited – pipeline-separated array values. Same as collectionFormat: pipes in OpenAPI 2.0. Has effect only for non-exploded arrays (explode: false), that is, the pipe separates the array values if the array is a single parameter, as in arr=a|b|c.
+  deepObject – simple non-nested objects are serialized as paramName[prop1]=value1&paramName[prop2]=value2&.... The behavior for nested objects and arrays is undefined.
+:)
 declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? {
     if (parameters:is-path-parameter($parameter))
     then ()
-    else
+    else (
         let $name := $parameter?name
         let $values := 
             switch ($parameter?in)
@@ -119,16 +131,29 @@ declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? 
                     request:get-cookie-value($name)
                 default return
                     request:get-parameter($name, ())
-
-        return (
-            if (exists($parameter?style) and $parameter?style = ("simple", "label", "matrix", "spaceDelimited", "pipeDelimited")) then (
+        
+        let $values :=
+            switch ($parameter?style)
+            case 'simple'
+            case 'label'
+            case 'matrix'
+            case 'deepObject' return (
                 error($errors:NOT_IMPLEMENTED, "Unsupported parameter style " || $parameter?style || " for parameter " || $name || ".")
-            ) else if ($parameter?required and empty($values)) then (
+            )
+            case 'form' return for $v in $values return tokenize($v, ',')
+            case 'spaceDelimited' return for $v in $values return tokenize($v, ' ')
+            case 'pipeDelimited' return for $v in $values return tokenize($v, '\|')
+            default return $values
+            
+        return (
+            if ($parameter?required and empty($values)) then (
                 error($errors:REQUIRED_PARAM, "Parameter " || $name || " is required")
-            ) else (
+            )
+            else (
                 map { $name : parameters:cast($values, $parameter) }
             )
         )
+    )
 };
 
 declare %private function parameters:get-parameter-default-value ($schema as map(*)?) as item()? {
@@ -154,8 +179,8 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
 declare %private function parameters:cast-array($values as xs:string*, $config as map(*)) as array(*)? {
     let $default := parameters:get-parameter-default-value($config?schema)
     let $cast := parameters:cast-value(?, $config?schema?items)
-    (: for style "form", explode is true by default, false otherwise :)
-    let $explode := boolean($config?explode) or ($config?style = "form" and empty($config?explode))
+    (: explode is true by default, false otherwise :)
+    let $explode := boolean($config?explode) or empty($config?explode)
 
     return if (empty($values) and empty($default)) then (
         (: null :)
@@ -167,7 +192,7 @@ declare %private function parameters:cast-array($values as xs:string*, $config a
         }
     ) else (
         array {
-            for-each(tokenize($values, ','), $cast)
+            for-each($values, $cast)
         }
     )
 };
