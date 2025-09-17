@@ -1,5 +1,5 @@
 {
-    "openapi": "3.0.0",
+    "openapi": "3.0.4",
     "info": {
         "version": "1.1.0",
         "title": "Roasted API",
@@ -253,9 +253,9 @@
                         "explode": false
                     },
                     {
-                        "name": "array-string-form-not-explode",
+                        "name": "formStrExpNo",
                         "in": "query",
-                        "description": "Array parameters requested as color=blue,black,brown",
+                        "description": "comma separated list of string values: formStrExpNo=one,two,three",
                         "schema":{
                             "type": "array",
                             "default": [],
@@ -268,9 +268,9 @@
                         "explode" : false
                     },
                     {
-                        "name": "array-string-form-explode",
+                        "name": "formStrExpYes",
                         "in": "query",
-                        "description": "Array parameters requested as color=blue&color=black&color=brown",
+                        "description": "array of string values encoded as formStrExpYes=one&formStrExpYes=two&formStrExpYes=three",
                         "schema":{
                             "type": "array",
                             "items": {
@@ -282,9 +282,9 @@
                         "explode" : true
                     },
                     {
-                        "name": "array-integer-form-not-explode",
+                        "name": "formIntExpNo",
                         "in": "query",
-                        "description": "Array parameters requested as height=10,20,30",
+                        "description": "comma separated list of integer values: formIntExpNo=1,2,3",
                         "schema":{
                             "type": "array",
                             "items": {
@@ -297,9 +297,9 @@
                         "explode" : false
                     },
                     {
-                        "name": "array-integer-form-explode",
+                        "name": "formIntExpYes",
                         "in": "query",
-                        "description": "Array parameters requested as height=40&height=50&height=60",
+                        "description": "array of integer values encoded as  formIntExpYes=1&formIntExpYes=2&formIntExpYes=3",
                         "schema":{
                             "type": "array",
                             "default": [123],
@@ -376,9 +376,9 @@
                         }
                     },
                     {
-                        "name": "array-string-form-not-explode",
+                        "name": "requiredArray",
                         "in": "query",
-                        "description": "Array parameters requested as color=blue,black,brown",
+                        "description": "Required parameter that is an array",
                         "required": true,
                         "schema":{
                             "type": "array",
@@ -389,50 +389,6 @@
                         },
                         "style" : "form",
                         "explode" : false
-                    },
-                    {
-                        "name": "array-string-form-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as color=blue&color=black&color=brown",
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : true
-                    },
-                    {
-                        "name": "array-integer-form-not-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as height=10,20,30",
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "integer",
-                                "format": "int64"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : false
-                    },
-                    {
-                        "name": "array-integer-form-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as height=40&height=50&height=60",
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "integer",
-                                "format": "int64"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : true
                     }
                 ],
                 "responses": {

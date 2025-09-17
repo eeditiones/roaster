@@ -125,16 +125,16 @@ describe('Request body', function() {
 
 describe('Query parameters in GET request', function () {
     const params = {
-        'num': 165.75,
-        'int': 776,
-        'bool': true,
-        'string': '&a=2 2',
-        'piped': 'one|two',
-        'spaced': 'three four',
-        'array-string-form-not-explode' : 'blue,black',
-        'array-string-form-explode' : ['green', 'red'],
-        'array-integer-form-not-explode' : '1,2',
-        'array-integer-form-explode' : ['10', '20']
+        num: 165.75,
+        int: 776,
+        bool: true,
+        string: '&a=2 2',
+        piped: 'one|two',
+        spaced: 'three four',
+        formStrExpNo: 'blue,black',
+        formStrExpYes: ['green', 'red'],
+        formIntExpNo: '1,2',
+        formIntExpYes: ['10', '20']
     }
     const headers = {
         "X-start": 22
@@ -187,26 +187,26 @@ describe('Query parameters in GET request', function () {
         expect(p).to.deep.equal(['three','four'])
     })
 
-    it('paremeter array-string-form-not-explode is parsed correctly', async function () {
-        const p = parameters['array-string-form-not-explode']
+    it('parses comma separated values in parameter formStrExpNo into an array of strings', function () {
+        const p = parameters.formStrExpNo
         expect(p).to.be.an('array')
         expect(p).to.deep.equal(['blue','black'])
     })
 
-    it('paremeter array-string-form-explode is parsed correctly', async function () {
-        const p = parameters['array-string-form-explode']
+    it('parses occurrences of parameter formStrExpYes into an array of strings', function () {
+        const p = parameters.formStrExpYes
         expect(p).to.be.an('array')
         expect(p).to.deep.equal(['green','red'])
     })
 
-    it('paremeter array-integer-form-not-explode is parsed correctly', async function () {
-        const p = parameters['array-integer-form-not-explode']
+    it('parses comma separated values in parameter formIntExpNo into an array of integers', function () {
+        const p = parameters.formIntExpNo
         expect(p).to.be.an('array')
         expect(p).to.deep.equal([1,2])
     })
 
-    it('paremeter array-integer-form-explode is parsed correctly', async function () {
-        const p = parameters['array-integer-form-explode']
+    it('parses occurrences of parameter formIntExpYes into an array of integers', function () {
+        const p = parameters.formIntExpYes
         expect(p).to.be.an('array')
         expect(p).to.deep.equal([10,20])
     })
@@ -226,10 +226,12 @@ describe('Query parameters in GET request', function () {
 
 describe('empty array parameters in GET request', function () {
     const params = {
-        'array-string-form-not-explode' : 'u',
-        'array-string-form-explode' : [],
-        'array-integer-form-not-explode' : [],
-        'array-integer-form-explode' : []
+        piped: 'one',
+        spaced: '',
+        formStrExpNo: 'u',
+        formStrExpYes: [],
+        formIntExpNo: [],
+        formIntExpYes: []
     }
 
     let res, parameters
@@ -252,24 +254,36 @@ describe('empty array parameters in GET request', function () {
         expect(res.status).to.equal(200)
     })
 
-    it('paremeter array-string-form-not-explode is parsed as array with one entry', async function () {
-        const p = parameters['array-string-form-not-explode']
+    it('parses parameter piped into an array with one entry', function () {
+        const p = parameters.piped
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal(['one'])
+    })
+
+    it('parses parameter spaced to an empty array', function () {
+        const p = parameters.spaced
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal([])
+    })
+
+    it('parses parameter formStrExpNo into an array with one entry', function () {
+        const p = parameters.formStrExpNo
         expect(p).to.be.an('array')
         expect(p).to.deep.equal(['u'])
     })
 
-    it('paremeter array-string-form-explode is null', async function () {
-        const p = parameters['array-string-form-explode']
+    it('parses parameter formStrExpYes to null', function () {
+        const p = parameters.formStrExpYes
         expect(p).to.equal(null)
     })
 
-    it('paremeter array-integer-form-not-explode is null', async function () {
-        const p = parameters['array-integer-form-not-explode']
+    it('parses parameter formIntExpNo to null', function () {
+        const p = parameters.formIntExpNo
         expect(p).to.equal(null)
     })
 
-    it('paremeter array-integer-form-explode defualts to an array with one item', async function () {
-        const p = parameters['array-integer-form-explode']
+    it('parameter formIntExpYes defaults to an array with one item', function () {
+        const p = parameters.formIntExpYes
         expect(p).to.be.an('array')
         expect(p).to.deep.equal([123])
     })
@@ -277,7 +291,7 @@ describe('empty array parameters in GET request', function () {
 
 describe('unset required array parameter in POST request', function () {
     const params = {
-        'array-string-form-not-explode' : []
+        'requiredArray' : []
     }
 
     let status
@@ -302,21 +316,18 @@ describe('unset required array parameter in POST request', function () {
     })
 
     it('the response contains an actionable error message', async function () {
-        expect(message.startsWith('Parameter array-string-form-not-explode is required [')).to.be.true
+        expect(message.startsWith('Parameter requiredArray is required [')).to.be.true
     })
 
 });
 
 describe('Query parameters in POST request', function () {
     const params = {
-        'num': 165.75,
-        'int': 776,
-        'bool': true,
-        'string': '&a=2 2',
-        'array-string-form-not-explode' : 'blue,black',
-        'array-string-form-explode' : ['green', 'red'],
-        'array-integer-form-not-explode' : '1,2',
-        'array-integer-form-explode' : ['10', '20']
+        num: 165.75,
+        int: 776,
+        bool: true,
+        string: '&a=2 2',
+        requiredArray: ['1']
     }
     const headers = {
         "X-start": 22
