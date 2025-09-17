@@ -129,6 +129,8 @@ describe('Query parameters in GET request', function () {
         'int': 776,
         'bool': true,
         'string': '&a=2 2',
+        'piped': 'one|two',
+        'spaced': 'three four',
         'array-string-form-not-explode' : 'blue,black',
         'array-string-form-explode' : ['green', 'red'],
         'array-integer-form-not-explode' : '1,2',
@@ -171,6 +173,18 @@ describe('Query parameters in GET request', function () {
 
     it('adds default parameter', async function () {
         expect(parameters.defaultParam).to.equal('abcdefg')
+    })
+
+    it('parses pipe delimited values into an array', function () {
+        const p = parameters.piped
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal(['one','two'])
+    })
+
+    it('parses space delimited values into an array', function () {
+        const p = parameters.spaced
+        expect(p).to.be.an('array')
+        expect(p).to.deep.equal(['three','four'])
     })
 
     it('paremeter array-string-form-not-explode is parsed correctly', async function () {

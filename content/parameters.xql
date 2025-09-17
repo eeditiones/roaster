@@ -121,7 +121,7 @@ declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? 
                     request:get-parameter($name, ())
 
         return (
-            if (exists($parameter?style) and $parameter?style = ("simple", "label", "matrix", "spaceDelimited", "pipeDelimited")) then (
+            if (exists($parameter?style) and $parameter?style = ("simple", "label", "matrix")) then (
                 error($errors:NOT_IMPLEMENTED, "Unsupported parameter style " || $parameter?style || " for parameter " || $name || ".")
             ) else if ($parameter?required and empty($values)) then (
                 error($errors:REQUIRED_PARAM, "Parameter " || $name || " is required")
@@ -161,13 +161,22 @@ declare %private function parameters:cast-array($values as xs:string*, $config a
         (: null :)
     ) else if (empty($values)) then (
         array:for-each($default, $cast)
+    ) else if ($explode and $config?style = ("spaceDelimited", "pipeDelimited")) then (
+        error($errors:OPERATION, "Unsupported combination of parameter style " || $config?style || " with explode set to true.")
     ) else if ($explode) then (
         array {
             for-each($values, $cast)
         }
     ) else (
-        array {
-            for-each(tokenize($values, ','), $cast)
+        let $separator := 
+            switch ($config?style)
+            case "spaceDelimited" return " "
+            case "pipeDelimited" return "\|" (: pipe needs to be escaped for use in tokenize :)
+            case "form" return ","
+            default return ()
+
+        return array {
+            for-each(tokenize($values, $separator), $cast)
         }
     )
 };

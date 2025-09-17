@@ -228,6 +228,31 @@
                         }
                     },
                     {
+                        "name": "spaced",
+                        "in": "query",
+                        "description": "space delimited array of string values: spaced=one%20two%20three",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "style": "spaceDelimited"
+                    },
+                    {
+                        "name": "piped",
+                        "in": "query",
+                        "description": "pipe delimited array of string values: piped=one|two|three",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "style": "pipeDelimited",
+                        "explode": false
+                    },
+                    {
                         "name": "array-string-form-not-explode",
                         "in": "query",
                         "description": "Array parameters requested as color=blue,black,brown",
