@@ -106,18 +106,6 @@ declare function parameters:in-request ($request as map(*), $response as map(*))
         )
 };
 
-(:https://swagger.io/docs/specification/v3_0/serialization/
-  Path parameters support the following style values:
-  simple – (default) comma-separated values. Corresponds to the {param_name} URI template.
-  label – dot-prefixed values, also known as label expansion. Corresponds to the {.param_name} URI template.
-  matrix – semicolon-prefixed values, also known as path-style expansion. Corresponds to the {;param_name} URI template.
-  
-  Query parameters support the following style values:
-  form – (default) ampersand-separated values, also known as form-style query expansion. Corresponds to the {?param_name} URI template.
-  spaceDelimited – space-separated array values. Same as collectionFormat: ssv in OpenAPI 2.0. Has effect only for non-exploded arrays (explode: false), that is, the space separates the array values if the array is a single parameter, as in arr=a b c.
-  pipeDelimited – pipeline-separated array values. Same as collectionFormat: pipes in OpenAPI 2.0. Has effect only for non-exploded arrays (explode: false), that is, the pipe separates the array values if the array is a single parameter, as in arr=a|b|c.
-  deepObject – simple non-nested objects are serialized as paramName[prop1]=value1&paramName[prop2]=value2&.... The behavior for nested objects and arrays is undefined.
-:)
 declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? {
     if (parameters:is-path-parameter($parameter))
     then ()
@@ -179,8 +167,8 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
 declare %private function parameters:cast-array($values as xs:string*, $config as map(*)) as array(*)? {
     let $default := parameters:get-parameter-default-value($config?schema)
     let $cast := parameters:cast-value(?, $config?schema?items)
-    (: explode is true by default, false otherwise :)
-    let $explode := boolean($config?explode) or empty($config?explode)
+    (: explode is true by default for form, shall be false otherwise :)
+    let $explode := if ($config?style = "form") then boolean($config?explode) or empty($config?explode) else false()
 
     return if (empty($values) and empty($default)) then (
         (: null :)
