@@ -109,7 +109,7 @@ declare function parameters:in-request ($request as map(*), $response as map(*))
 declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? {
     if (parameters:is-path-parameter($parameter))
     then ()
-    else
+    else (
         let $name := $parameter?name
         let $values := 
             switch ($parameter?in)
@@ -120,15 +120,12 @@ declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? 
                 default return
                     request:get-parameter($name, ())
 
-        return (
-            if (exists($parameter?style) and $parameter?style = ("simple", "label", "matrix")) then (
-                error($errors:NOT_IMPLEMENTED, "Unsupported parameter style " || $parameter?style || " for parameter " || $name || ".")
-            ) else if ($parameter?required and empty($values)) then (
-                error($errors:REQUIRED_PARAM, "Parameter " || $name || " is required")
-            ) else (
-                map { $name : parameters:cast($values, $parameter) }
-            )
+        return if ($parameter?required and empty($values)) then (
+            error($errors:REQUIRED_PARAM, "Parameter " || $name || " is required")
+        ) else (
+            map { $name : parameters:cast($values, $parameter) }
         )
+    )
 };
 
 declare %private function parameters:get-parameter-default-value ($schema as map(*)?) as item()? {
@@ -154,8 +151,20 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
 declare %private function parameters:cast-array($values as xs:string*, $config as map(*)) as array(*)? {
     let $default := parameters:get-parameter-default-value($config?schema)
     let $cast := parameters:cast-value(?, $config?schema?items)
+    let $style :=
+        if (exists($config?style) and $config?style = ("label", "matrix")) then (
+            (: do not throw but log on debug :)
+            error($errors:OPERATION, "Unsupported parameter style " || $config?style || " for parameter " || $config?name || " in " || $config?in || ".")
+        ) else if ($config?in eq "header" and exists($config?style) and $config?style ne "simple") then (
+            error($errors:OPERATION, "Unsupported parameter style " || $config?style || " for parameter " || $config?name || " in " || $config?in || ".")
+        ) else if ($config?in eq "header") then (
+            "simple"
+        ) else (
+            ($config?style, 'form')[1]
+        )
     (: for style "form", explode is true by default, false otherwise :)
-    let $explode := boolean($config?explode) or ($config?style = "form" and empty($config?explode))
+    let $explode := boolean($config?explode) or ($style = "form" and empty($config?explode))
+
 
     return if (empty($values) and empty($default)) then (
         (: null :)
@@ -167,13 +176,15 @@ declare %private function parameters:cast-array($values as xs:string*, $config a
         array {
             for-each($values, $cast)
         }
+    ) else if (count($values) > 1) then (
+        error($errors:BAD_REQUEST, "Multiple entries for " || $config?name || " found but explode is set to false.")
     ) else (
         let $separator := 
-            switch ($config?style)
-            case "spaceDelimited" return " "
-            case "pipeDelimited" return "\|" (: pipe needs to be escaped for use in tokenize :)
-            case "form" return ","
-            default return ()
+            switch ($style)
+                case "spaceDelimited" return " "
+                case "pipeDelimited" return "\|" (: pipe needs to be escaped for use in tokenize :)
+                (: case "simple" case "form" :)
+                default return ","
 
         return array {
             for-each(tokenize($values, $separator), $cast)
