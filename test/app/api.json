@@ -299,7 +299,7 @@
                     {
                         "name": "formIntExpYes",
                         "in": "query",
-                        "description": "array of integer values encoded as  formIntExpYes=1&formIntExpYes=2&formIntExpYes=3",
+                        "description": "array of integer values encoded as formIntExpYes=1&formIntExpYes=2&formIntExpYes=3",
                         "schema":{
                             "type": "array",
                             "default": [123],
