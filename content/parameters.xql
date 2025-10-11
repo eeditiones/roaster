@@ -149,8 +149,6 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
 };
 
 declare %private function parameters:cast-array($values as xs:string*, $config as map(*)) as array(*)? {
-    let $default := parameters:get-parameter-default-value($config?schema)
-    let $cast := parameters:cast-value(?, $config?schema?items)
     let $style :=
         if (exists($config?style) and $config?style = ("label", "matrix")) then (
             (: do not throw but log on debug :)
@@ -165,31 +163,38 @@ declare %private function parameters:cast-array($values as xs:string*, $config a
     (: for style "form", explode is true by default, false otherwise :)
     let $explode := boolean($config?explode) or ($style = "form" and empty($config?explode))
 
+    let $default := parameters:get-parameter-default-value($config?schema)
+    let $tokenized-values :=
+        if (empty($values) and empty($default)) then (
+            (: null :)
+        ) else if (empty($values)) then (
+            $default?*
+        ) else if ($explode and ($config?in eq 'cookie' or $config?style = ("spaceDelimited", "pipeDelimited"))) then (
+            error($errors:OPERATION, "Explode cannot be true for " || $config?in || "-parameter " || $config?name || " with style set to " || $config?style || ".")
+        ) else if ($explode) then (
+            $values
+        ) else if (count($values) > 1) then (
+            error($errors:BAD_REQUEST, "Multiple entries for " || $config?name || " found but explode is set to false.")
+        ) else (
+            let $separator := 
+                switch ($style)
+                    case "spaceDelimited" return " "
+                    case "pipeDelimited" return "\|" (: pipe needs to be escaped for use in tokenize :)
+                    (: case "simple" case "form" :)
+                    default return ","
 
-    return if (empty($values) and empty($default)) then (
-        (: null :)
-    ) else if (empty($values)) then (
-        array:for-each($default, $cast)
-    ) else if ($explode and $config?style = ("spaceDelimited", "pipeDelimited")) then (
-        error($errors:OPERATION, "Unsupported combination of parameter style " || $config?style || " with explode set to true.")
-    ) else if ($explode) then (
-        array {
-            for-each($values, $cast)
-        }
-    ) else if (count($values) > 1) then (
-        error($errors:BAD_REQUEST, "Multiple entries for " || $config?name || " found but explode is set to false.")
-    ) else (
-        let $separator := 
-            switch ($style)
-                case "spaceDelimited" return " "
-                case "pipeDelimited" return "\|" (: pipe needs to be escaped for use in tokenize :)
-                (: case "simple" case "form" :)
-                default return ","
+            return tokenize($values, $separator)
+        )
 
-        return array {
-            for-each(tokenize($values, $separator), $cast)
-        }
-    )
+    let $cast := parameters:cast-value(?, $config?schema?items)
+    return try {
+        if (empty($tokenized-values)) then (
+        ) else (
+            array { for-each($tokenized-values, $cast) }
+        )
+    } catch * {
+        error($errors:BAD_REQUEST, "One or more values for " || $config?name || " could not be cast to " || $config?schema?items?type || ".")
+    }
 };
 
 declare %private function parameters:cast-value ($value as item()?, $schema as map(*)) as item()? {

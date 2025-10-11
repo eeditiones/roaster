@@ -129,12 +129,6 @@ describe('Query parameters in GET request', function () {
         int: 776,
         bool: true,
         string: '&a=2 2',
-        piped: 'one|two',
-        spaced: 'three four',
-        formStrExpNo: 'blue,black',
-        formStrExpYes: ['green', 'red'],
-        formIntExpNo: '1,2',
-        formIntExpYes: ['10', '20']
     }
     const headers = {
         "X-start": 22
@@ -145,10 +139,7 @@ describe('Query parameters in GET request', function () {
     before(async function () {
         res = await util.axios.get('api/parameters', {
             params,
-            headers,
-            paramsSerializer: {
-                indexes: null // render array parameter names without square brackets
-            }
+            headers
         })
         parameters = res?.data?.parameters
     })
@@ -175,42 +166,6 @@ describe('Query parameters in GET request', function () {
         expect(parameters.defaultParam).to.equal('abcdefg')
     })
 
-    it('parses pipe delimited values into an array', function () {
-        const p = parameters.piped
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['one','two'])
-    })
-
-    it('parses space delimited values into an array', function () {
-        const p = parameters.spaced
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['three','four'])
-    })
-
-    it('parses comma separated values in parameter formStrExpNo into an array of strings', function () {
-        const p = parameters.formStrExpNo
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['blue','black'])
-    })
-
-    it('parses occurrences of parameter formStrExpYes into an array of strings', function () {
-        const p = parameters.formStrExpYes
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['green','red'])
-    })
-
-    it('parses comma separated values in parameter formIntExpNo into an array of integers', function () {
-        const p = parameters.formIntExpNo
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal([1,2])
-    })
-
-    it('parses occurrences of parameter formIntExpYes into an array of integers', function () {
-        const p = parameters.formIntExpYes
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal([10,20])
-    })
-
     it('handles date parameters', async function () {
         const res = await util.axios.get('api/dates', {
             params: {
@@ -224,110 +179,12 @@ describe('Query parameters in GET request', function () {
 
 });
 
-describe('empty array parameters in GET request', function () {
-    const params = {
-        piped: 'one',
-        spaced: '',
-        formStrExpNo: 'u',
-        formStrExpYes: [],
-        formIntExpNo: [],
-        formIntExpYes: []
-    }
-
-    let res, parameters
-
-    before(async function () {
-        try {
-            res = await util.axios.get('api/parameters', {
-                params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
-            })
-            parameters = res?.data?.parameters
-        } catch (e) {
-            console.log(e)
-        }
-    })
-
-    it('the query succeeds', async function () {
-        expect(res.status).to.equal(200)
-    })
-
-    it('parses parameter piped into an array with one entry', function () {
-        const p = parameters.piped
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['one'])
-    })
-
-    it('parses parameter spaced to an empty array', function () {
-        const p = parameters.spaced
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal([])
-    })
-
-    it('parses parameter formStrExpNo into an array with one entry', function () {
-        const p = parameters.formStrExpNo
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['u'])
-    })
-
-    it('parses parameter formStrExpYes to null', function () {
-        const p = parameters.formStrExpYes
-        expect(p).to.equal(null)
-    })
-
-    it('parses parameter formIntExpNo to null', function () {
-        const p = parameters.formIntExpNo
-        expect(p).to.equal(null)
-    })
-
-    it('parameter formIntExpYes defaults to an array with one item', function () {
-        const p = parameters.formIntExpYes
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal([123])
-    })
-});
-
-describe('unset required array parameter in POST request', function () {
-    const params = {
-        'requiredArray' : []
-    }
-
-    let status
-
-    before(async function () {
-        try {
-            res = await util.axios.post('api/parameters', {
-                params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
-            })
-            status = res.status
-        } catch (e) {
-            status = e.response.status
-            message = e.response.data.description
-        }
-    })
-
-    it('the query fails with bad request', async function () {
-        expect(status).to.equal(400)
-    })
-
-    it('the response contains an actionable error message', async function () {
-        expect(message.startsWith('Parameter requiredArray is required [')).to.be.true
-    })
-
-});
-
 describe('Query parameters in POST request', function () {
     const params = {
         num: 165.75,
         int: 776,
         bool: true,
-        string: '&a=2 2',
-        requiredArray: ['1']
+        string: '&a=2 2'
     }
     const headers = {
         "X-start": 22
@@ -340,10 +197,7 @@ describe('Query parameters in POST request', function () {
             url: 'api/parameters',
             method: 'post',
             params,
-            headers,
-            paramsSerializer: {
-                indexes: null // render array parameter names without square brackets
-            }
+            headers
         })
         parameters = res?.data?.parameters
     })

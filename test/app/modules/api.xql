@@ -113,6 +113,19 @@ declare function api:avatar ($request as map(*)) {
     </svg>
 };
 
+declare function api:parameters-post ($request as map(*)) {
+    let $parameters := $request?parameters
+    return roaster:response(200, "application/json", map { "parameters": $parameters })
+};
+
+(:~
+ : A route handler that shows how to get array parameters from query strings
+ :)
+declare function api:arrays-get ($request as map(*)) {
+    let $parameters := $request?parameters
+    return roaster:response(200, "application/json", map { "parameters": $parameters })
+};
+
 (: end of route handlers :)
 
 (:~

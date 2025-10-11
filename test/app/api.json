@@ -177,55 +177,95 @@
                 "security": [{ "cookieAuth": [] }]
             }
         },
-        "/api/parameters": {
-            "get": {
-                "description": "Parameters in URL and header (GET)",
-                "summary": "Test parameters of varying types passed in URL and header",
-                "operationId": "rutil:debug",
-                "tags": ["query", "header"],
+        "/api/arrays": {
+            "post": {
+                "summary": "Test array parameters in querys",
+                "operationId": "api:arrays-post",
+                "tags": ["query"],
                 "parameters": [
                     {
-                        "name": "num",
+                        "name": "requiredArray",
                         "in": "query",
+                        "description": "Required parameter that is an array",
+                        "required": true,
                         "schema":{
-                            "type": "number"
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "nullable": true
+                        },
+                        "style" : "form",
+                        "explode" : false
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of parameters",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object"
+                                }
+                            }
                         }
                     },
-                    {
-                        "name": "int",
-                        "in": "query",
-                        "schema":{
-                            "type": "integer"
+                    "400": {
+                        "description": "Missing required parameter",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
                         }
+                    }
+                }
+            },
+            "get": {
+                "summary": "Test array parameters in querys",
+                "operationId": "api:arrays-get",
+                "tags": ["query"],
+                "parameters": [
+                    {
+                        "name": "piped",
+                        "in": "query",
+                        "description": "pipe delimited array of string values: piped=one|two|three",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "style": "pipeDelimited",
+                        "explode": false
                     },
                     {
-                        "name": "bool",
+                        "name": "pipedDefault",
                         "in": "query",
+                        "description": "style:pipeDelimited array with default value",
                         "schema":{
-                            "type": "boolean"
-                        }
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "default": ["one", "two", "three"]
+                        },
+                        "style": "pipeDelimited",
+                        "explode": false
                     },
                     {
-                        "name": "string",
+                        "name": "pipedExplode",
                         "in": "query",
+                        "description": "style:pipeDelimited with explode set to true",
                         "schema":{
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "defaultParam",
-                        "in": "query",
-                        "schema":{
-                            "type": "string",
-                            "default": "abcdefg"
-                        }
-                    },
-                    {
-                        "name": "X-start",
-                        "in": "header",
-                        "schema": {
-                            "type": "integer"
-                        }
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "style": "pipeDelimited",
+                        "explode": true
                     },
                     {
                         "name": "spaced",
@@ -240,17 +280,30 @@
                         "style": "spaceDelimited"
                     },
                     {
-                        "name": "piped",
+                        "name": "spacedDefault",
                         "in": "query",
-                        "description": "pipe delimited array of string values: piped=one|two|three",
+                        "description": "space delimited array of integers with a default value",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            },
+                            "default": [1, 2, 3]
+                        },
+                        "style": "spaceDelimited"
+                    },
+                    {
+                        "name": "spacedExplode",
+                        "in": "query",
+                        "description": "space delimited array of string values with explode set to true",
                         "schema":{
                             "type": "array",
                             "items": {
                                 "type": "string"
                             }
                         },
-                        "style": "pipeDelimited",
-                        "explode": false
+                        "explode": true,
+                        "style": "spaceDelimited"
                     },
                     {
                         "name": "formStrExpNo",
@@ -325,6 +378,71 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/parameters": {
+            "get": {
+                "description": "Parameters in URL and header (GET)",
+                "summary": "Test parameters of varying types passed in URL and header",
+                "operationId": "rutil:debug",
+                "tags": ["query", "header"],
+                "parameters": [
+                    {
+                        "name": "num",
+                        "in": "query",
+                        "schema":{
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "int",
+                        "in": "query",
+                        "schema":{
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "bool",
+                        "in": "query",
+                        "schema":{
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "string",
+                        "in": "query",
+                        "schema":{
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "defaultParam",
+                        "in": "query",
+                        "schema":{
+                            "type": "string",
+                            "default": "abcdefg"
+                        }
+                    },
+                    {
+                        "name": "X-start",
+                        "in": "header",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200":{
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema":{
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
             },
             "post": {
                 "description": "Parameters in URL and header (POST)",
@@ -374,21 +492,6 @@
                         "schema": {
                             "type": "integer"
                         }
-                    },
-                    {
-                        "name": "requiredArray",
-                        "in": "query",
-                        "description": "Required parameter that is an array",
-                        "required": true,
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : false
                     }
                 ],
                 "responses": {
