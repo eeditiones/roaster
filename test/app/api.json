@@ -184,6 +184,17 @@
                 "tags": ["query"],
                 "parameters": [
                     {
+                        "name": "simpleArrayHeader",
+                        "in": "header",
+                        "description": "Array parameter in header",
+                        "schema":{
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    {
                         "name": "requiredArray",
                         "in": "query",
                         "description": "Required parameter that is an array",

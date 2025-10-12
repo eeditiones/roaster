@@ -256,16 +256,83 @@ describe('Wrong item types provided for array parameter', function () {
     })
 });
 
-describe('unset required array parameter in POST request', function () {
+describe('POST with simple array header parameter set', function () {
+    const params = {
+        requiredArray: [1]
+    }
+    const headers = {
+        simpleArrayHeader: "eleventy,22,dirty tree"
+    }
+
+    let status, parameters
+
+    before(async function () {
+        try {
+            res = await util.axios.request('api/arrays', {
+                method: 'post',
+                headers,
+                params,
+                paramsSerializer: {
+                    indexes: null // render array parameter names without square brackets
+                }
+            })
+            status = res.status
+            parameters = res?.data?.parameters
+            console.log(res.data)
+        } catch (e) {
+            status = e.response.status
+            console.log(e.response.data)
+        }
+    })
+
+    it('the query succeeds', async function () {
+        expect(status).to.equal(200)
+    })
+    it('the header is parsed into an array', async function () {
+        expect(parameters.simpleArrayHeader).to.be.an('array')
+        expect(parameters.simpleArrayHeader).to.deep.equal(['eleventy','22','dirty tree'])
+    })
+});
+
+describe('POST with empty simple array header parameter', function () {
+    const params = {
+        requiredArray: [1]
+    }
+    const headers = {
+        simpleArrayHeader: ""
+    }
+
+    let res
+
+    before(async function () {
+        res = await util.axios.request('api/arrays', {
+            method: 'post',
+            headers,
+            params,
+            paramsSerializer: {
+                indexes: null // render array parameter names without square brackets
+            }
+        })
+    })
+
+    it('the query succeeds', async function () {
+        expect(res.status).to.equal(200)
+    })
+    it('the header is parsed to null', async function () {
+        expect(res.data.parameters.simpleArrayHeader).to.be.null
+    })
+});
+
+describe('empty required array parameter in POST request', function () {
     const params = {
         'requiredArray' : []
     }
 
-    let status
+    let status, message
 
     before(async function () {
         try {
-            res = await util.axios.post('api/arrays', {
+            const res = await util.axios.post('api/arrays', {
                 params,
                 paramsSerializer: {
                     indexes: null // render array parameter names without square brackets
@@ -291,11 +358,11 @@ describe('unset required array parameter in POST request', function () {
 describe('unset required array parameter in POST request', function () {
     const params = {}
 
-    let status
+    let status, message
 
     before(async function () {
         try {
-            res = await util.axios.post('api/arrays', {
+            const res = await util.axios.post('api/arrays', {
                 params,
                 paramsSerializer: {
                     indexes: null // render array parameter names without square brackets

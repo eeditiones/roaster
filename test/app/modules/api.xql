@@ -113,7 +113,7 @@ declare function api:avatar ($request as map(*)) {
     </svg>
 };
 
-declare function api:parameters-post ($request as map(*)) {
+declare function api:arrays-post ($request as map(*)) {
     let $parameters := $request?parameters
     return roaster:response(200, "application/json", map { "parameters": $parameters })
 };
