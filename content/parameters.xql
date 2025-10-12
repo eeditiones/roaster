@@ -171,7 +171,7 @@ declare %private function parameters:cast-array($values as xs:string*, $config a
             (: null :)
         ) else if (empty($values)) then (
             $default?*
-        ) else if ($explode and ($config?in eq 'cookie' or $config?style = ("spaceDelimited", "pipeDelimited"))) then (
+        ) else if ($explode and ($config?in eq 'cookie' or $config?style = ("spaceDelimited", "pipeDelimited", "simple"))) then (
             error($errors:OPERATION, "Explode cannot be true for " || $config?in || "-parameter " || $config?name || " with style set to " || $config?style || ".")
         ) else if ($explode) then (
             $values
