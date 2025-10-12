@@ -364,6 +364,21 @@
                         },
                         "style" : "form",
                         "explode" : true
+                    },
+                    {
+                        "name": "formDefaultRequired",
+                        "in": "query",
+                        "description": "required array parameter with a default value",
+                        "schema":{
+                            "type": "array",
+                            "default": [1],
+                            "items": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "nullable": true
+                        },
+                        "required": true
                     }
                 ],
                 "responses": {
