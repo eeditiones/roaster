@@ -120,10 +120,12 @@ declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? 
                 default return
                     request:get-parameter($name, ())
 
-        return if ($parameter?required and empty($values)) then (
+        let $cast := parameters:cast($values, $parameter)
+
+        return if ($parameter?required and empty($cast)) then (
             error($errors:REQUIRED_PARAM, "Parameter " || $name || " is required")
         ) else (
-            map { $name : parameters:cast($values, $parameter) }
+            map { $name : $cast }
         )
     )
 };

@@ -290,6 +290,7 @@
                             },
                             "default": [1, 2, 3]
                         },
+                        "required": true,
                         "style": "spaceDelimited"
                     },
                     {
