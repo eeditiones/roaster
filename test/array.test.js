@@ -154,7 +154,7 @@ describe('A parameter with style:pipeDelimited and explode:true will raise a ser
     })
 
     it('the error message is actionable', function () {
-        expect(errorResponse.data.description).to.include('Explode cannot be true for query-parameter pipedExplode with style set to pipeDelimited.')
+        expect(errorResponse.data.description).to.include('Explode cannot be true for query-parameter "pipedExplode" with style set to pipeDelimited.')
     })
 });
 
@@ -183,7 +183,7 @@ describe('A parameter with style:pipeDelimited and explode:true will raise a ser
     })
 
     it('the error message is actionable', function () {
-        expect(errorResponse.data.description).to.include('Explode cannot be true for query-parameter spacedExplode with style set to spaceDelimited.')
+        expect(errorResponse.data.description).to.include('Explode cannot be true for query-parameter "spacedExplode" with style set to spaceDelimited.')
     })
 });
 
@@ -245,8 +245,7 @@ describe('Wrong item types provided for array parameter', function () {
     })
 
     it('error message', function () {
-        console.log(errorResponse.data.description)
-        expect(errorResponse.data.description).to.include('One or more values for spacedDefault could not be cast to integer.')
+        expect(errorResponse.data.description).to.include('One or more values for query-parameter "spacedDefault" could not be cast to integer.')
     })
 });
 
@@ -270,10 +269,8 @@ describe('POST with simple array header parameter set', function () {
             })
             status = res.status
             parameters = res?.data?.parameters
-            console.log(res.data)
         } catch (e) {
             status = e.response.status
-            console.log(e.response.data)
         }
     })
 
@@ -337,8 +334,8 @@ describe('empty required array parameter in POST request', function () {
         expect(status).to.equal(400)
     })
 
-    it('the response contains an actionable error message', async function () {
-        expect(message.startsWith('Parameter requiredArray is required [')).to.be.true
+    it('the error description starts with an actionable message', async function () {
+        expect(message.startsWith('Required query-parameter "requiredArray" missing or empty.')).to.be.true
     })
 
 });
@@ -365,8 +362,8 @@ describe('unset required array parameter in POST request', function () {
         expect(status).to.equal(400)
     })
 
-    it('the response contains an actionable error message', async function () {
-        expect(message.startsWith('Parameter requiredArray is required [')).to.be.true
+    it('the error description starts with an actionable message', async function () {
+        expect(message.startsWith('Required query-parameter "requiredArray" missing or empty.')).to.be.true
     })
 
 });

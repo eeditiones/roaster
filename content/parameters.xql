@@ -53,7 +53,7 @@ declare function parameters:in-path ($request as map(*), $response as map(*)) as
                         return map { $key : $value }
                     )
                     else
-                        error($errors:REQUIRED_PARAM, "No definition for required path parameter " || $substitution)
+                        error($errors:REQUIRED_PARAM, "No definition for required path-parameter """ || $substitution || """")
 
             (: extend previous parameters map with new values :)
             let $merged := map:merge(($request?parameters, $maps))
@@ -123,7 +123,7 @@ declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? 
         let $cast := parameters:cast($values, $parameter)
 
         return if ($parameter?required and empty($cast)) then (
-            error($errors:REQUIRED_PARAM, "Parameter " || $name || " is required")
+            error($errors:REQUIRED_PARAM, "Required " || $parameter?in || "-parameter """ || $name || """ missing or empty.")
         ) else (
             map { $name : $cast }
         )
@@ -139,7 +139,7 @@ declare %private function parameters:get-parameter-default-value ($schema as map
 declare %private function parameters:cast ($values as xs:string*, $config as map(*)) as item()* {
     switch($config?schema?type)
         case "object" return 
-            error($errors:NOT_IMPLEMENTED, "Parameter '" || $config?name || "' is of type 'object', which is not supported yet.")
+            error($errors:NOT_IMPLEMENTED, "The " || $config?in || "-parameter """ || $config?name || """ is of type ""object"", which is not supported yet.")
         case "array" return
             parameters:cast-array($values, $config)
         default return
@@ -158,9 +158,9 @@ declare %private function parameters:cast-array($values as xs:string*, $config a
     let $style :=
         if (exists($config?style) and $config?style = ("label", "matrix")) then (
             (: do not throw but log on debug :)
-            error($errors:OPERATION, "Unsupported parameter style " || $config?style || " for parameter " || $config?name || " in " || $config?in || ".")
+            error($errors:OPERATION, "Unsupported style " || $config?style || " for " || $config?in || "-parameter """ || $config?name || """.")
         ) else if ($config?in eq "header" and exists($config?style) and $config?style ne "simple") then (
-            error($errors:OPERATION, "Unsupported parameter style " || $config?style || " for parameter " || $config?name || " in " || $config?in || ".")
+            error($errors:OPERATION, "Unsupported style " || $config?style || " for " || $config?in || "-parameter """ || $config?name || """.")
         ) else if ($config?in eq "header") then (
             "simple"
         ) else (
@@ -176,11 +176,11 @@ declare %private function parameters:cast-array($values as xs:string*, $config a
         ) else if (empty($values)) then (
             $default?*
         ) else if ($explode and ($config?in eq 'cookie' or $config?style = ("spaceDelimited", "pipeDelimited", "simple"))) then (
-            error($errors:OPERATION, "Explode cannot be true for " || $config?in || "-parameter " || $config?name || " with style set to " || $config?style || ".")
+            error($errors:OPERATION, "Explode cannot be true for " || $config?in || "-parameter """ || $config?name || """ with style set to " || $config?style || ".")
         ) else if ($explode) then (
             $values
         ) else if (count($values) > 1) then (
-            error($errors:BAD_REQUEST, "Multiple entries for " || $config?name || " found but explode is set to false.")
+            error($errors:BAD_REQUEST, "Multiple entries for " || $config?in || "-parameter """ || $config?name || """ found but explode is set to false.")
         ) else (
             let $separator := 
                 switch ($style)
@@ -199,7 +199,7 @@ declare %private function parameters:cast-array($values as xs:string*, $config a
             array { for-each($tokenized-values, $cast) }
         )
     } catch * {
-        error($errors:BAD_REQUEST, "One or more values for " || $config?name || " could not be cast to " || $config?schema?items?type || ".")
+        error($errors:BAD_REQUEST, "One or more values for " || $config?in || "-parameter """ || $config?name || """ could not be cast to " || $config?schema?items?type || ".")
     }
 };
 
