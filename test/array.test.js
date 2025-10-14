@@ -370,3 +370,33 @@ describe('unset required array parameter in POST request', function () {
     })
 
 });
+
+describe('sending more than one value for a non-array parameter', function () {
+    const params = {
+        string: ['one', 'two']
+    }
+
+    let status, message
+
+    before(async function () {
+        try {
+            const res = await util.axios.get('api/parameters', {
+                params,
+                paramsSerializer
+            })
+            status = res.status
+        } catch (e) {
+            status = e.response.status
+            message = e.response.data.description
+        }
+    })
+
+    it('the query fails with bad request', async function () {
+        expect(status).to.equal(400)
+    })
+
+    it('the error description starts with an actionable message', async function () {
+        console.log(message)
+        expect(message.startsWith('Multiple values were provided for query-parameter "string", which is not declared an array')).to.be.true
+    })
+})

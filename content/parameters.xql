@@ -142,12 +142,16 @@ declare %private function parameters:cast ($values as xs:string*, $config as map
             error($errors:NOT_IMPLEMENTED, "Parameter '" || $config?name || "' is of type 'object', which is not supported yet.")
         case "array" return
             parameters:cast-array($values, $config)
-        default return (
-            head((
-                $values,
-                parameters:get-parameter-default-value($config?schema)
-            )) ! parameters:cast-value(., $config?schema)
-        )
+        default return
+            parameters:cast-atomic($values, $config)
+};
+
+declare %private function parameters:cast-atomic ($values as xs:string*, $config as map(*)) as item()? {
+    if (count($values) > 1)
+    then error($errors:BAD_REQUEST, "Multiple values were provided for " || $config?in || "-parameter """ || $config?name || """, which is not declared an array.")
+    else if (count($values) = 1)
+    then parameters:cast-value($values, $config?schema)
+    else parameters:get-parameter-default-value($config?schema) ! parameters:cast-value(., $config?schema)
 };
 
 declare %private function parameters:cast-array($values as xs:string*, $config as map(*)) as array(*)? {
