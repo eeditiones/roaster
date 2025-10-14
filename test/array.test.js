@@ -2,6 +2,12 @@ const util = require('./util.js')
 const chai = require('chai')
 const expect = chai.expect
 
+// render array parameter names without square brackets
+const paramsSerializer = {
+    indexes: null
+}
+
+
 describe('endpoint with pipe delimited parameter in query', function () {
     const params = {
         piped: 'one|two',
@@ -17,9 +23,7 @@ describe('endpoint with pipe delimited parameter in query', function () {
     before(async function () {
         res = await util.axios.get('api/arrays', {
             params,
-            paramsSerializer: {
-                indexes: null // render array parameter names without square brackets
-            }
+            paramsSerializer
         })
         parameters = res?.data?.parameters
     })
@@ -81,9 +85,7 @@ describe('empty array parameters in GET request', function () {
         try {
             res = await util.axios.get('api/arrays', {
                 params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
+                paramsSerializer
             })
             parameters = res?.data?.parameters
         } catch (e) {
@@ -138,9 +140,7 @@ describe('A parameter with style:pipeDelimited and explode:true will raise a ser
         try {
             res = await util.axios.get('api/arrays', {
                 params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
+                paramsSerializer
             })
         } catch (e) {
             errorResponse = e.response
@@ -169,9 +169,7 @@ describe('A parameter with style:pipeDelimited and explode:true will raise a ser
         try {
             res = await util.axios.get('api/arrays', {
                 params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
+                paramsSerializer
             })
         } catch (e) {
             errorResponse = e.response
@@ -198,9 +196,7 @@ describe('Array parameters a default value when unset in the request', function 
         try {
             res = await util.axios.get('api/arrays', {
                 params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
+                paramsSerializer
             })
             parameters = res?.data?.parameters
         } catch (e) {
@@ -236,9 +232,7 @@ describe('Wrong item types provided for array parameter', function () {
         try {
             res = await util.axios.get('api/arrays', {
                 params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
+                paramsSerializer
             })
         } catch (e) {
             errorResponse = e.response
@@ -272,9 +266,7 @@ describe('POST with simple array header parameter set', function () {
                 method: 'post',
                 headers,
                 params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
+                paramsSerializer
             })
             status = res.status
             parameters = res?.data?.parameters
@@ -309,9 +301,7 @@ describe('POST with empty simple array header parameter', function () {
             method: 'post',
             headers,
             params,
-            paramsSerializer: {
-                indexes: null // render array parameter names without square brackets
-            }
+            paramsSerializer
         })
     })
 
@@ -334,9 +324,7 @@ describe('empty required array parameter in POST request', function () {
         try {
             const res = await util.axios.post('api/arrays', {
                 params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
+                paramsSerializer
             })
             status = res.status
         } catch (e) {
@@ -364,9 +352,7 @@ describe('unset required array parameter in POST request', function () {
         try {
             const res = await util.axios.post('api/arrays', {
                 params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
+                paramsSerializer
             })
             status = res.status
         } catch (e) {
