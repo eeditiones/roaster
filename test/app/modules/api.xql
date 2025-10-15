@@ -113,6 +113,20 @@ declare function api:avatar ($request as map(*)) {
     </svg>
 };
 
+(:~
+ : A route handler that returns all parsed parameter values
+ :)
+declare function api:arrays-post ($request as map(*)) {
+    map { "parameters": $request?parameters }
+};
+
+(:~
+ : A route handler that returns all parsed parameter values
+ :)
+declare function api:arrays-get ($request as map(*)) {
+    map { "parameters": $request?parameters }
+};
+
 (: end of route handlers :)
 
 (:~
