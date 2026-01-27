@@ -36,13 +36,10 @@ declare variable $auth:DEFAULT_STRATEGIES := map {
 };
 
 declare variable $auth:DEFAULT_LOGIN_OPTIONS := map {
-    "asDba": true(), 
-    "maxAge": xs:dayTimeDuration("P7D"),
-    "Path": request:get-context-path(),
-    "createSession": true() (: this will _also_ set the JSESSIONID cookie :)
+    "jsession": true(), (: this will _also_ set the JSESSIONID cookie :)
+    "lifetime": xs:dayTimeDuration("P7D"),
+    "path": request:get-context-path()
 };
-
-declare variable $auth:log-level := "debug";
 
 (:~
  : standard authorization middleware
@@ -77,9 +74,9 @@ declare function auth:add-cookie-name ($request as map(*), $auth-options as map(
     let $cookie-name := auth:read-cookie-name($request?spec)
     return
         if (empty($cookie-name)) then (
-            error($errors:OPERATION, 'Cookie-name not specified in API-definition!')
+            error($errors:OPERATION, 'Cookie-name not specified in API-definition at components.securitySchemes.cookieAuth.name!')
         ) else (
-            map:put($auth-options, 'name', $cookie-name)
+            map:put($auth-options, "name", $cookie-name)
         )
 };
 
@@ -118,24 +115,23 @@ declare function auth:login ($request as map(*)) as map(*) {
 declare function auth:login-user ($user as xs:string, $password as xs:string, $options as map(*)) as xs:string? {
     let $merged-options :=
         if (empty($options?name)) then (
-            error($errors:OPERATION, 'Cookie-name not set in call to auth:login-user!')
+            error($errors:OPERATION, 'Cookie-name is not set in options map for auth:login-user!')
         ) else (
             map:merge(($auth:DEFAULT_LOGIN_OPTIONS, $options), map{ "duplicates": "use-last" })
         )
 
-    let $ttl :=
-        if ($merged-options?maxAge instance of xs:dayTimeDuration) then (
-            $merged-options?maxAge
-        ) else if ($merged-options?maxAge instance of xs:integer) then (
-            xs:dayTimeDuration('PT' || $merged-options?maxAge || 'S')
+    let $lifetime :=
+        if ($merged-options?lifetime instance of xs:dayTimeDuration) then (
+            $merged-options?lifetime
+        ) else if ($merged-options?lifetime instance of xs:integer) then (
+            xs:dayTimeDuration('PT' || $merged-options?lifetime || 'S')
         ) else (
-            error($errors:OPERATION, "the maxAge option value cannot be used", $merged-options?maxAge)
+            error($errors:OPERATION, "The value of the maxAge option must be of type xs:dayTimeDuration or xs:integer. The value " || $merged-options?lifetime || " cannot be used.", $merged-options?lifetime)
         )
 
-    return (
-        util:log($auth:log-level, ("auth:login-user: ", $user)),
-        plogin:register($user, $password, $ttl,
-            auth:get-register-callback($merged-options))
+    return head(
+        plogin:register($user, $password, $lifetime,
+            auth:get-callback($merged-options))
     )
 };
 
@@ -174,7 +170,7 @@ declare function auth:logout-user ($options as map(*)) as empty-sequence() {
     )
 };
 
-declare %private variable $auth:INVALIDATE_COOKIE := map{ "value": "deleted", "maxAge": xs:dayTimeDuration("-P1D") };
+declare %private variable $auth:INVALIDATE_COOKIE := map{ "value": "deleted", "lifetime": xs:dayTimeDuration("-P1D") };
 
 (:~
  : Read the login domain from components.securitySchemes.cookieAuth.name
@@ -208,8 +204,8 @@ declare function auth:use-cookie-auth ($request as map(*), $custom-options as ma
     let $user :=
         if (empty($token)) then () else (
             let $merged-options := map:merge(($auth:DEFAULT_LOGIN_OPTIONS, $custom-options, map{ "name": $cookie-name }), map{ "duplicates": "use-last" })
-            let $callback := auth:get-credentials-callback($merged-options)
-            return plogin:login($token, $callback)
+            let $callback := auth:get-callback($merged-options)
+            return head(plogin:login($token, $callback))
         )
 
     return (
@@ -224,7 +220,6 @@ declare function auth:use-cookie-auth ($request as map(*), $custom-options as ma
  : retrieve the information here
  :)
 declare function auth:use-basic-auth ($request as map(*)) as map(*) {
-    util:log($auth:log-level, sm:id()),
     rutil:getDBUser()
 };
 
@@ -301,48 +296,21 @@ declare %private function auth:use-first-matching-method ($request as map(*)) as
     }
 };
 
-declare %private function auth:get-register-callback ($options as map(*)) as function(*) {
+declare %private function auth:get-callback ($options as map(*)) as function(*) {
     function (
         $new-token as xs:string?,
         $user as xs:string,
         $password as xs:string,
         $expiration as xs:duration
-    ) {
-        if ($options?asDba and not(sm:is-dba($user))) then (
-            (: raise error here? :)
-            util:log($auth:log-level, 'asDba is set to true() but user is non-DBA // not creating a session')
-        ) else (
-            if ($new-token) then (
-                (: session:invalidate(), :)
-                cookie:set(
-                    map:merge(
-                        ($options, map{ "value": $new-token, "maxAge": $expiration }),
-                        map{ "duplicates": "use-last" }))
-            ) else (),
-            let $_ := xmldb:login("/db", $user, $password, $options?createSession)
-            return $user
-        )
-    }
-};
-
-declare %private function auth:get-credentials-callback ($options as map(*)) as function(*) {
-    function (
-        $new-token as xs:string?,
-        $user as xs:string,
-        $password as xs:string,
-        $expiration as xs:duration
-    ) as xs:string? {
-        (: util:log($auth:log-level, "auth:credentials-callback: --" || $user || "--"), :)
+    ) as item()+ {
+        $user,
         if (empty($new-token)) then (
-            util:log($auth:log-level, "session still valid")
         ) else (
-            util:log($auth:log-level, "new token"),
             cookie:set(
-                map:merge(($options, map{ "value": $new-token, "maxAge": $expiration}),
+                map:merge(
+                    ($options, map{ "value": $new-token, "lifetime": $expiration}),
                     map{ "duplicates": "use-last" }))
         ),
-        (: util:log($auth:log-level, "USER: --" || $user || "--"), :)
-        $user
+        xmldb:login("/db", $user, $password, $options?jsession)
     }
 };
-

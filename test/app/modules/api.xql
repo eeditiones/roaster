@@ -9,6 +9,8 @@ import module namespace roaster="http://e-editiones.org/roaster";
 import module namespace auth="http://e-editiones.org/roaster/auth";
 import module namespace rutil="http://e-editiones.org/roaster/util";
 import module namespace errors="http://e-editiones.org/roaster/errors";
+import module namespace cookie="http://e-editiones.org/roaster/cookie";
+
 
 import module namespace upload="http://e-editiones.org/roasted/upload" at "upload.xqm";
 
@@ -131,13 +133,12 @@ declare function api:arrays-get ($request as map(*)) {
  : override default authentication options
  :)
 declare variable $api:auth-options := map {
-    "asDba": false(),
-    "createSession": false(),
-    "maxAge": 10, (: set the cookie time-out to 10 seconds using an integer literal :)
-    "Path": "/exist/apps/roasted", (: requests must include this path for the cookie to be included :)
-    "SameSite": "Lax", (: sets the SameSite property to either "None", "Strict" or "Lax"  :)
-    "Secure": true(), (: mark the cookie as secure :)
-    "HttpOnly": true() (: sets the HttpOnly property :)
+    "lifetime": 10, (: set the cookie time-out to 10 seconds using an integer literal :)
+    "path": "/exist/apps/roasted", (: requests must include this path for the cookie to be included :)
+    "samesite": "Lax", (: sets the SameSite property to either "None", "Strict" or "Lax"  :)
+    "secure": true(), (: mark the cookie as secure :)
+    "httponly": true(), (: sets the HttpOnly property :)
+    "jsession": false() (: do not set the JSESSION cookie, some write operations might fail :)
 };
 
 (:~

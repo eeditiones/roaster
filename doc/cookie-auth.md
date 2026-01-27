@@ -10,33 +10,32 @@ Next to fixing several issues related to login and logout and cookie authenticat
 
 These changes are completely backwards compatible and you do not need to do anything to reap some of the benefits.
 
-However, having the login and logout route handlers in your app allows you to set the additional cookie attributes `HttpOnly` and `SameSite` and also to read them from custom field names and formats like **XML**.
+However, having the login and logout route handlers in your app allows you to set the additional cookie attributes
+`HttpOnly` and `SameSite` and also to read them from custom field names and formats like **XML**.
 
 ## Options
 
-| name | default | description |
-| ---- | ---- | ---- |
-| `name` | - | **REQUIRED** the name of the cookie to create and read from (AKA "Login Domain") usually set by `auth:add-cookie-name#2`|
-| `asDba` | `true()` | Should the login be aborted if the user is not member of DBA? |
-| `createSession` | `true()` | this will _also_ set the JSESSIONID cookie |
-| `maxAge` | `xs:dayTimeDuration("P7D")` | set the life time of the cookie either as a `xs:dayTimeDuration` or with a literal number in seconds |
-| `Path` | `request:get-context-path()` | requests must include this path for the cookie to be included |
-| `Domain` | - | "The Domain attribute specifies which server can receive a cookie." |
-| `SameSite` | - | one of `"None"`, `"Lax"`, or `"Strict"` |
-| `Secure` | - | mark the cookie as secure |
-| `HttpOnly` | - | sets the HttpOnly property |
+| name         | default                      | description                                                                                         |
+| ------------ | ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| `name`       | -                            | **REQUIRED** the name of the _cookie_ (AKA "Login Domain") usually set by `auth:add-cookie-name#2`  |
+| `path`       | `request:get-context-path()` | requests must include this path for the cookie to be included                                       |
+| `lifetime`   | `xs:dayTimeDuration("P7D")`  | set the lifetime of the cookie either as a `xs:dayTimeDuration` or in seconds with a literal number  |
+| `domain`     | -                            | "The Domain attribute specifies which server can receive a cookie."                                 |
+| `samesite`   | -                            | one of `"None"`, `"Lax"`, or `"Strict"`                                                             |
+| `secure`     | -                            | mark the cookie as secure                                                                           |
+| `httponly`   | -                            | sets the HttpOnly property                                                                          |
+| `jsession`   | `true()`                     | this will _also_ set the JSESSIONID cookie and is needed for some write operations                  |
 
 In order to override default authentication options or add other ones create a map in your API module
 
 ```xquery
 declare variable $api:auth-options := map {
-    "asDba": false(), (: allow non-DBAs to register :)
-    "createSession": false(), (: do not create a server-side session :)
-    "maxAge": 10, (: set the cookie time-out to 10 seconds :)
-    "Path": "/exist/apps/roasted", (: requests must include this path for the cookie to be included :)
-    "SameSite": "Lax", (: set the SameSite attribute to "Lax" :)
-    "Secure": true(), (: mark the cookie as secure :)
-    "HttpOnly": true() (: sets the HttpOnly property :)
+    "lifetime": 10, (: set the cookie lifetime to 10 seconds :)
+    "path": "/exist/apps/roasted", (: requests must include this path for the cookie to be included :)
+    "samesite": "Lax", (: set the SameSite attribute to "Lax" :)
+    "secure": true(), (: mark the cookie as secure :)
+    "httponly": true() (: sets the HttpOnly property :)
+    "jsession": false(), (: do not set the JSESSIONID cookie :)
 };
 ```
 
@@ -218,25 +217,25 @@ cookie:set(map {
     (: options :)
     "name": "my-cookie",
     "value": "my-value",
-    "maxAge": xs:dayTimeDuration("P1D"),
+    "lifetime": xs:dayTimeDuration("P1D"),
     (: properties :)
-    "Domain": "localhost",
-    "Path": "/",
-    "SameSite": true(),
-    "Secure": true(),
-    "HttpOnly": "lax"
+    "domain": "localhost",
+    "path": "/",
+    "samesite": true(),
+    "secure": true(),
+    "httponly": "lax"
 })
 ```
 
 ### cookie:set Options
 
-| name | required | description |
-| ---- | ---- | ---- |
-| `name` | X | used to retrieve the value, can be any string compliant with RFC2109 |
-| `value` | X | a string payload that can be read on subsequent requests |
-| `maxAge` |  | set the life time of the cookie either as a xs:dayTimeDuration or an xs:integer in seconds |
-| `Path` |  | Requests must include this path for the cookie to be included |
-| `Domain` |  | The Domain attribute specifies which server can receive a cookie. |
-| `SameSite` |  | one of `"None"`, `"Lax"`, or `"Strict"` |
-| `Secure` |  | mark the cookie as secure |
-| `HttpOnly` |  | sets the HttpOnly property |
+| name       | required | description                                                                                |
+|------------|----------|--------------------------------------------------------------------------------------------|
+| `name`     | X        | used to retrieve the value, can be any string compliant with RFC2109                       |
+| `value`    | X        | a string payload that can be read on subsequent requests                                   |
+| `lifetime` |          | set the life time of the cookie either as a xs:dayTimeDuration or an xs:integer in seconds |
+| `path`     |          | Requests must include this path for the cookie to be included                              |
+| `domain`   |          | The Domain attribute specifies which server can receive a cookie.                          |
+| `samesite` |          | one of `"None"`, `"Lax"`, or `"Strict"`                                                    |
+| `secure`   |          | mark the cookie as secure                                                                  |
+| `httponly` |          | sets the HttpOnly property                                                                 |

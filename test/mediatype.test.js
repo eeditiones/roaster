@@ -39,11 +39,16 @@ describe("Binary up and download", function () {
         })
 
         it('handles post of binary data', async function () {
-            const res = await util.axios.post('api/paths/' + filename, contents, {
-                headers: { 'Content-Type': 'application/octet-stream' }
-            })
-            expect(res.status).to.equal(201)
-            expect(res.data).to.equal(dbUploadCollection + filename)
+            try {
+                const res = await util.axios.post('api/paths/' + filename, contents, {
+                    headers: { 'Content-Type': 'application/octet-stream' }
+                })
+                expect(res.status).to.equal(201)
+                expect(res.data).to.equal(dbUploadCollection + filename)
+            } catch (e) {
+                console.log(e.response?.data)
+                expect(e.response?.data?.description).to.be.null
+            }
         })
 
         it('retrieves the data', async function () {

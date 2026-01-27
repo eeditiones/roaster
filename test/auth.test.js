@@ -33,11 +33,15 @@ describe('On Login', function () {
     let cookie, parsedCookies
 
     before(async function () {
-        let res = await util.axios.post('login', util.authForm, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        cookie = res.headers['set-cookie'];
-        parsedCookies = parseCookies(cookie)
+        try {   
+            let res = await util.axios.post('login', util.authForm, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            })
+            cookie = res.headers['set-cookie']
+            parsedCookies = parseCookies(cookie)
+        } catch (e) {
+            console.log(e.response.data)
+        }
     })
 
     it('sets two cookies', function () {
@@ -85,10 +89,14 @@ describe('On Login', function () {
         let logoutResponse, guestResponse, updatedCookie, parsedCookies
 
         before(async function () {
-            logoutResponse = await util.axios.get('logout', { headers: { cookie }})
-            updatedCookie = logoutResponse.headers['set-cookie'];
-            parsedCookies = parseCookies(updatedCookie)
-            guestResponse = await util.axios.get('api/parameters', { headers: { cookie: updatedCookie }})
+            try {
+                logoutResponse = await util.axios.get('logout', { headers: { cookie }})
+                updatedCookie = logoutResponse.headers['set-cookie'];
+                parsedCookies = parseCookies(updatedCookie)
+                guestResponse = await util.axios.get('api/parameters', { headers: { cookie: updatedCookie }})
+            } catch (e) {
+                console.log(e.response.data)
+            }
         })
 
         it('request returns true', function () {
@@ -303,16 +311,16 @@ describe('On Login', function () {
             domainCookie = getCookieWith(parsedCookies, testAppLoginDomain)
         })
     
-        it('sets two cookies', function () {
+        it('sets one cookie', function () {
             expect(cookie).to.have.lengthOf(1)
         })
-    
+
         it('does not set the ' + jettySessionId + ' cookie', function () {
             expect(parsedCookies).to.not.satisfy(oneCookieHas(jettySessionId))
         })
     
-        it('sets the login domain cookie', function () {
-            expect(domainCookie).to.exist
+        it('sets the login domain cookie ("' + testAppLoginDomain +'")', function () {
+            expect(parsedCookies).to.satisfy(oneCookieHas(testAppLoginDomain))
         })
     
         it('domain cookie has defaults', function () {
@@ -397,7 +405,6 @@ describe('On Login', function () {
 
     describe('custom XML login using application/xml', function(){
         let cookie, parsedCookies, domainCookie
-    
         before(async function () {
             const data = `
 <login>
@@ -421,8 +428,8 @@ describe('On Login', function () {
             expect(parsedCookies).to.not.satisfy(oneCookieHas(jettySessionId))
         })
     
-        it('sets the login domain cookie', function () {
-            expect(domainCookie).to.exist
+        it('sets the login domain cookie ("' + testAppLoginDomain +'")', function () {
+            expect(parsedCookies).to.satisfy(oneCookieHas(testAppLoginDomain))
         })
     
         it('domain cookie has defaults', function () {
