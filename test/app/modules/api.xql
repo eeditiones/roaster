@@ -9,6 +9,8 @@ import module namespace roaster="http://e-editiones.org/roaster";
 import module namespace auth="http://e-editiones.org/roaster/auth";
 import module namespace rutil="http://e-editiones.org/roaster/util";
 import module namespace errors="http://e-editiones.org/roaster/errors";
+import module namespace cookie="http://e-editiones.org/roaster/cookie";
+
 
 import module namespace upload="http://e-editiones.org/roasted/upload" at "upload.xqm";
 
@@ -125,6 +127,64 @@ declare function api:arrays-post ($request as map(*)) {
  :)
 declare function api:arrays-get ($request as map(*)) {
     map { "parameters": $request?parameters }
+};
+
+(:~
+ : override default authentication options
+ :)
+declare variable $api:auth-options := map {
+    "lifetime": 10, (: set the cookie time-out to 10 seconds using an integer literal :)
+    "path": "/exist/apps/roasted", (: requests must include this path for the cookie to be included :)
+    "samesite": "Lax", (: sets the SameSite property to either "None", "Strict" or "Lax"  :)
+    "secure": true(), (: mark the cookie as secure :)
+    "httponly": true(), (: sets the HttpOnly property :)
+    "jsession": false() (: do not set the JSESSION cookie, some write operations might fail :)
+};
+
+(:~
+ : Example login route handler using non-standard propertys
+ : within the request body to authenticate users against exist-db.
+ : The data can also be supplied as JSON
+ :)
+declare function api:login ($request as map(*)) {
+    let $user := auth:login-user(
+        $request?body?usr, $request?body?pwd,
+        auth:add-cookie-name($request, $api:auth-options))
+
+    return if (empty($user)) then (
+        roaster:response(401, "application/json",
+            map{ "message": "Wrong user or password" })
+    ) else (
+        (: the request can also be redirected here :)
+        map{ "message": concat("Logged in as ", $user) }
+    )
+};
+
+(:~
+ : Example login route handler using XML
+ :)
+declare function api:login-xml ($request as map(*)) {
+    let $user := auth:login-user(
+        $request?body//user/string(), $request?body//password/string(), 
+        auth:add-cookie-name($request, $api:auth-options))
+
+    return if (empty($user)) then (
+        roaster:response(401, "application/xml",
+            <message>Wrong user or password</message>)
+    ) else (
+        (: the request can also be redirected here :)
+        roaster:response(200, "application/xml",
+            <message>Logged in as {$user}</message>)
+    )
+};
+
+(:~
+ : Example logout route handler
+ :)
+declare function api:logout ($request as map(*)) {
+    auth:logout-user(auth:add-cookie-name($request, $api:auth-options)),
+    (: the request can also be redirected here :)
+    map{ "message": "Logged out" }
 };
 
 (: end of route handlers :)
