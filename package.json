@@ -17,7 +17,7 @@
   },
   "license": "GPL-3.0",
   "devDependencies": {
-    "@existdb/gulp-exist": "^4.4.0",
+    "@existdb/gulp-exist": "^5.0.0",
     "@existdb/gulp-replace-tmpl": "^1.0.4",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
