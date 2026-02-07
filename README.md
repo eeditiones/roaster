@@ -189,6 +189,11 @@ declare function custom-router:use-beep-boop ($request as map(*), $response as m
 Roaster transparently handles data from multipart/form-data requests to keep route handlers short and readable.
 Please see the [file upload documentation](doc/file-upload.md) for more details on this.
 
+## Logging
+
+Roaster allows to pass in a fourth parameter to `roaster:route#4`.
+It defaults to using util:log as before.
+
 ## Limitations
 
 The library does not support yet support following OpenAPI feature(s): 
@@ -267,7 +272,15 @@ This included the test application in `test/app`.
 
 To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. To test against a different different server, or use a different user or password you can copy `.env.example` to `.env` and edit it to your needs.
 
-Run the test suite with
+There is a testsuite that will only work if you are running existdb in a docker container named "roater-test-db". This is also the name of the service started in CI.
+
+So a normal setup to test on your local machine is
+
+```sh
+docker run --name roaster-test-db -p 8443:8443 -p 8080:8080 existdb/existdb:6.4.0
+```
+
+And then run the test suite with
 
 ```shell
 npm test

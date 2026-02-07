@@ -1,6 +1,13 @@
-const util = require('./util.js');
+const { promisify } = require('node:util');
+const child_process = require('node:child_process');
+const exec = promisify(child_process.exec);
+
 const chai = require('chai');
 const expect = chai.expect;
+
+const util = require('./util.js');
+
+const dockerTestInstanceName = process.env.EXISTDB_CONTAINER_NAME ?? 'roaster-test-db'
 
 describe('public route with custom middleware', function () {
     const pathParameter = '1/2/this/is/just/a/test'
@@ -192,3 +199,48 @@ describe("requesting a token as guest", function () {
     
     })
 });
+
+describe("when using a custom logger that outputs to stdout and stderr", function () {
+    let standardOut, standardError
+
+    function filterLogs (output, match) {
+        return output.split('\n')
+            .filter(l => l.startsWith(match))
+    }
+
+    before(async function () {
+        // request route that logs
+        await util.axios.post('jwt/token', util.adminCredentials)
+                // read docker logs
+        const {stdout, stderr } = await exec(`docker logs ${dockerTestInstanceName}`)
+        standardOut = stdout
+        standardError = stderr
+    })
+
+    it('stdout and stderr were read from docker', function () {
+        expect(standardOut).to.exist
+        expect(standardError).to.exist
+    })
+
+    describe("the custom logs", function () {
+        let customOut, customErr
+
+        before(async function () {
+            // filter docker logs
+            customOut = filterLogs(standardOut, '(Line: 76 /db/apps/roasted/modules/custom-router.xq)')
+            customErr = filterLogs(standardError, '(Line: 75 /db/apps/roasted/modules/custom-router.xq) ERROR ')
+        })
+
+
+        it('debug messages can be found in stdout', function () {
+            expect(customOut.length).greaterThan(0)
+        })
+        it('error messages can be found in stderr', function () {
+            expect(customErr.length).greaterThan(0)
+        })
+        it('has log messages emitted from a route handler', function () {
+            const adminTokenIssued = customOut.filter(l => l.endsWith('New token issued for admin'))
+            expect(adminTokenIssued.length).to.be.greaterThan(0)
+        })
+    })
+})

@@ -66,4 +66,28 @@ declare variable $custom-router:use := (
     custom-router:use-beep-boop#2
 );
 
-roaster:route($custom-router:definitions, custom-router:lookup#1, $custom-router:use)
+(:~
+ : Example of a custom logger that will output to standarad out and standard error depending on level
+ : This logger is also used for testing
+ :)
+declare function custom-router:log-std ($level as xs:string, $message as item()*) as empty-sequence() {
+    switch(lower-case($level))
+    case 'error' return util:log-system-err(``[`{upper-case($level)}` `{$message}`]``)
+    default return util:log-system-out(``[`{upper-case($level)}` `{$message}`]``)
+};
+
+(:~
+ : Example of a custom logger application logger.
+ : While this offers greater flexiblity, additional changes need to be made to the log4j configuration
+ : of the exist-db instance the application will be running on.
+ :)
+declare function custom-router:log-app ($level as xs:string, $message as item()*) as empty-sequence() {
+    util:log-app($level, "roasted.app.logger", $message)
+};
+
+roaster:route(
+    $custom-router:definitions,
+    custom-router:lookup#1,
+    $custom-router:use,
+    custom-router:log-std#2
+)
