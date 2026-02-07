@@ -703,19 +703,21 @@ test.
 
 describe("with invalid content-type header", function () {
     let uploadResponse
-    before(function () {
-        return util.axios.post(
-            'api/paths/invalid.stuff',
-            'asd;lfkjdas;flkja',
-            {
-                headers: { 
-                    'Content-Type': 'my/thing',
-                    'Authorization': 'Basic YWRtaW46'
+    before(async function () {
+        try {
+            uploadResponse = await util.axios.post(
+                'api/paths/invalid.stuff',
+                'asd;lfkjdas;flkja',
+                {
+                    headers: {
+                        'Content-Type': 'my/thing',
+                        'Authorization': 'Basic YWRtaW46'
+                    }
                 }
-            }
-        )
-        .then(r => uploadResponse = r)
-        .catch(e => uploadResponse = e.response)
+            )
+        } catch (e) {
+            return uploadResponse = e.response
+        }
     })
     it("is rejected as Bad Request", function () {
         expect(uploadResponse.status).to.equal(400)
