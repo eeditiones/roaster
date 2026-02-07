@@ -1,11 +1,6 @@
 const util = require('./util.js');
-const path = require('path');
 const chai = require('chai');
 const expect = chai.expect;
-const chaiResponseValidator = require('chai-openapi-response-validator').default;
-
-const spec = path.resolve("./test/app/api-jwt.json");
-chai.use(chaiResponseValidator(spec));
 
 describe('public route with custom middleware', function () {
     const pathParameter = '1/2/this/is/just/a/test'

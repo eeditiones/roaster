@@ -18,18 +18,20 @@ updates:
     commit-message:
       prefix: "chore(deps):"
     groups:
-      exist:
+      build:
         patterns:
           - "@existdb/*"
-      semantic-release:
+          - "gulp*"
+          - "delete"
+          - "dotenv-cli"
+      release:
         patterns:
           - "@semantic-release/*"
           - "semantic-release"
-      other:
+      test:
         patterns:
-          - "*"
-        exclude-patterns:
-          - "@existdb/*"
-          - "@semantic-release/*"
-          - "semantic-release"
-
+          - "form-data"
+          - "axios"
+          - "chai"
+          - "jsdom"
+          - "mocha"
