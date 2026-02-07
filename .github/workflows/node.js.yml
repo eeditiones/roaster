@@ -41,6 +41,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
+        env:
+          EXISTDB_CONTAINER_NAME: ${{ job.services.exist.id }}
         run: npm test
   format:
     name: Check formatting
