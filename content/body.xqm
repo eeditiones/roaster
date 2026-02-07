@@ -143,7 +143,11 @@ declare function body:content-type($request as map(*)) as map(*) {
                         "binary"
             }
         else
-            error($errors:BODY_CONTENT_TYPE, "Body with media-type '" || $media-type || "' is not allowed", $request)
+            error(
+                $errors:BODY_CONTENT_TYPE,
+                "Body with media-type '" || $media-type || "' is not allowed",
+                map:remove($request, "logger")
+            )
     )
 };
 
