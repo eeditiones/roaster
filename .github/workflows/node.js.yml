@@ -16,7 +16,7 @@ jobs:
           - exist-version: latest
             experimental: true
     services:
-      roaster-test-db:
+      existdb:
         image: existdb/existdb:${{ matrix.exist-version }}
         ports:
           - 8443:8443
@@ -34,6 +34,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
+        env:
+          EXISTDB_CONTAINER_NAME: ${{ job.services.existdb.id }}
         run: npm test
   release:
     name: Release
