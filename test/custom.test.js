@@ -7,7 +7,7 @@ const expect = chai.expect;
 
 const util = require('./util.js');
 
-const dockerTestInstanceName = 'roaster-test-db'
+const dockerTestInstanceName = process.env.EXISTDB_CONTAINER_NAME ?? 'roaster-test-db'
 
 describe('public route with custom middleware', function () {
     const pathParameter = '1/2/this/is/just/a/test'
@@ -239,11 +239,7 @@ describe("when using a custom logger that outputs to stdout and stderr", functio
             expect(customErr.length).greaterThan(0)
         })
         it('has log messages emitted from a route handler', function () {
-            const adminTokenIssued = customOut.filter(l => {
-                // console.log(l, l.endsWith('New token issued for admin'))
-                return l.endsWith('New token issued for admin')
-            })
-            console.log(adminTokenIssued)
+            const adminTokenIssued = customOut.filter(l => l.endsWith('New token issued for admin'))
             expect(adminTokenIssued.length).to.be.greaterThan(0)
         })
     })
