@@ -25,7 +25,7 @@
     "axios": "^1.7.5",
     "chai": "^4.3.7",
     "delete": "^1.1.0",
-    "dotenv-cli": "^6.0.0",
+    "dotenv-cli": "^11.0.0",
     "form-data": "^4.0.0",
     "gulp": "^5.0.1",
     "gulp-rename": "^2.1.0",
