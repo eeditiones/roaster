@@ -272,7 +272,15 @@ This included the test application in `test/app`.
 
 To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. To test against a different different server, or use a different user or password you can copy `.env.example` to `.env` and edit it to your needs.
 
-Run the test suite with
+There is a testsuite that will only work if you are running existdb in a docker container named "roater-test-db". This is also the name of the service started in CI.
+
+So a normal setup to test on your local machine is
+
+```sh
+docker run --name roaster-test-db -p 8443:8443 -p 8080:8080 existdb/existdb:6.4.0
+```
+
+And then run the test suite with
 
 ```shell
 npm test

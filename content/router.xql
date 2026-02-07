@@ -89,7 +89,8 @@ declare function router:route (
     let $request-data := map { 
         "id": util:uuid(),
         "method": request:get-method() => lower-case(),
-        "path": request:get-attribute("$exist:path")
+        "path": request:get-attribute("$exist:path"),
+        "logger": $logger
     }
 
     return (
