@@ -2,18 +2,20 @@
  * build, watch, deploy tasks
  * for the library and example application package
  */
-const { src, dest, watch, series, parallel } = require('gulp')
-const rename = require('gulp-rename')
-const zip = require("gulp-zip")
-const del = require('delete')
+import { src, dest, watch, series, parallel } from 'gulp'
+import rename from 'gulp-rename'
+import zip from "gulp-zip"
+import del from 'delete'
 
-const { createClient, readOptionsFromEnv } = require('@existdb/gulp-exist')
-const replace = require('@existdb/gulp-replace-tmpl')
+import { createClient, readOptionsFromEnv } from '@existdb/gulp-exist'
+import replace from '@existdb/gulp-replace-tmpl'
 
 // read metadata from package.json and .existdb.json
-const { version, license, app } = require('./package.json')
+import packageJSON from './package.json' with { type: "json" }
 
-// .tmpl replacements to include 
+const { version, license, app } = packageJSON
+
+// .tmpl replacements to include
 // first value wins
 const replacements = [app, {version, license}]
 
@@ -53,63 +55,57 @@ const packageFilename = `${app.target}-${version}.xar`
  * helper function that uploads and installs a built XAR
  */
 function installXar (packageFilename) {
-    return src(packageFilename, {cwd: distFolder})
+    return src(packageFilename, {cwd: distFolder, encoding:false })
         .pipe(existClient.install())
 }
 
-function cleanDist (cb) {
+export function cleanDist (cb) {
     del([distFolder], cb);
 }
-exports['clean:dist'] = cleanDist
 
-function cleanLibrary (cb) {
+export function cleanLibrary (cb) {
     del([library.build], cb);
 }
-exports['clean:library'] = cleanLibrary
 
-function cleanTest (cb) {
+export function cleanTest (cb) {
     del([testApp.build], cb);
 }
-exports['clean:test'] = cleanTest
 
-function cleanAll (cb) {
+export function cleanAll (cb) {
     del([distFolder, library.build, testApp.build], cb);
 }
-exports['clean:all'] = cleanAll
-
-exports.clean = cleanAll
+export const clean = cleanAll
 
 /**
  * replace placeholders 
  * in src/*.xml.tmpl and 
  * output to build/*.xml
  */
-function templates() {
+export function templates() {
     return src(library.templates)
         .pipe(replace(replacements, { unprefixed: true }))
         .pipe(rename(path => { path.extname = "" }))
         .pipe(dest(library.build))
 }
 
-exports.templates = templates
-
 function watchTemplates () {
     watch(library.templates, series(templates))
 }
-exports["watch:tmpl"] = watchTemplates
+export const watch_tmpl = watchTemplates
 
 /**
  * copy html templates, XSL stylesheet, XMLs and XQueries to 'build'
  */
 function copyStatic () {
-    return src(library.static, {base: '.'}).pipe(dest(library.build))
+    return src(library.static, { base: '.', encoding:false })
+        .pipe(dest(library.build))
 }
-exports.copy = copyStatic
+export const copy = copyStatic
 
 function watchStatic () {
     watch(library.static, series(copyStatic));
 }
-exports["watch:static"] = watchStatic
+export const watch_static = watchStatic
 
 /**
  * since this is a pure library package uploading
@@ -125,7 +121,7 @@ function watchBuild () {
  * create XAR package in repo root
  */
 function xar () {
-    return src(library.allBuildFiles, {base: library.build})
+    return src(library.allBuildFiles, { base: library.build, encoding:false })
         .pipe(zip(packageFilename))
         .pipe(dest(distFolder))
 }
@@ -134,11 +130,11 @@ function xar () {
  * create XAR package in repo root
  */
 function packageTestApp () {
-    return src(testApp.files, {base: testApp.base, dot:true})
+    return src(testApp.files, { base: testApp.base, dot:true, encoding:false })
         .pipe(zip(testApp.packageFilename))
         .pipe(dest(distFolder))
 }
-exports["build:test"] = series(cleanTest, packageTestApp)
+export const build_test = series(cleanTest, packageTestApp)
 
 /**
  * upload and install a built XAR
@@ -146,12 +142,11 @@ exports["build:test"] = series(cleanTest, packageTestApp)
 function installTestAppXar () {
     return installXar(testApp.packageFilename)
 }
-exports["install:test"] = series(cleanTest, packageTestApp, installTestAppXar)
+export const install_test = series(cleanTest, packageTestApp, installTestAppXar)
 
-function watchTestApp () {
+export function watchTestApp () {
     watch(testApp.files, series(packageTestApp, installTestAppXar));
 }
-exports["watch:test"] = watchTestApp
 
 /**
  * upload and install the latest built XAR
@@ -167,15 +162,15 @@ const packageLibrary = series(
     xar
 )
 
-exports.build = series(cleanLibrary, packageLibrary)
-exports["build:all"] = series(
+export const build = series(cleanLibrary, packageLibrary)
+export const build_all = series(
     cleanAll,
     packageLibrary, 
     packageTestApp
 )
 
-exports.install = series(cleanLibrary, packageLibrary, installLibraryXar)
-exports["install:all"] = series(
+export const install = series(cleanLibrary, packageLibrary, installLibraryXar)
+export const install_all = series(
     cleanAll,
     packageLibrary, installLibraryXar, 
     packageTestApp, installTestAppXar
@@ -187,13 +182,17 @@ const watchAll = parallel(
     watchBuild,
     watchTestApp
 )
-exports.watch = watchAll
+export {
+   watchAll as watch,
+   build_all as "build:all",
+   install_all as "install:all"
+}
 
 // main task for day to day development
 // package and install library
 // package test application but do not install it
 // still watch all and install on change 
-exports.default = series(
+export default series(
     cleanAll, 
     packageLibrary, installLibraryXar,
     packageTestApp,

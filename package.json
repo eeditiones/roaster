@@ -17,21 +17,19 @@
   },
   "license": "GPL-3.0",
   "devDependencies": {
-    "@existdb/gulp-exist": "^4.4.0",
+    "@existdb/gulp-exist": "^5.0.0",
     "@existdb/gulp-replace-tmpl": "^1.0.4",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.3",
     "axios": "^1.7.5",
     "chai": "^4.3.7",
-    "chokidar": "^3.5.3",
     "delete": "^1.1.0",
     "dotenv-cli": "^6.0.0",
     "form-data": "^4.0.0",
-    "glob-stream": "^7.0.0",
-    "gulp": "^4.0.2",
-    "gulp-rename": "^2.0.0",
-    "gulp-zip": "^5.1.0",
+    "gulp": "^5.0.1",
+    "gulp-rename": "^2.1.0",
+    "gulp-zip": "^6.1.0",
     "jsdom": "^20.0.2",
     "mocha": "^10.1.0",
     "semantic-release": "^25.0.3"
@@ -50,10 +48,6 @@
     "status": "stable",
     "title": "roaster - OpenAPI Router",
     "license": "GPLv3"
-  },
-  "overrides": {
-    "chokidar": "$chokidar",
-    "glob-stream": "$glob-stream"
   },
   "dependencies": {}
 }

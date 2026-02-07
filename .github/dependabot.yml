@@ -22,8 +22,6 @@ updates:
         patterns:
           - "@existdb/*"
           - "gulp*"
-          - "chokidar"
-          - "glob-stream"
           - "delete"
           - "dotenv-cli"
       release:
