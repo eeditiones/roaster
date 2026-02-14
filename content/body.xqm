@@ -63,7 +63,7 @@ declare function body:parse ($request as map(*)) {
             default return request:get-data()
         }
         catch * {
-            error(
+            error( 
                 $errors:BODY_CONTENT_TYPE, 
                 "Body with media type '" || $request?media-type || "' could not be parsed (invalid " || upper-case($request?format) || ").",
                 $err:description
@@ -142,8 +142,9 @@ function body:get-form-data-value ($name as xs:string, $format as xs:string?) as
         if (request:is-multipart-content())
         then
             let $names := request:get-uploaded-file-name($name)
-            let $data := request:get-uploaded-file-data($name)
+            let $data := request:get-uploaded-file-data($name) ! util:base64-decode(.)
             let $sizes := request:get-uploaded-file-size($name)
+
             return
                 for $_name at $index in $names
                 return map {
@@ -151,6 +152,12 @@ function body:get-form-data-value ($name as xs:string, $format as xs:string?) as
                     "data": $data[$index],
                     "size": $sizes[$index]
                 }
+        else if ( starts-with(request:get-header('Content-Type'), 'multipart/form-data')  and $name = 'file') then
+            map {
+                "name": request:get-attribute("fileName"),
+                "data": request:get-attribute("file"),
+                "size": string-length(request:get-attribute("file"))
+            }
         else
             request:get-parameter($name, ())
 
@@ -158,7 +165,10 @@ function body:get-form-data-value ($name as xs:string, $format as xs:string?) as
         xs:base64Binary(request:get-parameter($name, ()))
 
     default return
-        request:get-parameter($name, ())
+        if ( not(request:is-multipart-content()) and starts-with(request:get-header('Content-Type'), 'multipart/form-data') ) then
+            request:get-attribute($name)
+        else
+            request:get-parameter($name, ())
 };
 
 declare %private
@@ -212,15 +222,66 @@ function body:ensure-required-properties ($received-property-names as xs:string*
  :)
 declare %private
 function body:parse-form-data ($schema as map(*)?) as map(*) {
-    if (exists($schema))
+    if (exists($schema) and request:is-multipart-content())
     then
         map:merge(
             for-each(
                 body:ensure-required-properties(
                     request:get-parameter-names(), $schema?required?*),
                 body:validate-value($schema)))
+    else if ( starts-with(request:get-header('Content-Type'), 'multipart/form-data') ) then
+        let $parsed := body:parse-multipart(request:get-data(), request:get-header('Content-Type'))
+          , $set := ( 
+              request:set-attribute("fileName", $parsed?file?header?Content-Disposition?filename),
+              for $property in map:keys($parsed)
+                return request:set-attribute($property, $parsed($property)?body)
+            )
+        return map:merge(
+            for-each(
+                body:ensure-required-properties(
+                    map:keys($parsed), $schema?required?*),
+                body:validate-value($schema)
+            )
+        )
     else
         map:merge(
             for-each(
                 request:get-parameter-names(), body:additional-property#1))
+};
+
+declare function body:parse-multipart ( $data as xs:string, $header as xs:string ) as map(*) {
+  let $boundary := $header => substring-after('boundary=') => translate('"', '')
+  
+  return map:merge(
+    (: split multipart data at the boundary :)
+    for $m in tokenize($data, "--" || $boundary)
+      (: ignore the last part after the final boundary, which is just '--' :)
+      where string-length($m) gt 6
+      
+      (: the header is separated by an empty line :)
+      let $parts := (tokenize($m, "(^\s*$){2}", "m"))[normalize-space() != ""]
+      
+      let $header := map:merge( 
+        for $line in tokenize($parts[1], "\n")
+          where normalize-space($line) != ""
+
+          let $val := $line => substring-after(': ') => normalize-space()
+          let $value := if ( contains($val, '; ') )
+            (: combined header fields; e.g., Content-Disposition :)
+            then map:merge( 
+              for $entry in tokenize($val, '; ') return
+                if ( contains($entry, '=') )
+                  then map:entry ( substring-before($entry, '='), translate(substring-after($entry, '='), '"', '') )
+                  else map:entry ( "text", $entry )
+            )
+            else $val
+          return map:entry(substring-before($line, ': '), $value)
+      )
+      let $body := string-join($parts[position() > 1], '\n')
+      
+      (: empty lines in the body will also cause splitting; hence, recombine everything except the header :)
+      return map:entry(($header?Content-Disposition?name, 'name')[1],
+          map { "header" : $header, "body" : if ( $body instance of document-node() ) then $body else normalize-space($body) }
+      )
+  )
 };
