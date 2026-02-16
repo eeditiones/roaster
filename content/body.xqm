@@ -277,7 +277,11 @@ declare function body:parse-multipart ( $data as xs:string, $header as xs:string
             else $val
           return map:entry(substring-before($line, ': '), $value)
       )
-      let $body := string-join($parts[position() > 1], '\n')
+      (: eXist’s parse-xml does not like XML declarations… :)
+      let $bodyJoined := string-join($parts[position() > 1], '\n')
+        , $body := if ( matches($bodyJoined, '^\s+<\?xml version="1.0" encoding="UTF-8"\?>') )
+                then substring-after($bodyJoined, '?>')
+                else $bodyJoined
       
       (: empty lines in the body will also cause splitting; hence, recombine everything except the header :)
       return map:entry(($header?Content-Disposition?name, 'name')[1],
