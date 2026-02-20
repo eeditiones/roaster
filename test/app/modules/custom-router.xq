@@ -71,9 +71,14 @@ declare variable $custom-router:use := (
  : This logger is also used for testing
  :)
 declare function custom-router:log-std ($level as xs:string, $message as item()*) as empty-sequence() {
-    switch(lower-case($level))
-    case 'error' return util:log-system-err(``[`{upper-case($level)}` `{$message}`]``)
-    default return util:log-system-out(``[`{upper-case($level)}` `{$message}`]``)
+    let $norm-level := upper-case($level)
+    let $serialized := serialize($message, map{"method": "adaptive"})
+    let $log-function :=
+        switch($norm-level)
+            case 'ERROR' return util:log-system-err#1
+            default return util:log-system-out#1
+
+    return $log-function(``[`{$norm-level}` `{$serialized}`]``)
 };
 
 (:~
