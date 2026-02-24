@@ -254,15 +254,17 @@ declare function body:parse-multipart ( $data as xs:string, $header as xs:string
   
   return map:merge(
     (: split multipart data at the boundary :)
-    for $m in tokenize($data, "--" || $boundary)
+    for $m in tokenize($data, "\s*--" || $boundary || '\s*')
       (: ignore the last part after the final boundary, which is just '--' :)
       where string-length($m) gt 6
       
       (: the header is separated by an empty line :)
-      let $parts := (tokenize($m, "(^\s*$){2}", "m"))[normalize-space() != ""]
+      let $result := analyze-string($m, "(\r?\n)\s*(\r?\n)")
+        , $match := $result/fn:match[1]
+        , $content := substring($m, string-length(string-join($match/preceding-sibling::node(), "")) + string-length(string($match)) + 1)
       
       let $header := map:merge( 
-        for $line in tokenize($parts[1], "\n")
+        for $line in tokenize($result/fn:non-match[1]/text(), "\n")
           where normalize-space($line) != ""
 
           let $val := $line => substring-after(': ') => normalize-space()
@@ -277,15 +279,14 @@ declare function body:parse-multipart ( $data as xs:string, $header as xs:string
             else $val
           return map:entry(substring-before($line, ': '), $value)
       )
-      (: eXist’s parse-xml does not like XML declarations… :)
-      let $bodyJoined := string-join($parts[position() > 1], '\n')
-        , $body := if ( matches($bodyJoined, '^\s+<\?xml version="1.0" encoding="UTF-8"\?>') )
-                then substring-after($bodyJoined, '?>')
-                else $bodyJoined
+      (: eXist’s parse-xml does not like XML declarations :)
+        , $body := if ( matches($content, '^\s+<\?xml version="1.0" encoding="UTF-8"\?>') )
+                then substring-after($content, '?>')
+                else $content
       
-      (: empty lines in the body will also cause splitting; hence, recombine everything except the header :)
-      return map:entry(($header?Content-Disposition?name, 'name')[1],
-          map { "header" : $header, "body" : if ( $body instance of document-node() ) then $body else normalize-space($body) }
+      return map:entry(
+          ($header?Content-Disposition?name, 'name')[1],
+          map { "header" : $header, "body" : $body }
       )
   )
 };
