@@ -1,6 +1,3 @@
-# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
-
 name: Test and Release
 
 on: [push, pull_request]
@@ -19,7 +16,7 @@ jobs:
           - exist-version: latest
             experimental: true
     services:
-      exist:
+      existdb:
         image: existdb/existdb:${{ matrix.exist-version }}
         ports:
           - 8443:8443
@@ -37,6 +34,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
+        env:
+          EXISTDB_CONTAINER_NAME: ${{ job.services.existdb.id }}
         run: npm test
   release:
     name: Release
