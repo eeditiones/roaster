@@ -393,7 +393,7 @@ describe('sending more than one value for a non-array parameter', function () {
     })
 
     it('the error description starts with an actionable message', async function () {
-        console.log(message)
+        // console.log(message)
         expect(message.startsWith('Multiple values were provided for query-parameter "string", which is not declared an array')).to.be.true
     })
 })
