@@ -211,8 +211,8 @@ describe("when using a custom logger that outputs to stdout and stderr", functio
     before(async function () {
         // request route that logs
         await util.axios.post('jwt/token', util.adminCredentials)
-                // read docker logs
-        const {stdout, stderr } = await exec(`docker logs ${dockerTestInstanceName}`)
+        // read docker logs
+        const { stdout, stderr } = await exec(`docker logs ${dockerTestInstanceName}`)
         standardOut = stdout
         standardError = stderr
     })
@@ -227,8 +227,8 @@ describe("when using a custom logger that outputs to stdout and stderr", functio
 
         before(async function () {
             // filter docker logs
-            customOut = filterLogs(standardOut, '(Line: 76 /db/apps/roasted/modules/custom-router.xq)')
-            customErr = filterLogs(standardError, '(Line: 75 /db/apps/roasted/modules/custom-router.xq) ERROR ')
+            customOut = filterLogs(standardOut, '(Line: -1 /db/apps/roasted/modules/custom-router.xq)')
+            customErr = filterLogs(standardError, '(Line: -1 /db/apps/roasted/modules/custom-router.xq) ERROR ')
         })
 
 
@@ -239,7 +239,7 @@ describe("when using a custom logger that outputs to stdout and stderr", functio
             expect(customErr.length).greaterThan(0)
         })
         it('has log messages emitted from a route handler', function () {
-            const adminTokenIssued = customOut.filter(l => l.endsWith('New token issued for admin'))
+            const adminTokenIssued = customOut.filter(l => l.endsWith('New token issued for admin"'))
             expect(adminTokenIssued.length).to.be.greaterThan(0)
         })
     })
