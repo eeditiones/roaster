@@ -194,6 +194,30 @@ Please see the [file upload documentation](doc/file-upload.md) for more details 
 Roaster allows to pass in a fourth parameter to `roaster:route#4`.
 It defaults to using util:log as before.
 
+All route handlers will receive a reference to that logging function.
+
+```xquery
+declare function my:log($level as xs:string, $data as item()*) as empty-sequence() {
+    util:log-system-out(
+        upper-case($level) || " " || 
+        serialize($data, map{ "method": "adaptive" }))
+};
+```
+
+A custom logging function must expect two parameters:
+
+- The $level with the possible values 'trace', 'debug', 'info', 'warn', and 'error'
+- $data is a sequence of items, you might want to serialize it to your needs
+
+```xquery
+roaster:route(
+    $my:api,
+    my:lookup#1,
+    $my:middlewares,
+    my:log#2
+)
+```
+
 ## Limitations
 
 The library does not support yet support following OpenAPI feature(s): 
