@@ -87,26 +87,37 @@ declare function auth:add-cookie-name ($request as map(*), $auth-options as map(
  : @throws errors:OPERATION if cookieAuth does not provide a login domain 
  :)
 declare function auth:login ($request as map(*)) as map(*) {
-    let $cookie-name := auth:read-cookie-name($request?spec)
-    let $user := auth:login-user(
-        $request?body?user, $request?body?password,
-        map{ "name": $cookie-name }
-    )
-
-    return
-        if (exists($user))
-        then
-            map {
-                "user": $user,
-                "groups": array { sm:get-user-groups($user) },
-                "dba": sm:is-dba($user),
-                "domain": $cookie-name
-            }
-        else
-            error($errors:UNAUTHORIZED, "Wrong user or password", map {
-                "user": $user,
-                "domain": $cookie-name
-            })
+    if ($request?body?logout or $request?parameters?logout) then (
+        auth:logout($request)
+    ) else if (empty($request?body?user) or $request?body?user = '') then (
+        let $cookieAuth := auth:use-cookie-auth($request)
+        return
+            map:merge((
+                $cookieAuth,
+                map { 
+                    "domain": auth:read-cookie-name($request?spec),
+                    "user": $cookieAuth?name
+            }))
+    ) else
+        let $cookie-name := auth:read-cookie-name($request?spec)
+        let $user := auth:login-user(
+            $request?body?user, $request?body?password,
+            map{ "name": $cookie-name }
+        )
+        return
+            if (exists($user))
+            then
+                map {
+                    "user": $user,
+                    "groups": array { sm:get-user-groups($user) },
+                    "dba": sm:is-dba($user),
+                    "domain": $cookie-name
+                }
+            else
+                error($errors:UNAUTHORIZED, "Wrong user or password", map {
+                    "user": $user,
+                    "domain": $cookie-name
+                })
 };
 
 (:~
