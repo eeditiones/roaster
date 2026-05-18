@@ -90,9 +90,9 @@ describe('CSRF protection', function () {
         after(util.logout)
 
         it('does not enforce CSRF even with mismatched Origin', async function () {
-            // POST /api/upload/{path} is authed (x-constraints user=admin)
+            // POST /api/paths/{path} is authed (x-constraints user=admin)
             // but has no x-csrf, so the middleware must bypass.
-            const res = await util.axios.post('api/upload/whatever', 'hello', {
+            const res = await util.axios.post('api/paths/whatever', 'hello', {
                 headers: {
                     Origin: 'https://evil.example',
                     'Content-Type': 'text/plain'
