@@ -1225,6 +1225,54 @@
                     }
                 }
             }
+        },
+        "/api/csrf/same-origin": {
+            "post": {
+                "summary": "CSRF-protected route requiring same-origin",
+                "operationId": "rutil:debug",
+                "x-csrf": {
+                    "same-origin": true
+                },
+                "tags": [
+                    "auth"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/csrf/allowed-origins": {
+            "post": {
+                "summary": "CSRF-protected route with explicit allow-list",
+                "operationId": "rutil:debug",
+                "x-csrf": {
+                    "allowed-origins": ["https://allowed.example"]
+                },
+                "tags": [
+                    "auth"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

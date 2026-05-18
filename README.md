@@ -162,6 +162,32 @@ The *effective user* will be used, if present.
 
 This will work also for custom authorization strategies. The handler function needs to [extend the request map with the user information](test/app/modules/jwt-auth.xqm#L66).
 
+## CSRF Protection
+
+Cookie-authenticated state-changing endpoints (e.g. an admin-only XAR upload) are a textbook CSRF target: a logged-in dba who visits a malicious page can be tricked into POSTing to the protected endpoint with their cookie attached.
+
+Roaster ships an opt-in, declarative CSRF middleware. Enable it per route with the `x-csrf` extension:
+
+```json
+"/publish": {
+  "post": {
+    "summary": "Install a XAR",
+    "x-csrf": {
+      "same-origin": true
+    }
+  }
+}
+```
+
+Behaviour:
+
+- The check fires **only** when the matched security scheme is `cookieAuth` **and** the method is `POST`, `PUT`, `PATCH`, or `DELETE`. Basic-auth requests from CLI clients (`xst`, `packageservice`, `curl --user`) bypass entirely.
+- `same-origin: true` requires the request's `Origin` header (or, as a fallback, `Referer`) to match the server's own scheme, host, and port.
+- `allowed-origins: [...]` accepts an explicit list of trusted origins (e.g. `["https://exist-db.org"]`); the parsed origin must be a member.
+- Cookie-auth state-changing requests with no `Origin` and no `Referer` are rejected with 403.
+
+Routes without `x-csrf` are unaffected. The middleware can also be configured at the spec top level if every state-changing route in the API should be protected.
+
 ## Middleware
 
 If you need to perform certain actions on each request you can add a transformation function also known as middleware.
