@@ -28,103 +28,102 @@ function getCookieWith(cookies, key) {
 const testAppLoginDomain = 'roasted.com.login'
 const jettySessionId = 'JSESSIONID'
 
-describe('On Login', function () {
+describe('When using the deprecated /login endpoint', function () {
     describe('using multipart/form-data', function(){
-    let cookie, parsedCookies
-
-    before(async function () {
-        try {   
-            let res = await util.axios.post('login', util.authForm, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            })
-            cookie = res.headers['set-cookie']
-            parsedCookies = parseCookies(cookie)
-        } catch (e) {
-            console.log(e.response.data)
-        }
-    })
-
-    it('sets two cookies', function () {
-        expect(cookie).to.have.lengthOf(2)
-    })
-
-    it('sets the ' + jettySessionId + ' cookie', function () {
-        expect(parsedCookies).to.satisfy(oneCookieHas(jettySessionId))
-    })
-
-    it('sets the login domain cookie', function () {
-        expect(parsedCookies).to.satisfy(oneCookieHas(testAppLoginDomain))
-    })
-
-    it('domain cookie has defaults', function () {
-        const domainCookie = getCookieWith(parsedCookies, testAppLoginDomain)
-        expect(domainCookie).to.exist
-        expect(domainCookie).to.have.property('Path')
-        expect(domainCookie['Path']).to.equal('/exist')
-        expect(domainCookie).to.have.property('Max-Age')
-        expect(domainCookie['Max-Age']).to.equal('604800')
-        expect(domainCookie).to.have.property('Expires')
-        expect(new Date(domainCookie.Expires).getTime()).to.be.greaterThan(Date.now())
-    })
-
-    describe('using cookie auth', function () {
-        let publicRouteResponse
+        let cookie, parsedCookies
 
         before(async function () {
-            publicRouteResponse = await util.axios.get('api/parameters', { headers: { cookie } })
-        })
-
-        it('public route can be called', async function () {
-            expect(publicRouteResponse.status).to.equal(200);
-        })
-
-        it('sets the correct user', function () {
-            expect(publicRouteResponse.data.user).to.be.a('object')
-            expect(publicRouteResponse.data.user.name).to.equal("admin")
-            expect(publicRouteResponse.data.user.dba).to.equal(true)
-        })
-    })
-
-    describe('On logout', function () {
-        let logoutResponse, guestResponse, updatedCookie, parsedCookies
-
-        before(async function () {
-            try {
-                logoutResponse = await util.axios.get('logout', { headers: { cookie }})
-                updatedCookie = logoutResponse.headers['set-cookie'];
-                parsedCookies = parseCookies(updatedCookie)
-                guestResponse = await util.axios.get('api/parameters', { headers: { cookie: updatedCookie }})
+            try {   
+                let res = await util.axios.post('login', util.authForm, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                })
+                cookie = res.headers['set-cookie']
+                parsedCookies = parseCookies(cookie)
             } catch (e) {
                 console.log(e.response.data)
             }
         })
 
-        it('request returns true', function () {
-            expect(logoutResponse.status).to.equal(200)
-            expect(logoutResponse.data.success).to.equal(true)
+        it('sets two cookies', function () {
+            expect(cookie).to.have.lengthOf(2)
         })
 
-        it('invalidates session and domain cookie', function () {
-            expect(updatedCookie.length).to.equal(1)
-            // expect(parsedCookies).to.satisfy(oneCookieHas(jettySessionId))
+        it('sets the ' + jettySessionId + ' cookie', function () {
+            expect(parsedCookies).to.satisfy(oneCookieHas(jettySessionId))
+        })
+
+        it('sets the login domain cookie', function () {
             expect(parsedCookies).to.satisfy(oneCookieHas(testAppLoginDomain))
+        })
+
+        it('domain cookie has defaults', function () {
             const domainCookie = getCookieWith(parsedCookies, testAppLoginDomain)
-            expect(domainCookie[testAppLoginDomain]).to.equal('deleted')
+            expect(domainCookie).to.exist
+            expect(domainCookie).to.have.property('Path')
+            expect(domainCookie['Path']).to.equal('/exist')
+            expect(domainCookie).to.have.property('Max-Age')
+            expect(domainCookie['Max-Age']).to.equal('604800')
+            expect(domainCookie).to.have.property('Expires')
+            expect(new Date(domainCookie.Expires).getTime()).to.be.greaterThan(Date.now())
+        })
+        describe('using cookie auth', function () {
+            let publicRouteResponse
+
+            before(async function () {
+                publicRouteResponse = await util.axios.get('api/parameters', { headers: { cookie } })
+            })
+
+            it('public route can be called', async function () {
+                expect(publicRouteResponse.status).to.equal(200);
+            })
+
+            it('sets the correct user', function () {
+                expect(publicRouteResponse.data.user).to.be.a('object')
+                expect(publicRouteResponse.data.user.name).to.equal("admin")
+                expect(publicRouteResponse.data.user.dba).to.equal(true)
+            })
         })
 
-        it('public route sets guest as user', async function () {
-            expect(guestResponse.status).to.equal(200)
-            expect(guestResponse.data.user.name).to.equal("guest")
-            expect(guestResponse.data.user.dba).to.equal(false)
-        })
+        describe('On logout', function () {
+            let logoutResponse, guestResponse, updatedCookie, parsedCookies
 
-        it('invalidated cookie reverts to guest access', async function () {
-            const responseWithOldCookies = await util.axios.get('api/parameters', { headers: { cookie }})
-            expect(responseWithOldCookies.status).to.equal(200)
-            expect(responseWithOldCookies.data.user.name).to.equal("guest")
-            expect(responseWithOldCookies.data.user.dba).to.equal(false)
+            before(async function () {
+                try {
+                    logoutResponse = await util.axios.get('api/logout', { headers: { cookie }})
+                    updatedCookie = logoutResponse.headers['set-cookie'];
+                    parsedCookies = parseCookies(updatedCookie)
+                    guestResponse = await util.axios.get('api/parameters', { headers: { cookie: updatedCookie }})
+                } catch (e) {
+                    console.log(e.response.data)
+                }
+            })
+
+            it('request returns true', function () {
+                expect(logoutResponse.status).to.equal(200)
+                expect(logoutResponse.data.message).to.equal("Logged out")
+            })
+
+            it('invalidates session and domain cookie', function () {
+                expect(updatedCookie.length).to.equal(1)
+                // expect(parsedCookies).to.satisfy(oneCookieHas(jettySessionId))
+                expect(parsedCookies).to.satisfy(oneCookieHas(testAppLoginDomain))
+                const domainCookie = getCookieWith(parsedCookies, testAppLoginDomain)
+                expect(domainCookie[testAppLoginDomain]).to.equal('deleted')
+            })
+
+            it('public route sets guest as user', async function () {
+                expect(guestResponse.status).to.equal(200)
+                expect(guestResponse.data.user.name).to.equal("guest")
+                expect(guestResponse.data.user.dba).to.equal(false)
+            })
+
+            it('invalidated cookie reverts to guest access', async function () {
+                const responseWithOldCookies = await util.axios.get('api/parameters', { headers: { cookie }})
+                expect(responseWithOldCookies.status).to.equal(200)
+                expect(responseWithOldCookies.data.user.name).to.equal("guest")
+                expect(responseWithOldCookies.data.user.dba).to.equal(false)
+            })
         })
-    })
     })
 
     describe('using application/x-www-form-urlencoded', function(){
@@ -180,25 +179,65 @@ describe('On Login', function () {
             })
         })
 
-        describe('On logout', function () {
-            let logoutResponse, guestResponse
-
+        // This test documents the current behavior of the old login route,
+        // which allows to send an empty body and still be logged in
+        // if the user is successfully authenticated via cookie auth.
+        describe('without credentials in the body', function () {
+            let parsedCookies, statusResponse
             before(async function () {
-                logoutResponse = await util.axios.get('logout', { headers: { cookie }})
-                updatedCookie = logoutResponse.headers['set-cookie'];
-                guestResponse = await util.axios.get('api/parameters', { headers: { updatedCookie }})
+                try {
+                    statusResponse = await util.axios.post('login', {}, {
+                        headers: { cookie }
+                    })
+                } catch (e) {
+                    console.log(e)
+                }
             })
-            it('request returns true', function () {
+
+            it('returns a successful response', async function () {
+                expect(statusResponse.status).to.equal(200)
+            })
+
+            it('does not set a cookie', async function () {
+                expect(statusResponse.headers['set-cookie']).to.be.undefined
+            })
+
+            it('does not log out the user', async function () {
+                expect(statusResponse.data.user).to.equal('admin')
+                expect(statusResponse.data).to.be.a('object')
+                expect(statusResponse.data.name).to.equal('admin')
+                expect(statusResponse.data.dba).to.equal(true)
+            })
+        })
+
+        // This test documents the current behavior of the old login route, 
+        // which allows logout using a query parameter even when the user is 
+        // not logged in via the body (e.g. using basic auth or cookie auth).
+        // This is not ideal behavior, but changing it would be a breaking change,
+        // so this test serves to document the existing behavior and ensure it doesn't change unexpectedly.
+        describe('with logout parameter set', function () {
+            let parsedCookies, logoutResponse
+            before(async function () {
+                try {   
+                    logoutResponse = await util.axios.post('login?logout=true', {}, {
+                        headers: { cookie }
+                    })
+                    parsedCookies = parseCookies(logoutResponse.headers['set-cookie'])
+                } catch (e) {
+                    console.log(e)
+                }
+            })
+
+            it('allows logout using the query parameter ?logout', async function () {
                 expect(logoutResponse.status).to.equal(200)
-                expect(logoutResponse.data.success).to.equal(true)
             })
-            it('public route sets guest as user', async function () {
-                expect(guestResponse.status).to.equal(200)
-                expect(guestResponse.data.user.name).to.equal("guest")
-                expect(guestResponse.data.user.dba).to.equal(false)
+            it('deletes the login domain cookie', async function () {
+                expect(parsedCookies[0]).to.have.property(testAppLoginDomain)
+                expect(parsedCookies[0][testAppLoginDomain]).to.equal('deleted')
             })
         })
     })
+
     describe('using application/json', function(){
         let cookie, parsedCookies
     
@@ -260,7 +299,7 @@ describe('On Login', function () {
             let logoutResponse, guestResponse, updatedCookie, parsedCookies
     
             before(async function () {
-                logoutResponse = await util.axios.get('logout', { headers: { cookie }})
+                logoutResponse = await util.axios.get('api/logout', { headers: { cookie }})
                 updatedCookie = logoutResponse.headers['set-cookie'];
                 parsedCookies = parseCookies(updatedCookie)
                 guestResponse = await util.axios.get('api/parameters', { headers: { cookie: updatedCookie }})
@@ -268,7 +307,7 @@ describe('On Login', function () {
     
             it('request returns true', function () {
                 expect(logoutResponse.status).to.equal(200)
-                expect(logoutResponse.data.success).to.equal(true)
+                expect(logoutResponse.data.message).to.equal("Logged out")
             })
     
             it('invalidates session and domain cookie', function () {
@@ -294,6 +333,9 @@ describe('On Login', function () {
         })
     })
 
+})
+
+describe('Routes using new login', function () {
     describe('custom login using application/json', function(){
         let cookie, parsedCookies, domainCookie
     
