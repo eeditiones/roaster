@@ -220,7 +220,6 @@ declare function auth:use-cookie-auth ($request as map(*), $custom-options as ma
         )
 
     return (
-        (: util:log($auth:log-level, ("auth:use-cookie-auth: token ", substring-before($token, ":") , ":******** evaluated to ", $user)), :)
         if (empty($user)) then () else rutil:getDBUser()
     )
 };
