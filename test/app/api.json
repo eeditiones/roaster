@@ -63,6 +63,116 @@
         }
     },
     "paths": {
+        "/login": {
+            "post": {
+                "summary": "User Login",
+                "description": "Start an authenticated session using roaster's login route handler that can act as a fallback to the default eXist login and authentication mechanism.",
+                "tags": [
+                    "auth",
+                    "body"
+                ],
+                "operationId": "auth:login",
+                "parameters": [
+                    {
+                        "name": "logout",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "user": {
+                                        "description": "Name of the user",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "user": {
+                                        "description": "Name of the user",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "user"
+                                ],
+                                "properties": {
+                                    "user": {
+                                        "description": "Name of the user",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "user": {
+                                            "type": "string"
+                                        },
+                                        "groups": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "dba": {
+                                            "type": "boolean"
+                                        },
+                                        "domain": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Wrong user or password"
+                    }
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
+            }
+        },
         "/logout": {
             "get": {
                 "summary": "User Logout",
@@ -82,36 +192,6 @@
                                         "success": {
                                             "type": "boolean"
                                         },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized"
-                    }
-                }
-            }
-        },
-        "/api/logout": {
-            "get": {
-                "summary": "User Logout",
-                "description": "End session of the current user",
-                "operationId": "api:logout",
-                "tags": [
-                    "auth"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
                                         "message": {
                                             "type": "string"
                                         }
@@ -256,74 +336,14 @@
                 "security": []
             }
         },
-        "/login": {
-            "post": {
-                "summary": "User Login",
-                "description": "Start an authenticated session using roaster's login route handler",
+        "/api/logout": {
+            "get": {
+                "summary": "User Logout",
+                "description": "End session of the current user",
+                "operationId": "api:logout",
                 "tags": [
-                    "auth",
-                    "body"
+                    "auth"
                 ],
-                "operationId": "auth:login",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": [
-                                    "user"
-                                ],
-                                "properties": {
-                                    "user": {
-                                        "description": "Name of the user",
-                                        "type": "string"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password"
-                                    }
-                                }
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "type": "object",
-                                "required": [
-                                    "user"
-                                ],
-                                "properties": {
-                                    "user": {
-                                        "description": "Name of the user",
-                                        "type": "string"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password"
-                                    }
-                                }
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "type": "object",
-                                "required": [
-                                    "user"
-                                ],
-                                "properties": {
-                                    "user": {
-                                        "description": "Name of the user",
-                                        "type": "string"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -332,19 +352,7 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "user": {
-                                            "type": "string"
-                                        },
-                                        "groups": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        },
-                                        "dba": {
-                                            "type": "boolean"
-                                        },
-                                        "domain": {
+                                        "message": {
                                             "type": "string"
                                         }
                                     }
@@ -353,14 +361,9 @@
                         }
                     },
                     "401": {
-                        "description": "Wrong user or password"
+                        "description": "unauthorized"
                     }
-                },
-                "security": [
-                    {
-                        "cookieAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/arrays": {
