@@ -329,7 +329,10 @@ declare %private function router:execute-handler ($base-request as map(*), $use,
 (: content types :)
 
 declare function router:get-content-type-for-code ($config as map(*), $code as xs:integer, $fallback as xs:string) as xs:string {
-    let $response-definition := head(($config?responses?($code), $config?responses?default))
+    (: OpenAPI response keys are strings ("200", "default"); look up the integer status code by its
+     : string form. (Indexing the string-keyed responses map with the integer $code only ever matched
+     : because of eXist's pre-conformance map-key coercion, removed in eXist-db/exist#6491.) :)
+    let $response-definition := head(($config?responses?(string($code)), $config?responses?default))
     let $content := 
         if (exists($response-definition) and $response-definition instance of map(*))
         then $response-definition?content
