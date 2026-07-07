@@ -7,16 +7,20 @@ on: [push, pull_request]
 
 jobs:
   build:
+    name: build (exist ${{ matrix.exist-version }}${{ matrix.experimental && ', experimental' || '' }})
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: true
       matrix:
-        exist-version: [release, 6.0.1, 5.5.1]
+        exist-version: [6.0.1, 5.5.1, 6.4.1]
         experimental: [false]
         # latest might contain breaking changes
         include:
           - exist-version: latest
+            experimental: true
+          # the rolling release image may fail for the moment
+          - exist-version: release
             experimental: true
     services:
       exist:
