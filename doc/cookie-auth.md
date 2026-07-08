@@ -239,3 +239,11 @@ cookie:set(map {
 | `samesite` |          | one of `"None"`, `"Lax"`, or `"Strict"`                                                    |
 | `secure`   |          | mark the cookie as secure                                                                  |
 | `httponly` |          | sets the HttpOnly property                                                                 |
+
+## CSRF protection for cookie-authenticated routes
+
+Because the browser will attach the login cookie to any same-origin request — including ones initiated by an attacker's page via a form submission or `fetch` — state-changing endpoints that rely on cookie auth need protection against cross-site request forgery (CSRF).
+
+Roaster's `x-csrf` extension is the recommended defence (see the `CSRF Protection` section in the [README](../README.md)). It is opt-in per route, fires only when the matched security scheme is `cookieAuth`, and leaves Basic-auth flows from CLI clients untouched.
+
+Setting the `samesite` cookie attribute to `"Lax"` or `"Strict"` is a complementary defence, but it is not a substitute: `Lax` still allows top-level navigations and is implemented inconsistently across older browsers. The Origin/Referer check enforced by `x-csrf` is the more reliable backstop for security-sensitive endpoints.
