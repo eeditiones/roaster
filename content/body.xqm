@@ -225,7 +225,7 @@ declare %private function body:ensure-required-properties(
     for-each(
         $required-properties,
         function ($required-prop-name as xs:string) as empty-sequence() {
-            if ($required-properties = $received-property-names) then (
+            if ($required-prop-name = $received-property-names) then (
             ) else
                 error($errors:BAD_REQUEST, 'Property "' || $required-prop-name || '" is required!')
         }
