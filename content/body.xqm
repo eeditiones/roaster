@@ -199,7 +199,7 @@ function body:validate-value ($schema as map(*)) as function(*) {
 declare %private
 function body:ensure-required-properties ($received-property-names as xs:string*, $required-properties as xs:string*) as xs:string* {
     for-each($required-properties, function ($required-prop-name as xs:string) as empty-sequence() {
-        if ($required-properties = $received-property-names)
+        if ($required-prop-name = $received-property-names)
         then ()
         else error($errors:BAD_REQUEST, 'Property "' || $required-prop-name || '" is required!')
     }),
