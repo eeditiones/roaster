@@ -1052,6 +1052,57 @@
                 }
             }
         },
+        "/api/response-type/{shape}": {
+            "get": {
+                "summary": "Return a body of varying shape via an undeclared response status",
+                "description": "Used to test resolving a content type for an undeclared response status: prefer the operation's declared success (2xx) content type, but reconcile it against the actual body shape (#127)",
+                "operationId": "api:response-type-undeclared",
+                "tags": ["errors"],
+                "parameters": [
+                    {
+                        "name": "shape",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["map", "array", "element", "string", "explicit-xml"]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "unused, handlers always return a different status code",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/response-type-no-spec/{shape}": {
+            "get": {
+                "summary": "Return a body via an undeclared response status on an operation with no declared responses at all",
+                "description": "Used to test the last-resort content type negotiation against the client's Accept header when there is no declared/default/success/error response to borrow a content type from (#127)",
+                "operationId": "api:response-type-no-declared-response",
+                "tags": ["errors"],
+                "parameters": [
+                    {
+                        "name": "shape",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["string", "map", "element"]
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/upload/single/{path}": {
             "post": {
                 "summary": "Upload a single file.",

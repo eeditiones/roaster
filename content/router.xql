@@ -359,26 +359,136 @@ declare %private function router:execute-handler(
 
 (: content types :)
 
-declare function router:get-content-type-for-code(
-    $config as map(*),
-    $code as xs:integer,
-    $fallback as xs:string
-) as xs:string {
+(:~
+ : Content types tried, in order, when a status code has no declared (or
+ : `default`) response and the operation declares no other response we can
+ : borrow a content type from: negotiated against the client's Accept
+ : header, application/xml preferred when nothing matches, application/json
+ : as the next choice, and text/plain as a last resort (see #127).
+ : A sequence, not a map, because the order of map keys is undefined.
+ :)
+declare %private variable $router:DEFAULT_CONTENT_TYPE_CANDIDATES := (
+    "application/xml", "application/json", "text/plain"
+);
+
+(:~
+ : Resolve the content type for a response status that has no explicit
+ : media type, without regard to the actual body. Tries, in order:
+ :
+ : 1. the response declared for $code
+ : 2. the operation's `default` response
+ : 3. the operation's declared 2xx ("success") response, if any -- an
+ : undeclared status (e.g. an ad-hoc 500) most likely wants to speak
+ : whatever format the route normally responds with
+ : 4. any other declared response on the operation (its declared error
+ : conditions), in case there is no success response to borrow from
+ : 5. content negotiated against $router:DEFAULT_CONTENT_TYPE_CANDIDATES
+ :
+ : Each step that finds a `content` map negotiates within it via
+ : router:get-matching-content-type, so the client's Accept header is
+ : honored at every step, not just the last.
+ :)
+declare %private function router:get-content-type-for-code($config as map(*), $code as xs:integer) as xs:string {
+    let $responses := $config?responses
     (:
      : OpenAPI response keys are strings ("200", "default"); look up the integer status code by its
-     : string form. (Indexing the string-keyed responses map with the integer $code only ever matched
-     : because of eXist's pre-conformance map-key coercion, removed in eXist-db/exist#6491.)
+     : string form. Indexing the string-keyed responses map with the integer $code only ever matched
+     : because of eXist's pre-conformance map-key coercion, removed in eXist-db/exist#6491.
      :)
-    let $response-definition := head(($config?responses?(string($code)), $config?responses?default))
-    let $content := if (exists($response-definition) and $response-definition instance of map(*)) then
-        $response-definition?content
-    else (
-    )
+    let $response-definition := (
+        $responses?(string($code)),
+        $responses?default,
+        router:first-declared-response($responses, router:is-success-status#1),
+        router:first-declared-response(
+            $responses,
+            function ($key as xs:string) as xs:boolean {
+                $key != "default" and $key != string($code) and not(router:is-success-status($key))
+            }
+        )
+    )[. instance of map(*)][exists(?content)][1]
 
-    return if (exists($content)) then
-        router:get-matching-content-type($content)
+    return if (exists($response-definition)) then
+        router:get-matching-content-type($response-definition?content)
     else
-        $fallback
+        let $accepted := router:accepted-content-types()[. = $router:DEFAULT_CONTENT_TYPE_CANDIDATES]
+        return head(($accepted, $router:DEFAULT_CONTENT_TYPE_CANDIDATES))
+};
+
+declare %private function router:is-success-status($key as xs:string) as xs:boolean {
+    $key castable as xs:integer and
+        (
+            let $n := xs:integer($key)
+            return $n ge 200 and $n lt 300
+        )
+};
+
+(:~
+ : First response definition (with a `content` map) among $responses whose
+ : key matches $predicate, in declaration order.
+ :)
+declare %private function router:first-declared-response(
+    $responses as map(*)?,
+    $predicate as function (xs:string) as xs:boolean
+) as map(*)? {
+    if (empty($responses)) then (
+    ) else
+        let $matching-keys := filter(
+            map:keys($responses),
+            function ($key as xs:string) as xs:boolean {
+                $predicate($key) and $responses?($key) instance of map(*) and exists($responses?($key)?content)
+            }
+        )
+        (: lookup with zero keys ($m?(())) is well-defined and returns () :) return $responses?(head($matching-keys))
+};
+
+(:~
+ : Guard against unserializable bodies, returning a (possibly adjusted)
+ : `content-type` and `body` as a map with those two keys:
+ :
+ : - a map(*)/array(*) body cannot be serialized by the xml/xhtml/html5/text
+ : output methods (raises an uncaught err:SENR0001 after the response
+ : status/headers are already committed): the content type is overridden
+ : to application/json, under which the body is already natively
+ : representable as-is.
+ : - conversely a node() body serialized with the json output method
+ : silently loses its markup (atomized to its string value) rather than
+ : failing loudly. There is no lossless way to turn arbitrary XML into
+ : JSON (fn:xml-to-json only accepts XML already in the fn:json-to-xml
+ : element vocabulary -- ordinary application XML raises err:FOJS0006).
+ : Since every caller of write-response reaches this branch only for a
+ : status this reconciliation had to override in the first place, the
+ : body is assumed to describe that anomaly and is wrapped as a single
+ : "error" key instead: `{"error": "<the serialized xml, escaped>"}`.
+ : This keeps the response valid, parseable JSON -- matching the
+ : content type that was actually resolved/negotiated -- without
+ : discarding the original markup the way silent atomization would.
+ :
+ : Bodies that are neither (plain atomic values) serialize fine either way
+ : and are left untouched. See #127.
+ :)
+declare %private function router:reconcile-content-type-with-body(
+    $content-type as xs:string,
+    $body as item()*
+) as map(*) {
+    let $method := router:method-for-content-type($content-type)
+    return if (($body instance of map(*) or $body instance of array(*)) and $method != "json") then (
+        util:log(
+            "warn",
+            "roaster: response body is a map/array but the resolved content type '" ||
+                $content-type ||
+                "' cannot serialize it; falling back to 'application/json'. Consider declaring a matching content type for this status code in the API spec."
+        ),
+        map {"content-type": "application/json", "body": $body}
+    ) else if ($body instance of node() and $method = "json") then (
+        util:log(
+            "warn",
+            "roaster: response body is an XML node but the resolved content type '" ||
+                $content-type ||
+                "' would otherwise silently discard its markup; wrapping it as an 'error' key instead. Consider declaring a matching content type for this status code in the API spec."
+        ),
+        map {"content-type": $content-type, "body": map {"error": $body}}
+    ) else
+        map {"content-type": $content-type, "body": $body}
 };
 
 (:~
@@ -510,9 +620,20 @@ declare function router:default-error-handler($code as xs:integer, $error as map
 declare %private function router:write-response($default-code as xs:integer, $response as item()*, $config as map(*)) {
     let $code := head(($response?($router:RESPONSE_CODE), $default-code))
 
-    let $content-type := head(
-        ($response?($router:RESPONSE_TYPE), router:get-content-type-for-code($config, $code, "application/xml"))
-    )
+    let $response-body := $response?($router:RESPONSE_BODY)
+
+    (: an explicit media type always wins and is never reconciled against the
+       body -- deliberately serializing a map as XML, say, stays a hard error.
+       $router:get-content-type-for-code/reconcile-content-type-with-body are
+       only called (and only then may log or rewrite the body) when there is
+       no explicit type. :)
+    let $resolved := if (exists($response?($router:RESPONSE_TYPE))) then
+        map {"content-type": $response?($router:RESPONSE_TYPE), "body": $response-body}
+    else
+        router:reconcile-content-type-with-body(router:get-content-type-for-code($config, $code), $response-body)
+
+    let $content-type := $resolved?content-type
+    let $body := $resolved?body
 
     let $method := router:method-for-content-type($content-type)
 
@@ -523,7 +644,7 @@ declare %private function router:write-response($default-code as xs:integer, $re
         ) else (
             response:set-header("Content-Type", router:content-type-header($content-type, $method)),
             util:declare-option("output:method", $method),
-            $response?($router:RESPONSE_BODY)
+            $body
         )
     )
 };
