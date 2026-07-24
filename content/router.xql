@@ -203,7 +203,7 @@ declare %private function router:create-regex($path as xs:string) as xs:string {
         return replace($component, $router:path-parameter-matcher, $replacement)
     
     return
-        "^/" || string-join($replaced, "/")
+        "^/" || string-join($replaced, "/") || "$"
 };
 
 declare %private function router:add-specificity ($route as map(*)) as map(*) {
