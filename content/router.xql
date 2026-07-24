@@ -203,7 +203,12 @@ declare %private function router:create-regex($path as xs:string) as xs:string {
         return replace($component, $router:path-parameter-matcher, $replacement)
     
     return
-        "^/" || string-join($replaced, "/") || "$"
+        (: allow (but don't require) a single trailing slash after the last component,
+         : e.g. both "/api/reconcile" and "/api/reconcile/" match "^/api/reconcile/?$" -
+         : still anchored, so this doesn't reopen the prefix over-matching that the "$"
+         : anchor itself was added to fix (eeditiones/roaster#122): "/api/reconcile/v0.2"
+         : still requires its own distinct route. :)
+        "^/" || string-join($replaced, "/") || "/?$"
 };
 
 declare %private function router:add-specificity ($route as map(*)) as map(*) {
