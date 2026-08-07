@@ -51,6 +51,7 @@ declare function jwt-auth:issue-token ($request as map(*)) {
         return
             if ($loggedin and $username = $user?name)
             then (
+                $request?logger('info', ``[[`{$request?id}`] New token issued for `{$username}`]``),
                 router:response(201, (), map {
                     "user": $user,
                     "token": $jwt-auth:jwt?create($user)
