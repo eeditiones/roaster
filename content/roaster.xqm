@@ -25,6 +25,7 @@ import module namespace router="http://e-editiones.org/roaster/router";
 import module namespace errors="http://e-editiones.org/roaster/errors";
 import module namespace parameters="http://e-editiones.org/roaster/parameters";
 import module namespace auth="http://e-editiones.org/roaster/auth";
+import module namespace csrf="http://e-editiones.org/roaster/csrf";
 
 (:~
  : May be called from user code to send a response with a particular
@@ -77,7 +78,10 @@ declare function roaster:resolve-pointer ($config as map(*), $ref as xs:string*)
  : 3. If two paths have the same (normalized) length, prioritize by appearance in API files, first one wins
  :)
 declare function roaster:route($api-files as xs:string+, $lookup as function(xs:string) as function(*)?) {
-    router:route($api-files, $lookup, auth:standard-authorization#2)
+    router:route($api-files, $lookup, (
+        auth:standard-authorization#2,
+        csrf:enforce#2
+    ))
 };
 
 declare function roaster:route($api-files as xs:string+, $lookup as function(xs:string) as function(*)?, $middleware) {

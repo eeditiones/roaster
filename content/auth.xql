@@ -270,28 +270,33 @@ declare %private function auth:authenticate ($request as map(*), $response as ma
 
     let $methods := array:for-each($defined-auth-methods, auth:map-auth-methods(?, $strategies))
 
-    let $user := array:fold-left($methods, (), auth:use-first-matching-method($request))
+    let $match := array:fold-left($methods, map{}, auth:use-first-matching-method($request))
+    let $user := $match?user
     let $constraints := $request?config?x-constraints
     return
         if (
-            auth:is-public-route($constraints) or 
+            auth:is-public-route($constraints) or
             auth:is-authorized-user($constraints, $user)
         )
         then (
-            map:put($request, "user", $user), (: add "user" to request :)
+            (: add "user" and matched "auth-scheme" to request :)
+            map:merge((
+                $request,
+                map { "user": $user, "auth-scheme": $match?scheme }
+            )),
             $response
         )
         else error($errors:UNAUTHORIZED, "Access denied")
 };
 
-declare %private function auth:map-auth-methods ($method-config as map(*), $strategies as map(*)) as function(*) {
+declare %private function auth:map-auth-methods ($method-config as map(*), $strategies as map(*)) as map(*) {
     let $method-name := map:keys($method-config)
     (: TODO handle method-parameters for OAuth and openID
         : let $method-parameters := $method-config?($method-name) :)
-    
+
     return
         if (map:contains($strategies, $method-name))
-        then ($strategies($method-name))
+        then map { "name": $method-name, "fn": $strategies($method-name) }
         else error(
             $errors:OPERATION,
             "No strategy found for : '" || $method-name || "'", ($method-config, $strategies)
@@ -299,10 +304,15 @@ declare %private function auth:map-auth-methods ($method-config as map(*), $stra
 };
 
 declare %private function auth:use-first-matching-method ($request as map(*)) as function(*) {
-    function ($user as map(*)?, $method as function(*)) as map(*)? {
-        if (exists($user))
-        then $user
-        else $method($request)
+    function ($acc as map(*), $method as map(*)) as map(*) {
+        if (map:contains($acc, "user"))
+        then $acc
+        else
+            let $user := $method?fn($request)
+            return
+                if (exists($user))
+                then map { "user": $user, "scheme": $method?name }
+                else $acc
     }
 };
 
