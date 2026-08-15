@@ -207,7 +207,17 @@ declare %private function router:create-regex($path as xs:string) as xs:string {
          : e.g. both "/api/reconcile" and "/api/reconcile/" match "^/api/reconcile/?$" -
          : still anchored, so this doesn't reopen the prefix over-matching that the "$"
          : anchor itself was added to fix (eeditiones/roaster#122): "/api/reconcile/v0.2"
-         : still requires its own distinct route. :)
+         : still requires its own distinct route.
+         :
+         : Without the "$"/"/?$" anchor at all (i.e. on an unpatched roaster before this
+         : fix), any request path that merely *starts with* a declared route wrongly
+         : matches it instead of 404ing - e.g. against the reconcile profile in
+         : mpilhlt/tei-publisher-reconcile, "GET /api/reconcile/v0.2" (a nonexistent path,
+         : not the "?version=0.2" query param the manifest actually uses) matched the bare
+         : "/api/reconcile" route and wrongly returned its manifest instead of a 404. See
+         : that project's docker/README.md ("GET /api/reconcile/v0.2 (or any path merely
+         : *starting with* a declared route) wrongly matches that route") for the concrete
+         : repro and regression coverage. :)
         "^/" || string-join($replaced, "/") || "/?$"
 };
 
