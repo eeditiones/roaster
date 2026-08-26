@@ -115,6 +115,10 @@ declare function api:avatar ($request as map(*)) {
     </svg>
 };
 
+declare function api:encoding-test ($request as map(*)) {
+    roaster:response(200, ($request?parameters?type, 'text/html')[1] , <html><body><h1>café 💩</h1></body></html>)
+};
+
 (:~
  : A route handler that returns all parsed parameter values
  :)

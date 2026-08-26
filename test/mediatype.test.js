@@ -753,7 +753,9 @@ describe("Retrieving an SVG image", function () {
         expect(response.status).to.equal(200)
     })
     it("was sent with the correct Content-Type header", function () {
-        expect(response.headers['content-type']).to.equal('image/svg+xml')
+        // image/svg+xml is XML-flavored text, so it gets an explicit UTF-8
+        // charset just like application/xml (see charset.test.js).
+        expect(response.headers['content-type']).to.equal('image/svg+xml; charset=UTF-8')
     })
     it("is pretty printed", function () {
         expect(response.data).to.equal(avatarImage)
