@@ -465,6 +465,8 @@ declare %private function router:write-response ($default-code as xs:integer, $r
         router:get-content-type-for-code($config, $code, "application/xml")
     ))
 
+    let $method := router:method-for-content-type($content-type)
+
     return (
         response:set-status-code($code),
         router:set-additional-headers($response?($router:RESPONSE_HEADERS)),
@@ -472,8 +474,8 @@ declare %private function router:write-response ($default-code as xs:integer, $r
             ()
         else 
             (
-                response:set-header("Content-Type", $content-type),
-                util:declare-option("output:method", router:method-for-content-type($content-type)),
+                response:set-header("Content-Type", router:content-type-header($content-type, $method)),
+                util:declare-option("output:method", $method),
                 $response?($router:RESPONSE_BODY)
             )
     )
@@ -495,6 +497,38 @@ declare %private function router:safe-set-header ($header as xs:string, $value a
     (: Q: rather throw here error ? :)
     then util:log("warn", "Headervalue for '" || $header || "' is not castable to xs:string")
     else response:set-header($header, $value)
+};
+
+(:~
+ : Build the actual Content-Type header value for a response.
+ :
+ : eXist-db's serializer always writes text-based output as UTF-8 unless a
+ : route explicitly overrides it - there is no per-route encoding to track,
+ : so a response's charset isn't something routes.json should have to
+ : declare. Derive it from the already-computed serialization $method
+ : instead, for every text-ish type, so it's never missing or hand-wired
+ : (a missing charset leaves the client to guess the encoding, which is how
+ : non-Latin scripts end up mangled into mojibake).
+ : A type that already carries parameters (the operation explicitly asked
+ : for something specific) is left untouched. application/json is left
+ : alone too - RFC 8259 says senders shouldn't add a charset parameter to
+ : it, since JSON text is always UTF-8 by definition.
+ :
+ : $method "text" is ambiguous: router:method-for-content-type also returns it
+ : as a passthrough for binary types (e.g. application/octet-stream, image/png)
+ : that aren't otherwise recognized, so it can't be trusted alone - a charset
+ : is only added for it when $type itself is actually a text/* media type.
+ :)
+declare %private function router:content-type-header ($type as xs:string, $method as xs:string) as xs:string {
+    if (contains($type, ";")) then
+        $type
+    else if (
+        $method = ("html5", "xhtml", "xml") or
+        ($method = "text" and starts-with($type, "text/"))
+    ) then
+        $type || "; charset=UTF-8"
+    else
+        $type
 };
 
 (:~

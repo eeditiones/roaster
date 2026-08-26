@@ -1035,6 +1035,31 @@
                 }
             }
         },
+        "/api/encoding-test": {
+            "get": {
+                "summary": "Echo an arbitrary Content-Type back through roaster:response",
+                "description": "Used to test how the router derives the actual Content-Type response header (e.g. charset handling) for a given media type.",
+                "operationId": "api:encoding-test",
+                "tags": [
+                    "query"
+                ],
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Body sent with the requested Content-Type"
+                    }
+                }
+            }
+        },
         "/api/errors/handle": {
             "get": {
                 "summary": "Test error handler",
