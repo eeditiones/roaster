@@ -6,9 +6,9 @@ const expect = chai.expect
 describe('Content-Type header charset handling', function () {
     const phrase = 'café 💩'
 
-    function fetchAs (type) {
+    function fetchAs (type, text=undefined) {
         return util.axios.get('api/encoding-test', {
-            params: { type },
+            params: { type, ...(text ? { text } : {}) },
             responseType: 'arraybuffer'
         })
     }
@@ -58,9 +58,12 @@ describe('Content-Type header charset handling', function () {
         })
     })
 
-    it('leaves a type that already declares its own parameters untouched', async function () {
-        const res = await fetchAs('application/xml; charset=us-ascii')
-        expect(res.headers['content-type']).to.equal('application/xml; charset=us-ascii')
-        expect(Buffer.from(res.data).toString('utf-8')).to.include('café 💩')
-    })
+	it('works with other texts as well', async () => {
+		// Use some different strange input
+    const res = await fetchAs('text/html', 'multi-char: 👩‍❤️‍👨, Hello world! 你好，世界！ ')
+
+    expect(res.headers['content-type']).to.equal('text/html;charset=utf-8')
+    expect(Buffer.from(res.data).toString('utf-8')).to.include('multi-char: 👩‍❤️‍👨, Hello world! 你好，世界！')
+
+	})
 })

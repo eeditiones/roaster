@@ -1050,8 +1050,19 @@
                         "required": false,
                         "schema": {
                             "type": "string"
-                        }
+                        },
+						"description": "The text encoding to echo back with. Defaults to text/html."
+                    },
+					{
+						"name": "text",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+						"description": "The text to echo back. Defaults to 'café 💩', which covers common UTF-8 cases"
                     }
+
                 ],
                 "responses": {
                     "200": {
