@@ -116,7 +116,8 @@ declare function api:avatar ($request as map(*)) {
 };
 
 declare function api:encoding-test ($request as map(*)) {
-    roaster:response(200, ($request?parameters?type, 'text/html')[1] , <html><body><h1>café 💩</h1></body></html>)
+	let $text := ($request?parameters?text, "café 💩")[1]
+	return roaster:response(200, ($request?parameters?type, 'text/html')[1] , <html><body><h1>{$text}</h1></body></html>)
 };
 
 (:~
