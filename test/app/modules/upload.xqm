@@ -26,7 +26,7 @@ declare function upload:single ($request as map(*)) {
 declare function upload:batch ($request as map(*)) {
     try {
         let $download-links as xs:string+ :=
-            for $file in $request?body?file
+            for $file in $request?body?file?*
             let $stored := xmldb:store($upload:collection, $file?name, $file?data)
             return $upload:download-path || $file?name
 

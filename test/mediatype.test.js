@@ -540,6 +540,42 @@ test.
     })
 
 
+    describe("with one file posted to the batch route", function () {
+        let uploadResponse
+        const data = new FormData()
+
+        const fileName = 'only-file.txt'
+        const fileContent = 'the only text'
+        data.append('file', fileContent, {
+            knownLength: fileContent.length,
+            filename: fileName,
+            contentType: 'text/plain'
+        })
+        const headers = data.getHeaders();
+
+        before(function () {
+            return util.axios.post(
+                'upload/batch',
+                data,
+                { headers }
+            )
+            .then(r => uploadResponse = r)
+            .catch(e => uploadResponse = e.response )
+        })
+        // a property declared as type "array" is an array even for a single value
+        it("was uploaded", function () {
+            expect(uploadResponse.status).to.equal(201)
+            expect(uploadResponse.data.uploaded).to.deep.equal([
+                downloadApiEndpoint + fileName
+            ])
+        })
+        it('can be retrieved', async function () {
+            const res = await util.axios.get(uploadResponse.data.uploaded[0], { responseType: 'arraybuffer' })
+            expect(res.status).to.equal(200)
+            expect(res.data.toString()).to.eql(fileContent, 'File content differs')
+        })
+    })
+
     describe("with two files", function () {
         let uploadResponse
         const data = new FormData()
