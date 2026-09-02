@@ -163,7 +163,13 @@ function body:get-form-data-value ($name as xs:string, $format as xs:string?) as
 
 declare %private
 function body:additional-property ($name as xs:string) as map(*) {
-    map { $name : request:get-parameter($name, ()) }
+    (: a repeating field is wrapped in an array - a sequence of more than one
+     : item cannot be serialized with the JSON output method (err:SERE0023)
+     : and multi-value parameters are arrays in $request?parameters as well :)
+    let $values := request:get-parameter($name, ())
+    return map {
+        $name : if (count($values) > 1) then array { $values } else $values
+    }
 };
 
 declare %private
@@ -189,6 +195,10 @@ function body:validate-value ($schema as map(*)) as function(*) {
                 then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
                 else if (count($value) > 1 and not($is-array))
                 then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
+                (: properties declared as type "array" are wrapped like
+                 : parameters:cast-array does for multi-value parameters :)
+                else if ($is-array and exists($value))
+                then map:entry($name, array { $value })
                 else map:entry($name, $value)
     }
 };

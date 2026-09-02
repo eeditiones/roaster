@@ -133,7 +133,7 @@ In order to allow batch uploads only very few modifications to the above example
     }
     ```
 2. `<input type="file" multiple="true" />`
-3. iterate over all files in the body `for $file in $request?body?file`
+3. iterate over all files in the body `for $file in $request?body?file?*` (properties declared as type "array" are array values)
 4. return array of uploaded resources in response
 
 ```html
@@ -178,7 +178,7 @@ In order to allow batch uploads only very few modifications to the above example
 declare function upload:batch ($request as map(*)) {
     let $stored :=
         array{
-            for $file in $request?body?file
+            for $file in $request?body?file?*
             return xmldb:store(
                 "/db/apps/roasted/uploads", $file?name, $file?data)
         }
