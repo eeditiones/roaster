@@ -203,7 +203,12 @@ declare %private function router:create-regex($path as xs:string) as xs:string {
         return replace($component, $router:path-parameter-matcher, $replacement)
     
     return
-        "^/" || string-join($replaced, "/")
+        (: disallow any continuation of the last component except for a trailing slash to match.
+         : e.g. both "$base/resource/Patient" and "$base/resource/Patient/" match a
+         : "/resource/Patient" pattern, but "$base/resource/Patient123" or
+         : "/resource/Patient/123" do not. :)
+
+        "^/" || string-join($replaced, "/") || "/?$"
 };
 
 declare %private function router:add-specificity ($route as map(*)) as map(*) {
