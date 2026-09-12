@@ -46,5 +46,5 @@ declare function rutil:getDBUser() as map(*) {
  : to handler functions.
  :)
 declare function rutil:debug($request as map(*)) {
-    router:response(200, "application/json", $request, ())
+    router:response(200, "application/json", map:remove($request, 'logger'), ())
 };

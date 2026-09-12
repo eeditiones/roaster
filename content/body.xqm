@@ -130,7 +130,7 @@ declare function body:content-type ($request as map(*)) as map(*) {
             else error(
                 $errors:BODY_CONTENT_TYPE,
                 "Body with media-type '" || $media-type || "' is not allowed", 
-                $request
+                map:remove($request, 'logger')
             )
     )
 };
