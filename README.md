@@ -42,7 +42,7 @@ TEI Publisher has [api.json](https://github.com/eeditiones/tei-publisher-app/tre
 It is also possible to overwrite a route from `api.json` by placing it into `custom-api.json`.
 
 Each route in the specification _must_ have an `operationId` property.
-This is the name of the XQuery function that will handle the request to the given route. Several routes _can_ use the same handler function, where applicable.
+This is the name of the XQuery function that will handle the request to the given route. 
 The XQuery function will be resolved by the lookup-function passed to  `roaster:route`. In order for that to work all route handler functions need to be available in the context of that function. This is why [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
 
 ## Route Handling

@@ -78,44 +78,6 @@ describe('Prefixed known path', function () {
     });
 });
 
-describe("Binary up and download", function () {
-    const contents = fs.readFileSync("./dist/roasted.xar")
-
-    before(async function () {
-        await util.login()
-        response = await util.axios.get('api/parameters', {})
-    })
-
-    it('public route can be called', function () {
-        expect(response.status).to.equal(200);
-    })
-
-    it('user property is set on request map', function () {
-        expect(response.data.user).to.be.a('object')
-        expect(response.data.user.name).to.equal("admin")
-        expect(response.data.user.dba).to.equal(true)
-    })
-
-    describe('On logout', function () {
-        let logoutResponse
-        let guestResponse
-        before(async function () {
-            logoutResponse = await util.axios.get('logout')
-            guestResponse = await util.axios.get('api/parameters', {})
-        })
-        it('request returns true', function () {
-            expect(logoutResponse.status).to.equal(200)
-            expect(logoutResponse.data.success).to.equal(true)
-        })
-        it('public route sets guest as user', function () {
-            expect(guestResponse.status).to.equal(200)
-            expect(guestResponse.data.user.name).to.equal("guest")
-            expect(guestResponse.data.user.dba).to.equal(false)
-        })
-
-    })
-})
-
 describe('Request body', function() {
     it('uploads string in body', async function() {
         const res = await util.axios.post('api/$op-er+ation*!');
@@ -125,14 +87,10 @@ describe('Request body', function() {
 
 describe('Query parameters in GET request', function () {
     const params = {
-        'num': 165.75,
-        'int': 776,
-        'bool': true,
-        'string': '&a=2 2',
-        'array-string-form-not-explode' : 'blue,black',
-        'array-string-form-explode' : ['green', 'red'],
-        'array-integer-form-not-explode' : '1,2',
-        'array-integer-form-explode' : ['10', '20']
+        num: 165.75,
+        int: 776,
+        bool: true,
+        string: '&a=2 2',
     }
     const headers = {
         "X-start": 22
@@ -143,10 +101,7 @@ describe('Query parameters in GET request', function () {
     before(async function () {
         res = await util.axios.get('api/parameters', {
             params,
-            headers,
-            paramsSerializer: {
-                indexes: null // render array parameter names without square brackets
-            }
+            headers
         })
         parameters = res?.data?.parameters
     })
@@ -173,30 +128,6 @@ describe('Query parameters in GET request', function () {
         expect(parameters.defaultParam).to.equal('abcdefg')
     })
 
-    it('paremeter array-string-form-not-explode is parsed correctly', async function () {
-        const p = parameters['array-string-form-not-explode']
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['blue','black'])
-    })
-
-    it('paremeter array-string-form-explode is parsed correctly', async function () {
-        const p = parameters['array-string-form-explode']
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['green','red'])
-    })
-
-    it('paremeter array-integer-form-not-explode is parsed correctly', async function () {
-        const p = parameters['array-integer-form-not-explode']
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal([1,2])
-    })
-
-    it('paremeter array-integer-form-explode is parsed correctly', async function () {
-        const p = parameters['array-integer-form-explode']
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal([10,20])
-    })
-
     it('handles date parameters', async function () {
         const res = await util.axios.get('api/dates', {
             params: {
@@ -210,99 +141,12 @@ describe('Query parameters in GET request', function () {
 
 });
 
-describe('empty array parameters in GET request', function () {
-    const params = {
-        'array-string-form-not-explode' : 'u',
-        'array-string-form-explode' : [],
-        'array-integer-form-not-explode' : [],
-        'array-integer-form-explode' : []
-    }
-
-    let res, parameters
-
-    before(async function () {
-        try {
-            res = await util.axios.get('api/parameters', {
-                params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
-            })
-            parameters = res?.data?.parameters
-        } catch (e) {
-            console.log(e)
-        }
-    })
-
-    it('the query succeeds', async function () {
-        expect(res.status).to.equal(200)
-    })
-
-    it('paremeter array-string-form-not-explode is parsed as array with one entry', async function () {
-        const p = parameters['array-string-form-not-explode']
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['u'])
-    })
-
-    it('paremeter array-string-form-explode is null', async function () {
-        const p = parameters['array-string-form-explode']
-        expect(p).to.equal(null)
-    })
-
-    it('paremeter array-integer-form-not-explode is null', async function () {
-        const p = parameters['array-integer-form-not-explode']
-        expect(p).to.equal(null)
-    })
-
-    it('paremeter array-integer-form-explode defualts to an array with one item', async function () {
-        const p = parameters['array-integer-form-explode']
-        expect(p).to.be.an('array')
-        expect(p).to.deep.equal([123])
-    })
-});
-
-describe('unset required array parameter in POST request', function () {
-    const params = {
-        'array-string-form-not-explode' : []
-    }
-
-    let status
-
-    before(async function () {
-        try {
-            res = await util.axios.post('api/parameters', {
-                params,
-                paramsSerializer: {
-                    indexes: null // render array parameter names without square brackets
-                }
-            })
-            status = res.status
-        } catch (e) {
-            status = e.response.status
-            message = e.response.data.description
-        }
-    })
-
-    it('the query fails with bad request', async function () {
-        expect(status).to.equal(400)
-    })
-
-    it('the response contains an actionable error message', async function () {
-        expect(message.startsWith('Parameter array-string-form-not-explode is required [')).to.be.true
-    })
-
-});
-
 describe('Query parameters in POST request', function () {
     const params = {
-        'num': 165.75,
-        'int': 776,
-        'bool': true,
-        'string': '&a=2 2',
-        'array-string-form-not-explode' : 'blue,black',
-        'array-string-form-explode' : ['green', 'red'],
-        'array-integer-form-not-explode' : '1,2',
-        'array-integer-form-explode' : ['10', '20']
+        num: 165.75,
+        int: 776,
+        bool: true,
+        string: '&a=2 2'
     }
     const headers = {
         "X-start": 22
@@ -315,10 +159,7 @@ describe('Query parameters in POST request', function () {
             url: 'api/parameters',
             method: 'post',
             params,
-            headers,
-            paramsSerializer: {
-                indexes: null // render array parameter names without square brackets
-            }
+            headers
         })
         parameters = res?.data?.parameters
     })

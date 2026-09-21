@@ -53,7 +53,7 @@ declare function parameters:in-path ($request as map(*), $response as map(*)) as
                         return map { $key : $value }
                     )
                     else
-                        error($errors:REQUIRED_PARAM, "No definition for required path parameter " || $substitution)
+                        error($errors:REQUIRED_PARAM, "No definition for required path-parameter """ || $substitution || """")
 
             (: extend previous parameters map with new values :)
             let $merged := map:merge(($request?parameters, $maps))
@@ -119,27 +119,13 @@ declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? 
                     request:get-cookie-value($name)
                 default return
                     request:get-parameter($name, ())
-        
-        let $values :=
-            switch ($parameter?style)
-            case 'simple'
-            case 'label'
-            case 'matrix'
-            case 'deepObject' return (
-                error($errors:NOT_IMPLEMENTED, "Unsupported parameter style " || $parameter?style || " for parameter " || $name || ".")
-            )
-            case 'form' return for $v in $values return tokenize($v, ',')
-            case 'spaceDelimited' return for $v in $values return tokenize($v, ' ')
-            case 'pipeDelimited' return for $v in $values return tokenize($v, '\|')
-            default return $values
-            
-        return (
-            if ($parameter?required and empty($values)) then (
-                error($errors:REQUIRED_PARAM, "Parameter " || $name || " is required")
-            )
-            else (
-                map { $name : parameters:cast($values, $parameter) }
-            )
+
+        let $cast := parameters:cast($values, $parameter)
+
+        return if ($parameter?required and empty($cast)) then (
+            error($errors:REQUIRED_PARAM, "Required " || $parameter?in || "-parameter """ || $name || """ missing or empty.")
+        ) else (
+            map { $name : $cast }
         )
     )
 };
@@ -153,36 +139,68 @@ declare %private function parameters:get-parameter-default-value ($schema as map
 declare %private function parameters:cast ($values as xs:string*, $config as map(*)) as item()* {
     switch($config?schema?type)
         case "object" return 
-            error($errors:NOT_IMPLEMENTED, "Parameter '" || $config?name || "' is of type 'object', which is not supported yet.")
+            error($errors:NOT_IMPLEMENTED, "The " || $config?in || "-parameter """ || $config?name || """ is of type ""object"", which is not supported yet.")
         case "array" return
             parameters:cast-array($values, $config)
-        default return (
-            head((
-                $values,
-                parameters:get-parameter-default-value($config?schema)
-            )) ! parameters:cast-value(., $config?schema)
-        )
+        default return
+            parameters:cast-atomic($values, $config)
+};
+
+declare %private function parameters:cast-atomic ($values as xs:string*, $config as map(*)) as item()? {
+    if (count($values) > 1)
+    then error($errors:BAD_REQUEST, "Multiple values were provided for " || $config?in || "-parameter """ || $config?name || """, which is not declared an array.")
+    else if (count($values) = 1)
+    then parameters:cast-value($values, $config?schema)
+    else parameters:get-parameter-default-value($config?schema) ! parameters:cast-value(., $config?schema)
 };
 
 declare %private function parameters:cast-array($values as xs:string*, $config as map(*)) as array(*)? {
-    let $default := parameters:get-parameter-default-value($config?schema)
-    let $cast := parameters:cast-value(?, $config?schema?items)
-    (: explode is true by default for form, shall be false otherwise :)
-    let $explode := if ($config?style = "form") then boolean($config?explode) or empty($config?explode) else false()
+    let $style :=
+        if (exists($config?style) and $config?style = ("label", "matrix")) then (
+            (: do not throw but log on debug :)
+            error($errors:OPERATION, "Unsupported style " || $config?style || " for " || $config?in || "-parameter """ || $config?name || """.")
+        ) else if ($config?in eq "header" and exists($config?style) and $config?style ne "simple") then (
+            error($errors:OPERATION, "Unsupported style " || $config?style || " for " || $config?in || "-parameter """ || $config?name || """.")
+        ) else if ($config?in eq "header") then (
+            "simple"
+        ) else (
+            ($config?style, 'form')[1]
+        )
+    (: for style "form", explode is true by default, false otherwise :)
+    let $explode := boolean($config?explode) or ($style = "form" and empty($config?explode))
 
-    return if (empty($values) and empty($default)) then (
-        (: null :)
-    ) else if (empty($values)) then (
-        array:for-each($default, $cast)
-    ) else if ($explode) then (
-        array {
-            for-each($values, $cast)
-        }
-    ) else (
-        array {
-            for-each($values, $cast)
-        }
-    )
+    let $default := parameters:get-parameter-default-value($config?schema)
+    let $tokenized-values :=
+        if (empty($values) and empty($default)) then (
+            (: null :)
+        ) else if (empty($values)) then (
+            $default?*
+        ) else if ($explode and ($config?in eq 'cookie' or $config?style = ("spaceDelimited", "pipeDelimited", "simple"))) then (
+            error($errors:OPERATION, "Explode cannot be true for " || $config?in || "-parameter """ || $config?name || """ with style set to " || $config?style || ".")
+        ) else if ($explode) then (
+            $values
+        ) else if (count($values) > 1) then (
+            error($errors:BAD_REQUEST, "Multiple entries for " || $config?in || "-parameter """ || $config?name || """ found but explode is set to false.")
+        ) else (
+            let $separator := 
+                switch ($style)
+                    case "spaceDelimited" return " "
+                    case "pipeDelimited" return "\|" (: pipe needs to be escaped for use in tokenize :)
+                    (: case "simple" case "form" :)
+                    default return ","
+
+            return tokenize($values, $separator)
+        )
+
+    let $cast := parameters:cast-value(?, $config?schema?items)
+    return try {
+        if (empty($tokenized-values)) then (
+        ) else (
+            array { for-each($tokenized-values, $cast) }
+        )
+    } catch * {
+        error($errors:BAD_REQUEST, "One or more values for " || $config?in || "-parameter """ || $config?name || """ could not be cast to " || $config?schema?items?type || ".")
+    }
 };
 
 declare %private function parameters:cast-value ($value as item()?, $schema as map(*)) as item()? {

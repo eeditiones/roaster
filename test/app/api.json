@@ -1,5 +1,5 @@
 {
-    "openapi": "3.0.0",
+    "openapi": "3.0.4",
     "info": {
         "version": "1.1.0",
         "title": "Roasted API",
@@ -12,35 +12,35 @@
         }
     ],
     "tags": [
-		{
-			"name": "path",
-			"description": "Route has special characters or parameters in path"
-		},
-		{
-			"name": "query",
-			"description": "Route specifies query parameters"
-		},
-		{
-			"name": "body",
-			"description": "Route specifies expected body"
-		},
-		{
-			"name": "header",
-			"description": "Route specifies header parameters"
-		},
-		{
-			"name": "files",
-			"description": "File up- and downloads of various kinds"
-		},
+        {
+            "name": "path",
+            "description": "Route has special characters or parameters in path"
+        },
+        {
+            "name": "query",
+            "description": "Route specifies query parameters"
+        },
+        {
+            "name": "body",
+            "description": "Route specifies expected body"
+        },
+        {
+            "name": "header",
+            "description": "Route specifies header parameters"
+        },
+        {
+            "name": "files",
+            "description": "File up- and downloads of various kinds"
+        },
         {
             "name": "errors",
             "description": "Routes with custom error handling"
         },
         {
-			"name": "auth",
-			"description": "Authenticate, login or logout database user"
-		}
-	],
+            "name": "auth",
+            "description": "Authenticate, login or logout database user"
+        }
+    ],
     "security": [
         {
             "cookieAuth": []
@@ -63,63 +63,45 @@
         }
     },
     "paths": {
-        "/logout": {
-            "get": {
-                "summary": "User Logout",
-                "description": "End session of the current user",
-                "operationId": "auth:logout",
-                "tags": ["auth", "query"],
+        "/login": {
+            "post": {
+                "summary": "User Login",
+                "description": "Start an authenticated session using roaster's login route handler that can act as a fallback to the default eXist login and authentication mechanism.",
+                "tags": [
+                    "auth",
+                    "body"
+                ],
+                "operationId": "auth:login",
                 "parameters": [
                     {
                         "name": "logout",
                         "in": "query",
-                        "description": "Set to some value to log out the current user",
                         "schema": {
-                            "type": "string"
+                            "type": "boolean"
                         }
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": { "type": "boolean" }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "301": {
-                        "description": "Redirect with the logout parameter set.",
-                        "content": {
-                            "text/plain": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "401": { "description": "unauthorized" }
-                }
-            }
-        },
-        "/login": {
-            "post": {
-                "summary": "User Login",
-                "description": "Start an authenticated session for the given user",
-                "tags": ["auth", "body"],
-                "operationId": "auth:login",
                 "requestBody": {
                     "required": true,
                     "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "user": {
+                                        "description": "Name of the user",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        },
                         "multipart/form-data": {
                             "schema": {
                                 "type": "object",
-                                "required": [ "user" ],
                                 "properties": {
                                     "user": {
                                         "description": "Name of the user",
@@ -135,7 +117,9 @@
                         "application/x-www-form-urlencoded": {
                             "schema": {
                                 "type": "object",
-                                "required": [ "user" ],
+                                "required": [
+                                    "user"
+                                ],
                                 "properties": {
                                     "user": {
                                         "description": "Name of the user",
@@ -158,13 +142,21 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "user": { "type": "string" },
+                                        "user": {
+                                            "type": "string"
+                                        },
                                         "groups": {
                                             "type": "array",
-                                            "items": { "type": "string" }
+                                            "items": {
+                                                "type": "string"
+                                            }
                                         },
-                                        "dba": { "type": "boolean" },
-                                        "domain": { "type": "string" }
+                                        "dba": {
+                                            "type": "boolean"
+                                        },
+                                        "domain": {
+                                            "type": "string"
+                                        }
                                     }
                                 }
                             }
@@ -174,7 +166,450 @@
                         "description": "Wrong user or password"
                     }
                 },
-                "security": [{ "cookieAuth": [] }]
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ]
+            }
+        },
+        "/logout": {
+            "get": {
+                "summary": "User Logout",
+                "description": "End session of the current user",
+                "operationId": "auth:logout",
+                "tags": [
+                    "auth"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized"
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "summary": "Custom user Login",
+                "description": "Custom login handler using different properties",
+                "tags": [
+                    "auth",
+                    "body"
+                ],
+                "operationId": "api:login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "usr"
+                                ],
+                                "properties": {
+                                    "usr": {
+                                        "description": "Username",
+                                        "type": "string"
+                                    },
+                                    "pwd": {
+                                        "description": "Password",
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Wrong user or password",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/api/login-xml": {
+            "post": {
+                "summary": "Login with XML",
+                "description": "Custom login handler using XML body",
+                "tags": [
+                    "auth",
+                    "body"
+                ],
+                "operationId": "api:login-xml",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/xml": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "username"
+                                ],
+                                "properties": {
+                                    "username": {
+                                        "description": "Username",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "description": "Password",
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "xml": {
+                                    "wrapped": true,
+                                    "name": "login"
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Wrong user or password",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/api/logout": {
+            "get": {
+                "summary": "User Logout",
+                "description": "End session of the current user",
+                "operationId": "api:logout",
+                "tags": [
+                    "auth"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized"
+                    }
+                }
+            }
+        },
+        "/api/arrays": {
+            "post": {
+                "summary": "Test array parameters in querys",
+                "operationId": "api:arrays-post",
+                "tags": [
+                    "query"
+                ],
+                "parameters": [
+                    {
+                        "name": "simpleArrayHeader",
+                        "in": "header",
+                        "description": "Array parameter in header",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    {
+                        "name": "requiredArray",
+                        "in": "query",
+                        "description": "Required parameter that is an array",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "nullable": true
+                        },
+                        "style": "form",
+                        "explode": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of parameters",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing required parameter",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "summary": "Test array parameters in querys",
+                "operationId": "api:arrays-get",
+                "tags": [
+                    "query"
+                ],
+                "parameters": [
+                    {
+                        "name": "piped",
+                        "in": "query",
+                        "description": "pipe delimited array of string values: piped=one|two|three",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "style": "pipeDelimited",
+                        "explode": false
+                    },
+                    {
+                        "name": "pipedDefault",
+                        "in": "query",
+                        "description": "style:pipeDelimited array with default value",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "default": [
+                                "one",
+                                "two",
+                                "three"
+                            ]
+                        },
+                        "style": "pipeDelimited",
+                        "explode": false
+                    },
+                    {
+                        "name": "pipedExplode",
+                        "in": "query",
+                        "description": "style:pipeDelimited with explode set to true",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "style": "pipeDelimited",
+                        "explode": true
+                    },
+                    {
+                        "name": "spaced",
+                        "in": "query",
+                        "description": "space delimited array of string values: spaced=one%20two%20three",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "style": "spaceDelimited"
+                    },
+                    {
+                        "name": "spacedDefault",
+                        "in": "query",
+                        "description": "space delimited array of integers with a default value",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            },
+                            "default": [
+                                1,
+                                2,
+                                3
+                            ]
+                        },
+                        "required": true,
+                        "style": "spaceDelimited"
+                    },
+                    {
+                        "name": "spacedExplode",
+                        "in": "query",
+                        "description": "space delimited array of string values with explode set to true",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "explode": true,
+                        "style": "spaceDelimited"
+                    },
+                    {
+                        "name": "formStrExpNo",
+                        "in": "query",
+                        "description": "comma separated list of string values: formStrExpNo=one,two,three",
+                        "schema": {
+                            "type": "array",
+                            "default": [],
+                            "items": {
+                                "type": "string"
+                            },
+                            "nullable": true
+                        },
+                        "style": "form",
+                        "explode": false
+                    },
+                    {
+                        "name": "formStrExpYes",
+                        "in": "query",
+                        "description": "array of string values encoded as formStrExpYes=one&formStrExpYes=two&formStrExpYes=three",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "nullable": true
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "formIntExpNo",
+                        "in": "query",
+                        "description": "comma separated list of integer values: formIntExpNo=1,2,3",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "nullable": true
+                        },
+                        "style": "form",
+                        "explode": false
+                    },
+                    {
+                        "name": "formIntExpYes",
+                        "in": "query",
+                        "description": "array of integer values encoded as formIntExpYes=1&formIntExpYes=2&formIntExpYes=3",
+                        "schema": {
+                            "type": "array",
+                            "default": [
+                                123
+                            ],
+                            "items": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "nullable": true
+                        },
+                        "style": "form",
+                        "explode": true
+                    },
+                    {
+                        "name": "formDefaultRequired",
+                        "in": "query",
+                        "description": "required array parameter with a default value",
+                        "schema": {
+                            "type": "array",
+                            "default": [
+                                1
+                            ],
+                            "items": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "nullable": true
+                        },
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/parameters": {
@@ -182,40 +617,43 @@
                 "description": "Parameters in URL and header (GET)",
                 "summary": "Test parameters of varying types passed in URL and header",
                 "operationId": "rutil:debug",
-                "tags": ["query", "header"],
+                "tags": [
+                    "query",
+                    "header"
+                ],
                 "parameters": [
                     {
                         "name": "num",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "number"
                         }
                     },
                     {
                         "name": "int",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "integer"
                         }
                     },
                     {
                         "name": "bool",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "boolean"
                         }
                     },
                     {
                         "name": "string",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     },
                     {
                         "name": "defaultParam",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "string",
                             "default": "abcdefg"
                         }
@@ -226,74 +664,14 @@
                         "schema": {
                             "type": "integer"
                         }
-                    },
-                    {
-                        "name": "array-string-form-not-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as color=blue,black,brown",
-                        "schema":{
-                            "type": "array",
-                            "default": [],
-                            "items": {
-                                "type": "string"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : false
-                    },
-                    {
-                        "name": "array-string-form-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as color=blue&color=black&color=brown",
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : true
-                    },
-                    {
-                        "name": "array-integer-form-not-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as height=10,20,30",
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "integer",
-                                "format": "int64"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : false
-                    },
-                    {
-                        "name": "array-integer-form-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as height=40&height=50&height=60",
-                        "schema":{
-                            "type": "array",
-                            "default": [123],
-                            "items": {
-                                "type": "integer",
-                                "format": "int64"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : true
                     }
                 ],
                 "responses": {
-                    "200":{
+                    "200": {
                         "description": "JSON dump of request",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object"
                                 }
                             }
@@ -305,40 +683,43 @@
                 "description": "Parameters in URL and header (POST)",
                 "summary": "Test parameters of varying types passed in URL and header",
                 "operationId": "rutil:debug",
-                "tags": ["query", "header"],
+                "tags": [
+                    "query",
+                    "header"
+                ],
                 "parameters": [
                     {
                         "name": "num",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "number"
                         }
                     },
                     {
                         "name": "int",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "integer"
                         }
                     },
                     {
                         "name": "bool",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "boolean"
                         }
                     },
                     {
                         "name": "string",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     },
                     {
                         "name": "defaultParam",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "string",
                             "default": "abcdefg"
                         }
@@ -349,73 +730,14 @@
                         "schema": {
                             "type": "integer"
                         }
-                    },
-                    {
-                        "name": "array-string-form-not-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as color=blue,black,brown",
-                        "required": true,
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : false
-                    },
-                    {
-                        "name": "array-string-form-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as color=blue&color=black&color=brown",
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : true
-                    },
-                    {
-                        "name": "array-integer-form-not-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as height=10,20,30",
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "integer",
-                                "format": "int64"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : false
-                    },
-                    {
-                        "name": "array-integer-form-explode",
-                        "in": "query",
-                        "description": "Array parameters requested as height=40&height=50&height=60",
-                        "schema":{
-                            "type": "array",
-                            "items": {
-                                "type": "integer",
-                                "format": "int64"
-                            },
-                            "nullable": true
-                        },
-                        "style" : "form",
-                        "explode" : true
                     }
                 ],
                 "responses": {
-                    "200":{
+                    "200": {
                         "description": "JSON dump of request",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object"
                                 }
                             }
@@ -428,12 +750,14 @@
             "get": {
                 "summary": "Dates in querystring",
                 "operationId": "api:date",
-                "tags": ["query"],
+                "tags": [
+                    "query"
+                ],
                 "parameters": [
                     {
                         "name": "date",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "string",
                             "format": "date"
                         }
@@ -441,18 +765,18 @@
                     {
                         "name": "dateTime",
                         "in": "query",
-                        "schema":{
+                        "schema": {
                             "type": "string",
                             "format": "date-time"
                         }
                     }
                 ],
                 "responses": {
-                    "200":{
+                    "200": {
                         "description": "JSON dump of request",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object"
                                 }
                             }
@@ -461,23 +785,26 @@
                 }
             }
         },
-        "/api/paths/{path}":{
+        "/api/paths/{path}": {
             "get": {
                 "summary": "Parameter specified in last path component",
                 "operationId": "api:get-uploaded-data",
-                "tags": ["path", "files"],
+                "tags": [
+                    "path",
+                    "files"
+                ],
                 "parameters": [
                     {
                         "name": "path",
                         "in": "path",
                         "required": true,
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     }
                 ],
                 "responses": {
-                    "200":{
+                    "200": {
                         "description": "file contents, if found",
                         "content": {
                             "application/octet-stream": {
@@ -503,10 +830,15 @@
             "post": {
                 "summary": "Post body with several content-types",
                 "x-constraints": {
-                    "user": "admin" 
+                    "user": "admin"
                 },
                 "operationId": "api:upload-data",
-                "tags": ["path", "body", "files", "auth"],
+                "tags": [
+                    "path",
+                    "body",
+                    "files",
+                    "auth"
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -523,7 +855,7 @@
                         "name": "path",
                         "in": "path",
                         "required": true,
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     }
@@ -552,17 +884,19 @@
                 }
             }
         },
-        "/api/$op-er+ation*!":{
+        "/api/$op-er+ation*!": {
             "get": {
                 "summary": "Get path using a $ character",
                 "operationId": "rutil:debug",
-                "tags": ["path"],
+                "tags": [
+                    "path"
+                ],
                 "responses": {
-                    "200":{
+                    "200": {
                         "description": "JSON dump of request",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object"
                                 }
                             }
@@ -573,13 +907,15 @@
             "post": {
                 "summary": "Post to path using a $ character",
                 "operationId": "rutil:debug",
-                "tags": ["path"],
+                "tags": [
+                    "path"
+                ],
                 "responses": {
-                    "200":{
+                    "200": {
                         "description": "JSON dump of request",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object"
                                 }
                             }
@@ -588,27 +924,29 @@
                 }
             }
         },
-        "/api/{test}/test":{
+        "/api/{test}/test": {
             "get": {
                 "summary": "Get path with a fixed ending",
                 "operationId": "rutil:debug",
-                "tags": ["path"],
+                "tags": [
+                    "path"
+                ],
                 "parameters": [
                     {
                         "name": "test",
                         "in": "path",
                         "required": true,
-                        "schema":{
+                        "schema": {
                             "type": "string"
                         }
                     }
                 ],
                 "responses": {
-                    "200":{
+                    "200": {
                         "description": "JSON dump of request",
                         "content": {
                             "application/json": {
-                                "schema":{
+                                "schema": {
                                     "type": "object"
                                 }
                             }
@@ -621,12 +959,14 @@
             "get": {
                 "summary": "Reports an error via fn:error function",
                 "operationId": "api:error-triggered",
-                "tags": ["errors"],
+                "tags": [
+                    "errors"
+                ],
                 "responses": {
                     "404": {
                         "description": "Not found",
                         "content": {
-                            "application/json":{
+                            "application/json": {
                                 "schema": {
                                     "type": "object"
                                 }
@@ -638,12 +978,14 @@
             "post": {
                 "summary": "Reports a dynamic XQuery error",
                 "operationId": "api:error-dynamic",
-                "tags": ["errors"],
+                "tags": [
+                    "errors"
+                ],
                 "responses": {
                     "500": {
                         "description": "XQuery error",
                         "content": {
-                            "application/json":{
+                            "application/json": {
                                 "schema": {
                                     "type": "object"
                                 }
@@ -655,7 +997,9 @@
             "delete": {
                 "summary": "Reports an explicit error",
                 "operationId": "api:error-explicit",
-                "tags": ["errors"],
+                "tags": [
+                    "errors"
+                ],
                 "responses": {
                     "500": {
                         "description": "XQuery error",
@@ -674,12 +1018,14 @@
             "get": {
                 "summary": "Retrieve avatar as SVG",
                 "operationId": "api:avatar",
-                "tags": ["files"],
+                "tags": [
+                    "files"
+                ],
                 "responses": {
                     "200": {
                         "description": "Get file with a specific mime type",
                         "content": {
-                            "image/svg+xml":{
+                            "image/svg+xml": {
                                 "schema": {
                                     "type": "object"
                                 }
@@ -689,12 +1035,50 @@
                 }
             }
         },
+        "/api/encoding-test": {
+            "get": {
+                "summary": "Echo an arbitrary Content-Type back through roaster:response",
+                "description": "Used to test how the router derives the actual Content-Type response header (e.g. charset handling) for a given media type.",
+                "operationId": "api:encoding-test",
+                "tags": [
+                    "query"
+                ],
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+						"description": "The text encoding to echo back with. Defaults to text/html."
+                    },
+					{
+						"name": "text",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+						"description": "The text to echo back. Defaults to 'café 💩', which covers common UTF-8 cases"
+                    }
+
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Body sent with the requested Content-Type"
+                    }
+                }
+            }
+        },
         "/api/errors/handle": {
             "get": {
                 "summary": "Test error handler",
                 "operationId": "api:error-dynamic",
                 "x-error-handler": "api:handle-error",
-                "tags": ["errors"],
+                "tags": [
+                    "errors"
+                ],
                 "responses": {
                     "500": {
                         "description": "XQuery error",
@@ -714,14 +1098,20 @@
                 "summary": "Upload a single file.",
                 "description": "In this example, the file path is part of the URL.",
                 "operationId": "upload:single",
-                "tags": ["path", "body", "files"],
+                "tags": [
+                    "path",
+                    "body",
+                    "files"
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
                         "multipart/form-data": {
                             "schema": {
                                 "type": "object",
-                                "required": ["file"],
+                                "required": [
+                                    "file"
+                                ],
                                 "properties": {
                                     "file": {
                                         "type": "string",
@@ -737,7 +1127,9 @@
                         "name": "path",
                         "in": "path",
                         "required": true,
-                        "schema":{ "type": "string" }
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -745,7 +1137,9 @@
                         "description": "Created uploaded file",
                         "content": {
                             "application/json": {
-                                "schema": { "type": "string" }
+                                "schema": {
+                                    "type": "string"
+                                }
                             }
                         }
                     },
@@ -753,7 +1147,9 @@
                         "description": "Content was invalid",
                         "content": {
                             "application/json": {
-                                "schema": { "type": "string" }
+                                "schema": {
+                                    "type": "string"
+                                }
                             }
                         }
                     }
@@ -764,7 +1160,10 @@
             "post": {
                 "summary": "Upload a batch of files",
                 "operationId": "upload:batch",
-                "tags": ["body", "files"],
+                "tags": [
+                    "body",
+                    "files"
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -793,7 +1192,9 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "uploaded": { "type": "array" }
+                                        "uploaded": {
+                                            "type": "array"
+                                        }
                                     }
                                 }
                             }
@@ -803,7 +1204,9 @@
                         "description": "Content was invalid",
                         "content": {
                             "application/json": {
-                                "schema": { "type": "string" }
+                                "schema": {
+                                    "type": "string"
+                                }
                             }
                         }
                     }
@@ -814,7 +1217,10 @@
             "post": {
                 "summary": "Upload a base64-encoded file.",
                 "operationId": "upload:base64",
-                "tags": ["body", "files"],
+                "tags": [
+                    "body",
+                    "files"
+                ],
                 "requestBody": {
                     "content": {
                         "multipart/form-data": {
@@ -840,7 +1246,9 @@
                         "description": "Created uploaded file",
                         "content": {
                             "application/json": {
-                                "schema": { "type": "string" }
+                                "schema": {
+                                    "type": "string"
+                                }
                             }
                         }
                     },
@@ -848,7 +1256,9 @@
                         "description": "Content was invalid",
                         "content": {
                             "application/json": {
-                                "schema": { "type": "string" }
+                                "schema": {
+                                    "type": "string"
+                                }
                             }
                         }
                     }
