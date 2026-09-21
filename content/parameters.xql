@@ -122,6 +122,18 @@ declare %private function parameters:retrieve ($parameter as map(*)) as map(*)? 
 
         let $cast := parameters:cast($values, $parameter)
 
+        (: [spec](https://spec.openapis.org/oas/v3.0.3#fixed-fields-9) Use of this property is NOT RECOMMENDED, hence we only respond to it when explicitly set to false() :)
+        let $check  :=
+            switch ($parameter?in)
+                case "header"
+                case "cookie" return 
+                    ()
+                default return (
+                    if ($parameter?allowEmptyValue = false() and $values = '' and request:get-parameter-names()[. = $name]) then
+                        error($errors:REQUIRED_PARAM, "Parameter " || $parameter?in || "-parameter """ || $name || """ shall have a value when present.")
+                    else ()
+                )
+
         return if ($parameter?required and empty($cast)) then (
             error($errors:REQUIRED_PARAM, "Required " || $parameter?in || "-parameter """ || $name || """ missing or empty.")
         ) else (
