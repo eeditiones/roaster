@@ -1,0 +1,30 @@
+{
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "none",
+    "useTabs": false,
+    "tabWidth": 4,
+    "printWidth": 120,
+    "plugins": ["prettier-plugin-xquery"],
+    "overrides": [
+        {
+            "files": ["*.xq", "*.xql", "*.xqm", "*.xqy", "*.xquery"],
+            "options": {
+                "singleQuote": false
+            }
+        },
+        {
+            "files": "package.json",
+            "options": {
+                "tabWidth": 2
+            }
+        },
+        {
+            "files": ["*.yml", "*.yaml"],
+            "options": {
+                "tabWidth": 2,
+                "singleQuote": false
+            }
+        }
+    ]
+}
