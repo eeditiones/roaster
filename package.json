@@ -9,7 +9,9 @@
     "build": "gulp build",
     "build:all": "gulp build:all",
     "deploy": "dotenv gulp install",
-    "develop": "dotenv gulp"
+    "develop": "dotenv gulp",
+    "format": "prettier --write .",
+    "format:ci": "prettier --check ."
   },
   "repository": {
     "type": "git",
@@ -32,6 +34,8 @@
     "gulp-zip": "^6.1.0",
     "jsdom": "^29.1.1",
     "mocha": "^11.7.6",
+    "prettier": "^3.8.2",
+    "prettier-plugin-xquery": "^1.7.0",
     "semantic-release": "^25.0.7"
   },
   "private": true,
