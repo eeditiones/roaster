@@ -379,9 +379,9 @@ describe('body with content-type multipart/form-data', function () {
         const filename = 'valid.txt'
         const contents = Buffer.from(`
  This
-is 
+is\x20
  just
-    a 
+    a\x20
 test.
 `)
         const data = new FormData()
@@ -710,16 +710,16 @@ describe('Retrieving an SVG image', function () {
     const avatarImage =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\n' +
         '    <g fill="darkgreen" stroke="lime" stroke-width=".25" transform="skewX(4) skewY(8) translate(0,.5)">\n' +
-        '        <rect x="2" y="2" width="2" height="2" rx=".5" ry=".5"/>\n' +
-        '        <rect x="5" y="2" width="2" height="2" rx=".5" ry=".5"/>\n' +
-        '        <rect x="8" y="2" width="2" height="2" rx=".5" ry=".5"/>\n' +
-        '        <rect x="11" y="2" width="2" height="2" rx=".5" ry=".5"/>\n' +
-        '        <rect x="2" y="5" width="2" height="2" rx=".5" ry=".5"/>\n' +
-        '        <rect x="5" y="5" width="2" height="2" rx=".5" ry=".5"/>\n' +
-        '        <rect x="8" y="5" width="2" height="2" rx=".5" ry=".5"/>\n' +
-        '        <rect x="11" y="5" width="2" height="2" rx=".5" ry=".5"/>\n' +
-        '        <rect x="2" y="8" width="2" height="2" rx=".5" ry=".5"/>\n' +
-        '        <rect x="5" y="8" width="2" height="2" rx=".5" ry=".5"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="2" y="2"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="5" y="2"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="8" y="2"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="11" y="2"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="2" y="5"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="5" y="5"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="8" y="5"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="11" y="5"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="2" y="8"/>\n' +
+        '        <rect height="2" rx=".5" ry=".5" width="2" x="5" y="8"/>\n' +
         '    </g>\n' +
         '</svg>'
 
