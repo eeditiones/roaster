@@ -67,10 +67,7 @@
             "post": {
                 "summary": "User Login",
                 "description": "Start an authenticated session using roaster's login route handler that can act as a fallback to the default eXist login and authentication mechanism.",
-                "tags": [
-                    "auth",
-                    "body"
-                ],
+                "tags": ["auth", "body"],
                 "operationId": "auth:login",
                 "parameters": [
                     {
@@ -117,9 +114,7 @@
                         "application/x-www-form-urlencoded": {
                             "schema": {
                                 "type": "object",
-                                "required": [
-                                    "user"
-                                ],
+                                "required": ["user"],
                                 "properties": {
                                     "user": {
                                         "description": "Name of the user",
@@ -178,9 +173,7 @@
                 "summary": "User Logout",
                 "description": "End session of the current user",
                 "operationId": "auth:logout",
-                "tags": [
-                    "auth"
-                ],
+                "tags": ["auth"],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -210,10 +203,7 @@
             "post": {
                 "summary": "Custom user Login",
                 "description": "Custom login handler using different properties",
-                "tags": [
-                    "auth",
-                    "body"
-                ],
+                "tags": ["auth", "body"],
                 "operationId": "api:login",
                 "requestBody": {
                     "required": true,
@@ -221,9 +211,7 @@
                         "application/json": {
                             "schema": {
                                 "type": "object",
-                                "required": [
-                                    "usr"
-                                ],
+                                "required": ["usr"],
                                 "properties": {
                                     "usr": {
                                         "description": "Username",
@@ -278,10 +266,7 @@
             "post": {
                 "summary": "Login with XML",
                 "description": "Custom login handler using XML body",
-                "tags": [
-                    "auth",
-                    "body"
-                ],
+                "tags": ["auth", "body"],
                 "operationId": "api:login-xml",
                 "requestBody": {
                     "required": true,
@@ -289,9 +274,7 @@
                         "application/xml": {
                             "schema": {
                                 "type": "object",
-                                "required": [
-                                    "username"
-                                ],
+                                "required": ["username"],
                                 "properties": {
                                     "username": {
                                         "description": "Username",
@@ -341,9 +324,7 @@
                 "summary": "User Logout",
                 "description": "End session of the current user",
                 "operationId": "api:logout",
-                "tags": [
-                    "auth"
-                ],
+                "tags": ["auth"],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -370,9 +351,7 @@
             "post": {
                 "summary": "Test array parameters in querys",
                 "operationId": "api:arrays-post",
-                "tags": [
-                    "query"
-                ],
+                "tags": ["query"],
                 "parameters": [
                     {
                         "name": "simpleArrayHeader",
@@ -427,9 +406,7 @@
             "get": {
                 "summary": "Test array parameters in querys",
                 "operationId": "api:arrays-get",
-                "tags": [
-                    "query"
-                ],
+                "tags": ["query"],
                 "parameters": [
                     {
                         "name": "piped",
@@ -453,11 +430,7 @@
                             "items": {
                                 "type": "string"
                             },
-                            "default": [
-                                "one",
-                                "two",
-                                "three"
-                            ]
+                            "default": ["one", "two", "three"]
                         },
                         "style": "pipeDelimited",
                         "explode": false
@@ -496,11 +469,7 @@
                             "items": {
                                 "type": "integer"
                             },
-                            "default": [
-                                1,
-                                2,
-                                3
-                            ]
+                            "default": [1, 2, 3]
                         },
                         "required": true,
                         "style": "spaceDelimited"
@@ -568,9 +537,7 @@
                         "description": "array of integer values encoded as formIntExpYes=1&formIntExpYes=2&formIntExpYes=3",
                         "schema": {
                             "type": "array",
-                            "default": [
-                                123
-                            ],
+                            "default": [123],
                             "items": {
                                 "type": "integer",
                                 "format": "int64"
@@ -586,9 +553,7 @@
                         "description": "required array parameter with a default value",
                         "schema": {
                             "type": "array",
-                            "default": [
-                                1
-                            ],
+                            "default": [1],
                             "items": {
                                 "type": "integer",
                                 "format": "int64"
@@ -617,10 +582,7 @@
                 "description": "Parameters in URL and header (GET)",
                 "summary": "Test parameters of varying types passed in URL and header",
                 "operationId": "rutil:debug",
-                "tags": [
-                    "query",
-                    "header"
-                ],
+                "tags": ["query", "header"],
                 "parameters": [
                     {
                         "name": "num",
@@ -683,10 +645,7 @@
                 "description": "Parameters in URL and header (POST)",
                 "summary": "Test parameters of varying types passed in URL and header",
                 "operationId": "rutil:debug",
-                "tags": [
-                    "query",
-                    "header"
-                ],
+                "tags": ["query", "header"],
                 "parameters": [
                     {
                         "name": "num",
@@ -750,9 +709,7 @@
             "get": {
                 "summary": "Dates in querystring",
                 "operationId": "api:date",
-                "tags": [
-                    "query"
-                ],
+                "tags": ["query"],
                 "parameters": [
                     {
                         "name": "date",
@@ -789,10 +746,7 @@
             "get": {
                 "summary": "Parameter specified in last path component",
                 "operationId": "api:get-uploaded-data",
-                "tags": [
-                    "path",
-                    "files"
-                ],
+                "tags": ["path", "files"],
                 "parameters": [
                     {
                         "name": "path",
@@ -833,12 +787,7 @@
                     "user": "admin"
                 },
                 "operationId": "api:upload-data",
-                "tags": [
-                    "path",
-                    "body",
-                    "files",
-                    "auth"
-                ],
+                "tags": ["path", "body", "files", "auth"],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -888,9 +837,7 @@
             "get": {
                 "summary": "Get path using a $ character",
                 "operationId": "rutil:debug",
-                "tags": [
-                    "path"
-                ],
+                "tags": ["path"],
                 "responses": {
                     "200": {
                         "description": "JSON dump of request",
@@ -907,9 +854,7 @@
             "post": {
                 "summary": "Post to path using a $ character",
                 "operationId": "rutil:debug",
-                "tags": [
-                    "path"
-                ],
+                "tags": ["path"],
                 "responses": {
                     "200": {
                         "description": "JSON dump of request",
@@ -928,9 +873,7 @@
             "get": {
                 "summary": "Get path with a fixed ending",
                 "operationId": "rutil:debug",
-                "tags": [
-                    "path"
-                ],
+                "tags": ["path"],
                 "parameters": [
                     {
                         "name": "test",
@@ -959,9 +902,7 @@
             "get": {
                 "summary": "Reports an error via fn:error function",
                 "operationId": "api:error-triggered",
-                "tags": [
-                    "errors"
-                ],
+                "tags": ["errors"],
                 "responses": {
                     "404": {
                         "description": "Not found",
@@ -978,9 +919,7 @@
             "post": {
                 "summary": "Reports a dynamic XQuery error",
                 "operationId": "api:error-dynamic",
-                "tags": [
-                    "errors"
-                ],
+                "tags": ["errors"],
                 "responses": {
                     "500": {
                         "description": "XQuery error",
@@ -997,9 +936,7 @@
             "delete": {
                 "summary": "Reports an explicit error",
                 "operationId": "api:error-explicit",
-                "tags": [
-                    "errors"
-                ],
+                "tags": ["errors"],
                 "responses": {
                     "500": {
                         "description": "XQuery error",
@@ -1018,9 +955,7 @@
             "get": {
                 "summary": "Retrieve avatar as SVG",
                 "operationId": "api:avatar",
-                "tags": [
-                    "files"
-                ],
+                "tags": ["files"],
                 "responses": {
                     "200": {
                         "description": "Get file with a specific mime type",
@@ -1040,9 +975,7 @@
                 "summary": "Echo an arbitrary Content-Type back through roaster:response",
                 "description": "Used to test how the router derives the actual Content-Type response header (e.g. charset handling) for a given media type.",
                 "operationId": "api:encoding-test",
-                "tags": [
-                    "query"
-                ],
+                "tags": ["query"],
                 "parameters": [
                     {
                         "name": "type",
@@ -1051,18 +984,17 @@
                         "schema": {
                             "type": "string"
                         },
-						"description": "The text encoding to echo back with. Defaults to text/html."
+                        "description": "The text encoding to echo back with. Defaults to text/html."
                     },
-					{
-						"name": "text",
+                    {
+                        "name": "text",
                         "in": "query",
                         "required": false,
                         "schema": {
                             "type": "string"
                         },
-						"description": "The text to echo back. Defaults to 'café 💩', which covers common UTF-8 cases"
+                        "description": "The text to echo back. Defaults to 'café 💩', which covers common UTF-8 cases"
                     }
-
                 ],
                 "responses": {
                     "200": {
@@ -1076,9 +1008,7 @@
                 "summary": "Test error handler",
                 "operationId": "api:error-dynamic",
                 "x-error-handler": "api:handle-error",
-                "tags": [
-                    "errors"
-                ],
+                "tags": ["errors"],
                 "responses": {
                     "500": {
                         "description": "XQuery error",
@@ -1098,20 +1028,14 @@
                 "summary": "Upload a single file.",
                 "description": "In this example, the file path is part of the URL.",
                 "operationId": "upload:single",
-                "tags": [
-                    "path",
-                    "body",
-                    "files"
-                ],
+                "tags": ["path", "body", "files"],
                 "requestBody": {
                     "required": true,
                     "content": {
                         "multipart/form-data": {
                             "schema": {
                                 "type": "object",
-                                "required": [
-                                    "file"
-                                ],
+                                "required": ["file"],
                                 "properties": {
                                     "file": {
                                         "type": "string",
@@ -1160,10 +1084,7 @@
             "post": {
                 "summary": "Upload a batch of files",
                 "operationId": "upload:batch",
-                "tags": [
-                    "body",
-                    "files"
-                ],
+                "tags": ["body", "files"],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -1217,10 +1138,7 @@
             "post": {
                 "summary": "Upload a base64-encoded file.",
                 "operationId": "upload:base64",
-                "tags": [
-                    "body",
-                    "files"
-                ],
+                "tags": ["body", "files"],
                 "requestBody": {
                     "content": {
                         "multipart/form-data": {

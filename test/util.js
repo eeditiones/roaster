@@ -1,4 +1,4 @@
-const axios = require('axios');
+const axios = require('axios')
 const https = require('https')
 
 // for use in custom controller tests
@@ -13,11 +13,9 @@ if (process.env.EXISTDB_USER && 'EXISTDB_PASS' in process.env) {
     adminCredentials.password = process.env.EXISTDB_PASS
 }
 
-const server = 'EXISTDB_SERVER' in process.env
-    ? process.env.EXISTDB_SERVER
-    : 'https://localhost:8443'
+const server = 'EXISTDB_SERVER' in process.env ? process.env.EXISTDB_SERVER : 'https://localhost:8443'
 
-const {origin, hostname} = new URL(server)
+const { origin, hostname } = new URL(server)
 
 // authentication data for normal login
 const authForm = new FormData()
@@ -31,7 +29,7 @@ const axiosInstance = axios.create({
     httpsAgent: new https.Agent({
         rejectUnauthorized: hostname !== 'localhost'
     })
-});
+})
 
 async function login() {
     // console.log('Logging in ' + serverInfo.user + ' to ' + app)
@@ -39,14 +37,14 @@ async function login() {
         headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    const cookie = res.headers['set-cookie'];
-    axiosInstance.defaults.headers.Cookie = cookie;
+    const cookie = res.headers['set-cookie']
+    axiosInstance.defaults.headers.Cookie = cookie
     // console.log('Logged in as %s: %s', res.data.user, res.statusText, res.headers['set-cookie']);
 }
 
 async function logout() {
     const res = await axiosInstance.get('logout')
-    const cookie = res.headers["set-cookie"]
+    const cookie = res.headers['set-cookie']
     // on logout we only get an update for the domain cookie
     // the first cookie, the JSESSIONID, stays intact
     axiosInstance.defaults.headers.Cookie = cookie
@@ -54,6 +52,8 @@ async function logout() {
 
 module.exports = {
     axios: axiosInstance,
-    login, logout,
-    adminCredentials, authForm
-};
+    login,
+    logout,
+    adminCredentials,
+    authForm
+}

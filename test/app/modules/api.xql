@@ -1,24 +1,20 @@
 xquery version "3.1";
 
-declare namespace api="http://e-editiones.org/roasted/test-api";
-declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
-declare namespace svg="http://www.w3.org/2000/svg";
+declare namespace api = "http://e-editiones.org/roasted/test-api";
+declare namespace output = "http://www.w3.org/2010/xslt-xquery-serialization";
+declare namespace svg = "http://www.w3.org/2000/svg";
 
-import module namespace roaster="http://e-editiones.org/roaster";
-
-import module namespace auth="http://e-editiones.org/roaster/auth";
-import module namespace rutil="http://e-editiones.org/roaster/util";
-import module namespace errors="http://e-editiones.org/roaster/errors";
-import module namespace cookie="http://e-editiones.org/roaster/cookie";
-
-
-import module namespace upload="http://e-editiones.org/roasted/upload" at "upload.xqm";
+import module namespace roaster = "http://e-editiones.org/roaster";
+import module namespace auth = "http://e-editiones.org/roaster/auth";
+import module namespace rutil = "http://e-editiones.org/roaster/util";
+import module namespace errors = "http://e-editiones.org/roaster/errors";
+import module namespace cookie = "http://e-editiones.org/roaster/cookie";
+import module namespace upload = "http://e-editiones.org/roasted/upload" at "upload.xqm";
 
 (:~
  : list of definition files to use
  :)
 declare variable $api:definitions := ("api.json");
-
 
 (:~
  : You can add application specific route handlers here.
@@ -26,8 +22,7 @@ declare variable $api:definitions := ("api.json");
  :)
 
 declare function api:date($request as map(*)) {
-    $request?parameters?date instance of xs:date and
-    $request?parameters?dateTime instance of xs:dateTime
+    $request?parameters?date instance of xs:date and $request?parameters?dateTime instance of xs:dateTime
 };
 
 (:~
@@ -42,107 +37,111 @@ declare function api:error-triggered($request as map(*)) {
  : calling this function will throw dynamic XQuery error (err:XPST0003)
  :)
 declare function api:error-dynamic($request as map(*)) {
-    util:eval('1 + $undefined')
+    util:eval("1 + $undefined")
 };
 
 (:~
- : Handlers can also respond with an error directly 
+ : Handlers can also respond with an error directly
  :)
 declare function api:error-explicit($request as map(*)) {
-    roaster:response(403, "application/xml", <forbidden/>)
+    roaster:response(403, "application/xml", <forbidden />)
 };
 
 (:~
- : This is used as an error-handler in the API definition 
+ : This is used as an error-handler in the API definition
  :)
 declare function api:handle-error($error as map(*)) as element(html) {
     <html>
         <body>
-            <h1>Error [{$error?code}]</h1>
-            <p>{
-                if (map:contains($error, "module"))
-                then ``[An error occurred in `{$error?module}` at line `{$error?line}`, column `{$error?column}`]``
-                else "An error occurred!"
-            }</p>
+            <h1>Error [{ $error?code }]</h1>
+            <p>
+                {
+                    if (map:contains($error, "module")) then
+                        ``[An error occurred in `{$error?module}` at line `{$error?line}`, column `{$error?column}`]``
+                    else
+                        "An error occurred!"
+                }
+            </p>
             <h2>Description</h2>
-            <p>{$error?description}</p>
+            <p>{ $error?description }</p>
         </body>
     </html>
 };
 
-declare function api:upload-data ($request as map(*)) {
-    let $body :=
-        if (
-            $request?body instance of array(*) or
-            $request?body instance of map(*)
-        )
-        then ($request?body => serialize(map { "method": "json" }))
-        else ($request?body)
+declare function api:upload-data($request as map(*)) {
+    let $body := if ($request?body instance of array(*) or $request?body instance of map(*)) then (
+        $request?body => serialize(map {"method": "json"})
+    ) else (
+        $request?body
+    )
 
     let $stored := xmldb:store("/db/apps/roasted/uploads", $request?parameters?path, $body)
     return roaster:response(201, $stored)
 };
 
-declare function api:get-uploaded-data ($request as map(*)) {
+declare function api:get-uploaded-data($request as map(*)) {
     (: xml :)
-    if (doc-available("/db/apps/roasted/uploads/" || $request?parameters?path))
-    then (
+    if (doc-available("/db/apps/roasted/uploads/" || $request?parameters?path)) then (
         unparsed-text("/db/apps/roasted/uploads/" || $request?parameters?path)
-        => util:base64-encode()
-        => xs:base64Binary()
-        => response:stream-binary("application/octet-stream", $request?parameters?path)
-    )
-    (: anything else :)
-    else if (util:binary-doc-available("/db/apps/roasted/uploads/" || $request?parameters?path))
-    then (
+            => util:base64-encode()
+            => xs:base64Binary()
+            => response:stream-binary("application/octet-stream", $request?parameters?path)
+    ) (: anything else :) else if (
+        util:binary-doc-available("/db/apps/roasted/uploads/" || $request?parameters?path)
+    ) then (
         util:binary-doc("/db/apps/roasted/uploads/" || $request?parameters?path)
-        => response:stream-binary("application/octet-stream", $request?parameters?path)
-    )
-    else (
+            => response:stream-binary("application/octet-stream", $request?parameters?path)
+    ) else (
         error($errors:NOT_FOUND, "document " || $request?parameters?path || " not found", "error details")
     )
 };
 
-declare function api:avatar ($request as map(*)) {
-    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-        <g fill="darkgreen" stroke="lime" stroke-width=".25" transform="skewX(4) skewY(8) translate(0,.5)">{
-            for $pos in 1 to 10
-            let $zero-based := $pos - 1
-            let $x := $zero-based mod 4 * 3 + 2
-            let $y := $zero-based idiv 4 * 3 + 2
-            return <rect x="{$x}" y="{$y}" width="2" height="2" rx=".5" ry=".5" />
-        }</g>
+declare function api:avatar($request as map(*)) {
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <g fill="darkgreen" stroke="lime" stroke-width=".25" transform="skewX(4) skewY(8) translate(0,.5)">
+            {
+                for $pos in 1 to 10
+                let $zero-based := $pos - 1
+                let $x := $zero-based mod 4 * 3 + 2
+                let $y := $zero-based idiv 4 * 3 + 2
+                return <rect height="2" rx=".5" ry=".5" width="2" x="{ $x }" y="{ $y }" />
+            }
+        </g>
     </svg>
 };
 
-declare function api:encoding-test ($request as map(*)) {
-	let $text := ($request?parameters?text, "café 💩")[1]
-	return roaster:response(200, ($request?parameters?type, 'text/html')[1] , <html><body><h1>{$text}</h1></body></html>)
+declare function api:encoding-test($request as map(*)) {
+    let $text := ($request?parameters?text, "café 💩")[1]
+    return roaster:response(
+        200,
+        ($request?parameters?type, "text/html")[1],
+        <html><body><h1>{ $text }</h1></body></html>
+    )
 };
 
 (:~
  : A route handler that returns all parsed parameter values
  :)
-declare function api:arrays-post ($request as map(*)) {
-    map { "parameters": $request?parameters }
+declare function api:arrays-post($request as map(*)) {
+    map {"parameters": $request?parameters}
 };
 
 (:~
  : A route handler that returns all parsed parameter values
  :)
-declare function api:arrays-get ($request as map(*)) {
-    map { "parameters": $request?parameters }
+declare function api:arrays-get($request as map(*)) {
+    map {"parameters": $request?parameters}
 };
 
 (:~
  : override default authentication options
  :)
 declare variable $api:auth-options := map {
-    "lifetime": 10, (: set the cookie time-out to 10 seconds using an integer literal :)
-    "path": "/exist/apps/roasted", (: requests must include this path for the cookie to be included :)
-    "samesite": "Lax", (: sets the SameSite property to either "None", "Strict" or "Lax"  :)
-    "secure": true(), (: mark the cookie as secure :)
-    "httponly": true(), (: sets the HttpOnly property :)
+    "lifetime": 10 (: set the cookie time-out to 10 seconds using an integer literal :),
+    "path": "/exist/apps/roasted" (: requests must include this path for the cookie to be included :),
+    "samesite": "Lax" (: sets the SameSite property to either "None", "Strict" or "Lax" :),
+    "secure": true() (: mark the cookie as secure :),
+    "httponly": true() (: sets the HttpOnly property :),
     "jsession": false() (: do not set the JSESSION cookie, some write operations might fail :)
 };
 
@@ -151,55 +150,56 @@ declare variable $api:auth-options := map {
  : within the request body to authenticate users against exist-db.
  : The data can also be supplied as JSON
  :)
-declare function api:login ($request as map(*)) {
+declare function api:login($request as map(*)) {
     let $user := auth:login-user(
-        $request?body?usr, $request?body?pwd,
-        auth:add-cookie-name($request, $api:auth-options))
+        $request?body?usr,
+        $request?body?pwd,
+        auth:add-cookie-name($request, $api:auth-options)
+    )
 
     return if (empty($user)) then (
-        roaster:response(401, "application/json",
-            map{ "message": "Wrong user or password" })
+        roaster:response(401, "application/json", map {"message": "Wrong user or password"})
     ) else (
         (: the request can also be redirected here :)
-        map{ "message": concat("Logged in as ", $user) }
+        map {"message": concat("Logged in as ", $user)}
     )
 };
 
 (:~
  : Example login route handler using XML
  :)
-declare function api:login-xml ($request as map(*)) {
+declare function api:login-xml($request as map(*)) {
     let $user := auth:login-user(
-        $request?body//user/string(), $request?body//password/string(), 
-        auth:add-cookie-name($request, $api:auth-options))
+        $request?body//user/string(),
+        $request?body//password/string(),
+        auth:add-cookie-name($request, $api:auth-options)
+    )
 
     return if (empty($user)) then (
-        roaster:response(401, "application/xml",
-            <message>Wrong user or password</message>)
+        roaster:response(401, "application/xml", <message>Wrong user or password</message>)
     ) else (
         (: the request can also be redirected here :)
-        roaster:response(200, "application/xml",
-            <message>Logged in as {$user}</message>)
+        roaster:response(200, "application/xml", <message>Logged in as { $user }</message>)
     )
 };
 
 (:~
  : Example logout route handler
  :)
-declare function api:logout ($request as map(*)) {
+declare function api:logout($request as map(*)) {
     auth:logout-user(auth:add-cookie-name($request, $api:auth-options)),
     (: the request can also be redirected here :)
-    map{ "message": "Logged out" }
+    map {"message": "Logged out"}
 };
 
 (: end of route handlers :)
 
 (:~
  : This function "knows" all modules and their functions
- : that are imported here 
+ : that are imported here
  : You can leave it as it is, but it has to be here
  :)
-declare function api:lookup ($name as xs:string) {
+declare function api:lookup($name as xs:string) {
     function-lookup(xs:QName($name), 1)
 };
 

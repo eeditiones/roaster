@@ -9,7 +9,10 @@
     "build": "gulp build",
     "build:all": "gulp build:all",
     "deploy": "dotenv gulp install",
-    "develop": "dotenv gulp"
+    "develop": "dotenv gulp",
+    "format": "prettier --write .",
+    "format:ci": "prettier --check .",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -30,11 +33,18 @@
     "gulp": "^5.0.1",
     "gulp-rename": "^2.1.0",
     "gulp-zip": "^6.1.0",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^17.5.1",
     "mocha": "^11.7.6",
+    "prettier": "^3.8.2",
+    "prettier-plugin-xquery": "^1.7.0",
     "semantic-release": "^25.0.7"
   },
   "private": true,
+  "lint-staged": {
+    "*": "prettier --ignore-unknown --write"
+  },
   "mocha": {
     "timeout": 10000,
     "slow": 1000
@@ -48,6 +58,5 @@
     "status": "stable",
     "title": "roaster - OpenAPI Router",
     "license": "GPLv3"
-  },
-  "dependencies": {}
+  }
 }
