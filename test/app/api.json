@@ -199,6 +199,32 @@
                 }
             }
         },
+        "/api/optional-body": {
+            "post": {
+                "summary": "A route whose request body is optional",
+                "description": "Echoes whether a body was sent, and the body",
+                "tags": ["body"],
+                "operationId": "api:optional-body",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": { "type": "object" }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "What was received",
+                        "content": {
+                            "application/json": {
+                                "schema": { "type": "object" }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/login": {
             "post": {
                 "summary": "Custom user Login",
