@@ -140,6 +140,20 @@ describe("body with content-type application/xml", function () {
         it("with a human readable description", function () {
             expect(uploadResponse.data.description).to.equal('Body with media type \'application/xml\' could not be parsed (invalid XML).')
         })
+        it("keeps the parser's own message", function () {
+            expect(uploadResponse.data.value).to.be.a('string').and.to.have.length.above(0)
+        })
+        it("without roaster's own source location", function () {
+            // module/line/column point into roaster, not into the request. A client
+            // that surfaces a position would annotate its own input at a line taken
+            // from body.xqm, and the path discloses the installed version.
+            expect(uploadResponse.data).to.not.have.property('module')
+            expect(uploadResponse.data).to.not.have.property('line')
+            expect(uploadResponse.data).to.not.have.property('column')
+        })
+        it("and without leaking it into the description", function () {
+            expect(uploadResponse.data.description).to.not.match(/in module/)
+        })
     })
 })
 

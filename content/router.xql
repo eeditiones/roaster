@@ -447,11 +447,31 @@ declare %private function router:error ($code as xs:integer, $error as map(*), $
 };
 
 declare function router:default-error-handler ($code as xs:integer, $error as map(*)) as item()* {
-    response:set-status-code($code),
-    response:set-header("Content-Type", "application/json"),
-    util:declare-option("output:method", "json"),
-    map:put($error, "description", 
-        router:error-description($error?description, $error?line, $error?column, $error?module, $error?value))
+    (:~
+     : `module`, `line` and `column` locate the *raising expression in roaster's
+     : own source*, not anything in the request, so they belong in a 5xx — where
+     : the server is at fault and the location is the diagnosis — and not in a
+     : 4xx, where the fault is the client's. In a client error they are at best
+     : noise, at worst misleading: a consumer that surfaces a position annotates
+     : its own input at a line number taken from body.xqm. They also disclose the
+     : installed path and version to every caller.
+     :)
+    let $omit-internals := $code < 500
+    let $described :=
+        map:put($error, "description",
+            if ($omit-internals) then
+                ($error?description, $error?value, 'No description provided.')[1]
+            else
+                router:error-description($error?description, $error?line, $error?column, $error?module, $error?value))
+    return (
+        response:set-status-code($code),
+        response:set-header("Content-Type", "application/json"),
+        util:declare-option("output:method", "json"),
+        if ($omit-internals) then
+            map:remove($described, ("module", "line", "column"))
+        else
+            $described
+    )
 };
 
 declare %private function router:write-response ($default-code as xs:integer, $response as item()*, $config as map(*)) {
