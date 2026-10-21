@@ -83,6 +83,14 @@ declare function api:upload-data ($request as map(*)) {
     return roaster:response(201, $stored)
 };
 
+(:~
+ : Echo the parsed body back as JSON. Used to check that a repeated form
+ : parameter reaches the handler as something a JSON response can carry.
+ :)
+declare function api:echo-form-body ($request as map(*)) {
+    roaster:response(200, "application/json", $request?body)
+};
+
 declare function api:get-uploaded-data ($request as map(*)) {
     (: xml :)
     if (doc-available("/db/apps/roasted/uploads/" || $request?parameters?path))

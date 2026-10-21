@@ -161,9 +161,29 @@ function body:get-form-data-value ($name as xs:string, $format as xs:string?) as
         request:get-parameter($name, ())
 };
 
+(:~
+ : A form parameter that occurs more than once is returned as a sequence by
+ : request:get-parameter(), and a sequence is not a JSON value: serializing a
+ : map that holds one raises err:SERE0023 ("Sequence of N items cannot be
+ : serialized using the JSON output method"). eXist-db 6 and earlier quietly
+ : coerced such a sequence to a JSON array, so this went unnoticed; eXist-db 7
+ : raises it, as BaseX and Saxon do.
+ :
+ : Wrapping a multi-valued parameter in an array keeps a parsed form body a
+ : JSON value, and makes it consistent with a parsed JSON body, where
+ : parse-json() already yields array(*) for a JSON array. Single and absent
+ : values are left alone, so a scalar stays a scalar.
+ :)
+declare %private
+function body:as-json-value ($value as item()*) as item()? {
+    if (count($value) gt 1)
+    then array { $value }
+    else $value
+};
+
 declare %private
 function body:additional-property ($name as xs:string) as map(*) {
-    map { $name : request:get-parameter($name, ()) }
+    map { $name : body:as-json-value(request:get-parameter($name, ())) }
 };
 
 declare %private
@@ -189,7 +209,13 @@ function body:validate-value ($schema as map(*)) as function(*) {
                 then error($errors:BAD_REQUEST, 'Property "' || $name || '" is required!')
                 else if (count($value) > 1 and not($is-array))
                 then error($errors:BAD_REQUEST, 'Property "' || $name || '" only allows one item. Got ' || count($value), $value)
-                else map:entry($name, $value)
+                (: Reaching here with more than one value implies $is-array.
+                   Uploaded files are handed to route handlers as a sequence of
+                   maps and are not meant to be serialized, so they are left as
+                   they are; every other repeated value becomes a JSON array. :)
+                else if ($format = "binary")
+                then map:entry($name, $value)
+                else map:entry($name, body:as-json-value($value))
     }
 };
 

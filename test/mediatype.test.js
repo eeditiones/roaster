@@ -761,3 +761,37 @@ describe("Retrieving an SVG image", function () {
         expect(response.data).to.equal(avatarImage)
     })
 })
+
+// A form parameter sent more than once arrives as a sequence, which is not a
+// JSON value: serializing a map holding one raises err:SERE0023 on eXist-db 7
+// (and in BaseX and Saxon). eXist-db 6 coerced it to a JSON array instead, so
+// this only surfaced as a 500 once the serializer was made spec-compliant.
+// body.xqm wraps repeated values in an array; these pin both the schemaless
+// path and the path where the schema declares a non-binary array property.
+describe("repeated form parameters", function () {
+    describe("with a schema declaring a string array", function () {
+        let response
+        before(async function () {
+            const data = new URLSearchParams()
+            data.append("name", "roaster")
+            data.append("tags", "one")
+            data.append("tags", "two")
+            data.append("tags", "three")
+            response = await util.axios.post('api/form-array', data.toString(), {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            })
+        })
+
+        it("responds 200", function () {
+            expect(response.status).to.equal(200)
+        })
+
+        it("returns the repeated parameter as a JSON array", function () {
+            expect(response.data.tags).to.deep.equal(['one', 'two', 'three'])
+        })
+
+        it("leaves a single-valued parameter a scalar", function () {
+            expect(response.data.name).to.equal('roaster')
+        })
+    })
+})

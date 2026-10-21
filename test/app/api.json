@@ -1264,6 +1264,48 @@
                     }
                 }
             }
+        },
+        "/api/form-array": {
+            "post": {
+                "summary": "Echo a urlencoded body whose schema declares a non-binary array property",
+                "operationId": "api:echo-form-body",
+                "tags": [
+                    "body"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "tags": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "the parsed body, serialized as JSON",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
