@@ -40,6 +40,37 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
+      # The test application depends on jwt, and jwt on expath-crypto. Without
+      # them, eXist-db resolves both from the public repository at
+      # exist-db.org while installing roasted.xar, so every leg of this matrix
+      # fails at installTestAppXar whenever that host is unreachable - before a
+      # single test runs. Fetch them from their own GitHub releases instead;
+      # these are the same versions the public repository serves.
+      #
+      # expath-crypto has to match the server. The 7.x build requires eXist-db
+      # 7, and on eXist-db 7 the 6.x build leaves jwt raising err:XPTY0004 at
+      # runtime. Choose it from the version the service reports rather than
+      # from the image tag, which is rolling for 'latest' and 'release'.
+      - name: Fetch test application dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          exist_major=$(curl -sk -u admin: --get \
+            --data-urlencode '_query=substring-before(system:get-version(), ".")' \
+            --data-urlencode '_wrap=no' \
+            https://localhost:8443/exist/rest/db)
+          case "$exist_major" in
+            ''|*[!0-9]*)
+              echo "could not determine the eXist-db version (got '$exist_major')" >&2
+              exit 1
+              ;;
+          esac
+          if [ "$exist_major" -ge 7 ]; then crypto=7.0.0; else crypto=6.0.1; fi
+          echo "eXist-db major $exist_major, using expath-crypto $crypto"
+          gh release download v2.0.2 --repo eXistSolutions/exist-jwt \
+            --pattern '*.xar' --dir test/dependencies
+          gh release download "$crypto" --repo eXist-db/expath-crypto-module \
+            --pattern '*.xar' --dir test/dependencies
       - name: Run tests
         run: npm test
   release:
