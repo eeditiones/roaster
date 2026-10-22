@@ -504,10 +504,12 @@ declare function router:default-error-handler($code as xs:integer, $error as map
     response:set-status-code($code),
     response:set-header("Content-Type", "application/json"),
     util:declare-option("output:method", "json"),
-    map:put(
-        $error,
-        "description",
-        router:error-description($error?description, $error?line, $error?column, $error?module, $error?value)
+    router:serializable(
+        map:put(
+            $error,
+            "description",
+            router:error-description($error?description, $error?line, $error?column, $error?module, $error?value)
+        )
     )
 };
 
@@ -636,6 +638,24 @@ declare %private function router:is-response-map($value as item()*) as xs:boolea
         (map:contains($value, $router:RESPONSE_CODE) or map:contains($value, $router:RESPONSE_BODY))
 };
 
+(:~
+ : Replace function items - like $request?logger - in maps and arrays with a placeholder,
+ : so that error data, which may contain the request map, can be serialized to JSON.
+ :)
+declare %private function router:serializable($item as item()*) as item()* {
+    for $i in $item
+    return typeswitch ($i)
+        case map(*) return
+            map:merge(map:for-each($i, function ($key, $value) { map:entry($key, router:serializable($value)) }))
+        case array(*) return
+            array:for-each($i, router:serializable#1)
+        case function(*) return
+            "function(*)"
+
+        default return
+            $i
+};
+
 declare %private function router:is-rethrown-error($value as item()*) as xs:boolean {
     count($value) eq 1 and $value instance of map(*) and map:contains($value, "_error")
 };
@@ -645,7 +665,7 @@ declare %private function router:log-error(
     $data as map(*),
     $logger as function (xs:string, item()*) as empty-sequence()
 ) as empty-sequence() {
-    let $error := $data?_error => serialize(map {"method": "json"})
+    let $error := $data?_error => router:serializable() => serialize(map {"method": "json"})
     return $logger(
         "error",
         ``[[`{$data?_request?id}`] `{$data?_request?method}` `{$data?_request?path}`: `{$code}`

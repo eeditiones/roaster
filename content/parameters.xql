@@ -34,7 +34,7 @@ declare function parameters:in-path($request as map(*), $response as map(*)) as 
         error(
             $errors:OPERATION,
             "Path pattern has no substitutions, but path parameters are defined " || $request?pattern,
-            $request
+            $request?config
         )
     else if (not($has-path-parameters-in-pattern)) then (
         $request, $response
@@ -92,7 +92,7 @@ declare function parameters:in-request($request as map(*), $response as map(*)) 
     ) (: route expects no parameters, return request unchanged :) else if (
         not($request?config?parameters instance of array(*))
     ) then
-        error($errors:OPERATION, "Parameter definition must be an array: " || $request?pattern, $request)
+        error($errors:OPERATION, "Parameter definition must be an array: " || $request?pattern, $request?config)
     else
         let $maps := for-each($request?config?parameters?*, parameters:retrieve#1)
 
