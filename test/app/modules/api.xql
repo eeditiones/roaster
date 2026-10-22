@@ -33,6 +33,10 @@ declare function api:if-modified-since($request as map(*)) {
         error($errors:SERVER_ERROR, "If-Modified-Since was not cast to xs:dateTime")
 };
 
+declare function api:required-properties($request as map(*)) {
+    $request?body
+};
+
 (:~
  : An example how to throw a dynamic custom error (error:NOT_FOUND_404)
  : This error is handled in the router
