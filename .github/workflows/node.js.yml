@@ -15,13 +15,14 @@ jobs:
       matrix:
         exist-version: [6.0.1, 5.5.1, 6.4.1]
         experimental: [false]
-        # latest might contain breaking changes
+        # eXist 7 (latest and the rolling release image) must pass as well.
+        # Set `experimental: true` on an entry to let it fail without failing
+        # the run again, e.g. while an upcoming eXist version breaks things.
         include:
           - exist-version: latest
-            experimental: true
-          # the rolling release image may fail for the moment
+            experimental: false
           - exist-version: release
-            experimental: true
+            experimental: false
     services:
       exist:
         image: existdb/existdb:${{ matrix.exist-version }}
