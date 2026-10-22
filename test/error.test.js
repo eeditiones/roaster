@@ -25,7 +25,8 @@ describe('Error reporting', function() {
         return util.axios.delete('api/errors')
             .catch(function(error) {
                 expect(error.response.status).to.equal(403)
-                expect(error.response.headers['content-type']).to.equal('application/xml')
+                // xml responses carry an explicit UTF-8 charset (see charset.test.js)
+                expect(error.response.headers['content-type']).to.equal('application/xml; charset=UTF-8')
                 expect(error.response.data).to.equal('<forbidden/>')
             })
     })
@@ -34,7 +35,10 @@ describe('Error reporting', function() {
         return util.axios.get('api/errors/handle')
             .catch(function(error) {
                 expect(error.response.status).to.equal(500)
-                expect(error.response.headers['content-type']).to.equal('text/html')
+                // html responses carry an explicit UTF-8 charset too, though
+                // eXist-db's servlet re-normalizes the header it is given
+                // (no space, lowercase) when it sets the character encoding
+                expect(error.response.headers['content-type']).to.equal('text/html;charset=utf-8')
                 expect(error.response.data).to.contain('$undefined')
             })
     })
