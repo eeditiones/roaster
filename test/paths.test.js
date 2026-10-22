@@ -242,3 +242,52 @@ describe('with percent encoded value in path', function () {
         expect(res.data.parameters.test).to.equal('test and test')
     })
 })
+
+describe('Route regex anchoring (regression for #122)', function () {
+    const getError = async (request) => {
+        try {
+            await request
+        } catch (e) {
+            return e.response
+        }
+        expect.fail('request should have been rejected')
+    }
+
+    it('matches the exact route', async function () {
+        const res = await util.axios.get('api/patients')
+        expect(res.status).to.equal(200)
+    })
+
+    it('matches the exact route with a trailing slash', async function () {
+        const res = await util.axios.get('api/patients/')
+        expect(res.status).to.equal(200)
+    })
+
+    it('does not match a request path with a superfluous suffix', async function () {
+        const res = await getError(util.axios.get('api/patients12345'))
+        expect(res.status).to.equal(404)
+    })
+
+    it('does not match a deeper sub-path of an exact route', async function () {
+        const res = await getError(util.axios.get('api/dates/v0.2'))
+        expect(res.status).to.equal(404)
+    })
+
+    it('lets the sibling parameterized route win for /api/patients/123', async function () {
+        const res = await util.axios.get('api/patients/123')
+        expect(res.status).to.equal(200)
+        expect(res.data.parameters.id).to.equal('123')
+    })
+
+    it('rejects a fixed-suffix route with a superfluous suffix (/api/{test}/test)', async function () {
+        const res = await getError(util.axios.get('api/foo/testXXX'))
+        expect(res.status).to.equal(404)
+    })
+
+    it('still allows the greedy last path parameter to match embedded slashes', async function () {
+        // this must fail inside the handler (file not found), not at the router level
+        const res = await getError(util.axios.get('api/paths/sub/dir/file.txt'))
+        expect(res.status).to.equal(404)
+        expect(res.data.description).to.not.contain('No route matches pattern')
+    })
+})

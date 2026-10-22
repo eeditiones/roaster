@@ -705,6 +705,55 @@
                 }
             }
         },
+        "/api/patients": {
+            "get": {
+                "summary": "List patients (regression test for issue #122)",
+                "description": "Exact-match route that must not be shadowed by suffixed request paths such as /api/patients12345",
+                "operationId": "rutil:debug",
+                "tags": ["path"],
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/patients/{id}": {
+            "get": {
+                "summary": "Get a single patient by id (regression test for issue #122)",
+                "operationId": "rutil:debug",
+                "tags": ["path"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/dates": {
             "get": {
                 "summary": "Dates in querystring",
