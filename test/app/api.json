@@ -744,7 +744,7 @@
         },
         "/api/if-modified-since": {
             "get": {
-                "summary": "Date-time in header (IETF date)",
+                "summary": "HTTP-date in header",
                 "operationId": "api:if-modified-since",
                 "tags": ["header"],
                 "parameters": [
@@ -753,7 +753,7 @@
                         "in": "header",
                         "schema": {
                             "type": "string",
-                            "format": "date-time"
+                            "format": "http-date"
                         }
                     }
                 ],
