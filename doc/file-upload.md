@@ -18,15 +18,10 @@ This is not strictly necessary, but it shows how to send a filename which may be
 First look at the HTML form.
 
 ```html
-    <form id="singleFileUploadForm"
-        action="#"
-        method="POST" 
-        enctype="multipart/form-data"
-        onsubmit="uploadSingleFile"
-    >
-        <input type="file" name="file" id="singleFileUploadInput"/><br/>
-        <input type="submit" value="Upload text file"/>
-    </form>
+<form id="singleFileUploadForm" action="#" method="POST" enctype="multipart/form-data" onsubmit="uploadSingleFile">
+    <input type="file" name="file" id="singleFileUploadInput" /><br />
+    <input type="submit" value="Upload text file" />
+</form>
 ```
 
 The javascript function used for upload:
@@ -34,15 +29,15 @@ The form action is modified to dynamically set the filename as part of the URL.
 The filename is also sent in the form-data, so this is not really necessary (see batch upload example below).
 
 ```javascript
-      function uploadSingleFile(event) {
-        const input = document.getElementById('singleFileUploadInput')
-        const fileName = input.files[0].name;
+function uploadSingleFile(event) {
+    const input = document.getElementById('singleFileUploadInput')
+    const fileName = input.files[0].name
 
-        const form = event.target
-        form.action = `../upload-text/${fileName}`;
-        // Return true to submit immediately.
-        return true;
-      }
+    const form = event.target
+    form.action = `../upload-text/${fileName}`
+    // Return true to submit immediately.
+    return true
+}
 ```
 
 The form is at the URL `static/upload.html`, which is why the relative URL for uploading is `../upload/single/${fileName}`.
@@ -75,7 +70,7 @@ The OpenAPI specification for the upload is:
                     "name": "path",
                     "in": "path",
                     "required": true,
-                    "schema":{ "type": "string" }
+                    "schema": { "type": "string" }
                 }
             ],
             "responses": {
@@ -101,7 +96,7 @@ The OpenAPI specification for the upload is:
 }
 ```
 
-The request is handled by the XQuery function `upload:single` and 
+The request is handled by the XQuery function `upload:single` and
 writes the file into a collection inside the database.
 
 ```xquery
@@ -121,7 +116,7 @@ This setup is able to handle XML, text as well as binary file uploads.
 
 In order to allow batch uploads only very few modifications to the above example for single file uploads have to made.
 
-1. Signal that more than one element is expected in api.json 
+1. Signal that more than one element is expected in api.json
    `"multipart/form-data".schema.properties.file` is now of type array
     ```json
     {
@@ -137,10 +132,10 @@ In order to allow batch uploads only very few modifications to the above example
 4. return array of uploaded resources in response
 
 ```html
-    <form action="../upload/batch" method="POST" enctype="multipart/form-data">
-        <input type="file" name="file" multiple="true"/><br/>
-        <input type="submit" value="Upload files"/>
-    </form>
+<form action="../upload/batch" method="POST" enctype="multipart/form-data">
+    <input type="file" name="file" multiple="true" /><br />
+    <input type="submit" value="Upload files" />
+</form>
 ```
 
 ```json
@@ -187,7 +182,6 @@ declare function upload:batch ($request as map(*)) {
 };
 ```
 
-
 ## Base64 encoded file upload
 
 The previous example shows how to upload binary data unencoded, but since the OpenAPI specification provides a way to upload binary data encoded as base64, why not do that as well?
@@ -211,18 +205,18 @@ Base64 encoding is not provided by the HTML form, so we need some javascript.
 
 ```javascript
 function submitBase64FileUpload() {
-    event.preventDefault();
-    const file = document.getElementById('base64FileUploadInput').files[0];
-    const reader = new FileReader();
+    event.preventDefault()
+    const file = document.getElementById('base64FileUploadInput').files[0]
+    const reader = new FileReader()
     reader.onloadend = function () {
         // The reader makes a data: URI; remove the prefix and only keep the base64 string.
-        const base64 = reader.result.replace(/^data:.+;base64,/, '');
-        document.getElementById('base64FileUploadData').value = base64;
-        document.getElementById('base64FileUploadForm').submit();
-    };
-    reader.readAsDataURL(file);
+        const base64 = reader.result.replace(/^data:.+;base64,/, '')
+        document.getElementById('base64FileUploadData').value = base64
+        document.getElementById('base64FileUploadForm').submit()
+    }
+    reader.readAsDataURL(file)
     // do not submit, but wait for the reader to finish.
-    return false;
+    return false
 }
 ```
 

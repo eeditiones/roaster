@@ -7,7 +7,6 @@ const paramsSerializer = {
     indexes: null
 }
 
-
 describe('endpoint with pipe delimited parameter in query', function () {
     const params = {
         piped: 'one|two',
@@ -35,39 +34,39 @@ describe('endpoint with pipe delimited parameter in query', function () {
     it('parses pipe delimited values into an array', function () {
         const p = parameters.piped
         expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['one','two'])
+        expect(p).to.deep.equal(['one', 'two'])
     })
 
     it('parses space delimited values into an array', function () {
         const p = parameters.spaced
         expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['three','four'])
+        expect(p).to.deep.equal(['three', 'four'])
     })
 
     it('parses comma separated values in parameter formStrExpNo into an array of strings', function () {
         const p = parameters.formStrExpNo
         expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['blue','black'])
+        expect(p).to.deep.equal(['blue', 'black'])
     })
 
     it('parses occurrences of parameter formStrExpYes into an array of strings', function () {
         const p = parameters.formStrExpYes
         expect(p).to.be.an('array')
-        expect(p).to.deep.equal(['green','red'])
+        expect(p).to.deep.equal(['green', 'red'])
     })
 
     it('parses comma separated values in parameter formIntExpNo into an array of integers', function () {
         const p = parameters.formIntExpNo
         expect(p).to.be.an('array')
-        expect(p).to.deep.equal([1,2])
+        expect(p).to.deep.equal([1, 2])
     })
 
     it('parses occurrences of parameter formIntExpYes into an array of integers', function () {
         const p = parameters.formIntExpYes
         expect(p).to.be.an('array')
-        expect(p).to.deep.equal([10,20])
+        expect(p).to.deep.equal([10, 20])
     })
-});
+})
 
 describe('empty array parameters in GET request', function () {
     const params = {
@@ -127,11 +126,11 @@ describe('empty array parameters in GET request', function () {
         expect(p).to.be.an('array')
         expect(p).to.deep.equal([123])
     })
-});
+})
 
 describe('A parameter with style:pipeDelimited and explode:true will raise a server error when set', function () {
     const params = {
-        pipedExplode: 'one',
+        pipedExplode: 'one'
     }
 
     let res, errorResponse
@@ -154,13 +153,15 @@ describe('A parameter with style:pipeDelimited and explode:true will raise a ser
     })
 
     it('the error message is actionable', function () {
-        expect(errorResponse.data.description).to.include('Explode cannot be true for query-parameter "pipedExplode" with style set to pipeDelimited.')
+        expect(errorResponse.data.description).to.include(
+            'Explode cannot be true for query-parameter "pipedExplode" with style set to pipeDelimited.'
+        )
     })
-});
+})
 
 describe('A parameter with style:pipeDelimited and explode:true will raise a server error when set', function () {
     const params = {
-        spacedExplode: 'one',
+        spacedExplode: 'one'
     }
 
     let res, errorResponse
@@ -183,9 +184,11 @@ describe('A parameter with style:pipeDelimited and explode:true will raise a ser
     })
 
     it('the error message is actionable', function () {
-        expect(errorResponse.data.description).to.include('Explode cannot be true for query-parameter "spacedExplode" with style set to spaceDelimited.')
+        expect(errorResponse.data.description).to.include(
+            'Explode cannot be true for query-parameter "spacedExplode" with style set to spaceDelimited.'
+        )
     })
-});
+})
 
 describe('Array parameters a default value when unset in the request', function () {
     const params = {}
@@ -219,11 +222,11 @@ describe('Array parameters a default value when unset in the request', function 
         expect(p).to.be.an('array')
         expect(p).to.deep.equal([1, 2, 3])
     })
-});
+})
 
 describe('Wrong item types provided for array parameter', function () {
     const params = {
-        spacedDefault: '1 2 three',
+        spacedDefault: '1 2 three'
     }
 
     let res, errorResponse
@@ -245,16 +248,18 @@ describe('Wrong item types provided for array parameter', function () {
     })
 
     it('error message', function () {
-        expect(errorResponse.data.description).to.include('One or more values for query-parameter "spacedDefault" could not be cast to integer.')
+        expect(errorResponse.data.description).to.include(
+            'One or more values for query-parameter "spacedDefault" could not be cast to integer.'
+        )
     })
-});
+})
 
 describe('POST with simple array header parameter set', function () {
     const params = {
         requiredArray: [1]
     }
     const headers = {
-        simpleArrayHeader: "eleventy,22,dirty tree"
+        simpleArrayHeader: 'eleventy,22,dirty tree'
     }
 
     let status, parameters
@@ -279,16 +284,16 @@ describe('POST with simple array header parameter set', function () {
     })
     it('the header is parsed into an array', async function () {
         expect(parameters.simpleArrayHeader).to.be.an('array')
-        expect(parameters.simpleArrayHeader).to.deep.equal(['eleventy','22','dirty tree'])
+        expect(parameters.simpleArrayHeader).to.deep.equal(['eleventy', '22', 'dirty tree'])
     })
-});
+})
 
 describe('POST with empty simple array header parameter', function () {
     const params = {
         requiredArray: [1]
     }
     const headers = {
-        simpleArrayHeader: ""
+        simpleArrayHeader: ''
     }
 
     let res
@@ -308,11 +313,11 @@ describe('POST with empty simple array header parameter', function () {
     it('the header is parsed to null', async function () {
         expect(res.data.parameters.simpleArrayHeader).to.be.null
     })
-});
+})
 
 describe('empty required array parameter in POST request', function () {
     const params = {
-        'requiredArray' : []
+        requiredArray: []
     }
 
     let status, message
@@ -337,8 +342,7 @@ describe('empty required array parameter in POST request', function () {
     it('the error description starts with an actionable message', async function () {
         expect(message.startsWith('Required query-parameter "requiredArray" missing or empty.')).to.be.true
     })
-
-});
+})
 
 describe('unset required array parameter in POST request', function () {
     const params = {}
@@ -365,8 +369,7 @@ describe('unset required array parameter in POST request', function () {
     it('the error description starts with an actionable message', async function () {
         expect(message.startsWith('Required query-parameter "requiredArray" missing or empty.')).to.be.true
     })
-
-});
+})
 
 describe('sending more than one value for a non-array parameter', function () {
     const params = {
@@ -394,6 +397,10 @@ describe('sending more than one value for a non-array parameter', function () {
 
     it('the error description starts with an actionable message', async function () {
         console.log(message)
-        expect(message.startsWith('Multiple values were provided for query-parameter "string", which is not declared an array')).to.be.true
+        expect(
+            message.startsWith(
+                'Multiple values were provided for query-parameter "string", which is not declared an array'
+            )
+        ).to.be.true
     })
 })
