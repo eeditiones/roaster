@@ -86,7 +86,10 @@ describe('Undeclared response status content-type resolution (#127)', function (
             // deliberate, uncaught server error (eXist raises SENR0001 after
             // the response status/headers are already committed), so
             // roaster's JSON error envelope is never produced here. We only
-            // assert this does NOT succeed as a normal 200/JSON response.
+            // assert this does NOT succeed and the map body is not delivered.
+            // The content type is not asserted: eXist 7 (Jetty 12) renders its
+            // own error page negotiated against the Accept header, which is
+            // JSON for axios' default Accept.
             return util.axios
                 .get('api/response-type/explicit-xml')
                 .then(function () {
@@ -95,7 +98,8 @@ describe('Undeclared response status content-type resolution (#127)', function (
                 .catch(function (error) {
                     expect(error.response).to.exist
                     expect(error.response.status).to.not.equal(200)
-                    expect(error.response.headers['content-type']).to.not.equal('application/json')
+                    const body = error.response.data
+                    expect(typeof body === 'object' && body !== null && body.error === 'boom').to.be.false
                 })
         })
     })
