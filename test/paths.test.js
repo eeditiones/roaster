@@ -139,6 +139,39 @@ describe('Query parameters in GET request', function () {
     })
 })
 
+describe('Date-time header parameter (If-Modified-Since)', function () {
+    const get = (value) =>
+        util.axios.get('api/if-modified-since', {
+            headers: { 'If-Modified-Since': value }
+        })
+
+    it('accepts an xs:dateTime value', async function () {
+        const res = await get('2020-11-24T20:22:41Z')
+        expect(res.status).to.equal(200)
+        expect(res.data).to.equal('2020-11-24T20:22:41Z')
+    })
+
+    it('accepts an IETF date', async function () {
+        const res = await get('Tue, 24 Nov 2020 20:22:41 GMT')
+        expect(res.status).to.equal(200)
+        expect(res.data).to.equal('2020-11-24T20:22:41Z')
+    })
+
+    it('rejects gibberish with 400', async function () {
+        let res, errorResponse
+        try {
+            res = await get('not a date at all')
+        } catch (e) {
+            errorResponse = e.response
+        }
+        expect(res).to.be.undefined
+        expect(errorResponse.status).to.equal(400)
+        expect(errorResponse.data.description).to.include(
+            'header-parameter "If-Modified-Since" could not be cast to date-time'
+        )
+    })
+})
+
 describe('Query parameters in POST request', function () {
     const params = {
         num: 165.75,

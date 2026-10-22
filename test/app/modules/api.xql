@@ -25,6 +25,14 @@ declare function api:date($request as map(*)) {
     $request?parameters?date instance of xs:date and $request?parameters?dateTime instance of xs:dateTime
 };
 
+declare function api:if-modified-since($request as map(*)) {
+    let $since := $request?parameters?If-Modified-Since
+    return if ($since instance of xs:dateTime) then
+        string($since)
+    else
+        error($errors:SERVER_ERROR, "If-Modified-Since was not cast to xs:dateTime")
+};
+
 (:~
  : An example how to throw a dynamic custom error (error:NOT_FOUND_404)
  : This error is handled in the router

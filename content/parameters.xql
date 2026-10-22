@@ -162,7 +162,18 @@ declare %private function parameters:cast-atomic($values as xs:string*, $config 
                 '", which is not declared an array.'
         )
     else if (count($values) = 1) then
-        parameters:cast-value($values, $config?schema)
+        try { parameters:cast-value($values, $config?schema) } catch * {
+            error(
+                $errors:BAD_REQUEST,
+                "The value for " ||
+                    $config?in ||
+                    '-parameter "' ||
+                    $config?name ||
+                    '" could not be cast to ' ||
+                    ($config?schema?format, $config?schema?type)[1] ||
+                    "."
+            )
+        }
     else
         parameters:get-parameter-default-value($config?schema)!parameters:cast-value(., $config?schema)
 };
@@ -273,12 +284,11 @@ declare %private function parameters:cast-value($value as item()?, $schema as ma
                 case "date" return
                     xs:date($value)
                 case "date-time" return
+                    (: headers like If-Modified-Since use IETF dates (RFC 7231), which are not castable as xs:dateTime :)
                     if ($value castable as xs:dateTime) then
                         xs:dateTime($value)
                     else
-                        parse-ietf-date(
-                            $value
-                        ) (: Headers like If-Modified-Since are formatted as IETF date which is not castable as xs:dateTime :)
+                        parse-ietf-date($value)
                 case "binary" return
                     xs:base64Binary($value)
                 case "byte" return

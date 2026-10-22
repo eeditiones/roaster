@@ -742,6 +742,35 @@
                 }
             }
         },
+        "/api/if-modified-since": {
+            "get": {
+                "summary": "Date-time in header (IETF date)",
+                "operationId": "api:if-modified-since",
+                "tags": ["header"],
+                "parameters": [
+                    {
+                        "name": "If-Modified-Since",
+                        "in": "header",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The parsed header value as xs:dateTime",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/paths/{path}": {
             "get": {
                 "summary": "Parameter specified in last path component",
