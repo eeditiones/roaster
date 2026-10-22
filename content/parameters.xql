@@ -284,11 +284,10 @@ declare %private function parameters:cast-value($value as item()?, $schema as ma
                 case "date" return
                     xs:date($value)
                 case "date-time" return
-                    (: headers like If-Modified-Since use IETF dates (RFC 7231), which are not castable as xs:dateTime :)
-                    if ($value castable as xs:dateTime) then
-                        xs:dateTime($value)
-                    else
-                        parse-ietf-date($value)
+                    xs:dateTime($value)
+                (: HTTP-date (RFC 7231) as used in headers like If-Modified-Since :)
+                case "http-date" return
+                    parse-ietf-date($value)
                 case "binary" return
                     xs:base64Binary($value)
                 case "byte" return

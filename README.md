@@ -65,6 +65,26 @@ declare function custom:echo($request as map(*)) {
 };
 ```
 
+### Dates
+
+Parameters of `type: string` with one of the following formats are cast to XQuery date types:
+
+| `format`    | Defined by           | XQuery type   | Parsed with            |
+| ----------- | -------------------- | ------------- | ---------------------- |
+| `date`      | RFC 3339 `full-date` | `xs:date`     | `xs:date()`            |
+| `date-time` | RFC 3339 `date-time` | `xs:dateTime` | `xs:dateTime()`        |
+| `http-date` | RFC 7231 `HTTP-date` | `xs:dateTime` | `fn:parse-ietf-date()` |
+
+Use `http-date` for HTTP headers such as `If-Modified-Since`, whose values look like `Tue, 24 Nov 2020 20:22:41 GMT`.
+`http-date` is not part of the OpenAPI specification itself but is listed in the [OpenAPI Format Registry](https://spec.openapis.org/registry/format/http-date.html).
+
+Roaster is more lenient than the referenced RFCs, because it relies on the underlying XQuery parsing functions:
+
+- `date` and `date-time` accept any value valid for `xs:date` and `xs:dateTime`, for example a date with a timezone (`2020-11-24Z`) or a date-time without a timezone offset, which RFC 3339 requires.
+- `http-date` accepts everything `fn:parse-ietf-date()` accepts. This includes the obsolete RFC 850 form (`Sunday, 06-Nov-94 08:49:37 GMT`), a missing weekday, numeric timezone offsets and timezone names other than `GMT`.
+
+A value that cannot be parsed results in a `400 Bad Request` response.
+
 ## Responses
 
 If the function returns a value, it is sent to the client with a HTTP status code of 200 (OK). The returned value is converted into the specified target media type (if any, otherwise `application/xml` is assumed).
