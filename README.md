@@ -1,5 +1,5 @@
-
 # Roaster
+
 <img alt="roaster router logo" src="icon.svg" width="128" />
 
 > **Define** your API, **then** implement it.
@@ -7,7 +7,6 @@
 ![Test and Release](https://github.com/eeditiones/roaster/workflows/Test%20and%20Release/badge.svg) [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 
 ## OpenAPI Router for eXist
-
 
 Roaster is a generic router to be used in any exist-db application. It reads an [OpenAPI 3.0](https://spec.openapis.org/oas/v3.0.0) specification from a JSON file and routes requests to handler functions written in XQuery.
 
@@ -25,7 +24,7 @@ on [eXist-db's public package repository](https://exist-db.org/exist/apps/public
 
 ## How it works
 
-eXist applications usually have a controller as main entry point. The 
+eXist applications usually have a controller as main entry point. The
 [controller.xql](test/app/controller.xql) in the example application only handles requests to static resources, but forwards all other requests to an XQuery script [api.xql](test/app/modules/api.xql). This script imports the OpenAPI router module and calls `roaster:route`, passing it one or more Open API specifications in JSON format.
 
 The [demo app](#demo-app), included in this repository, uses two specifications:
@@ -42,21 +41,21 @@ TEI Publisher has [api.json](https://github.com/eeditiones/tei-publisher-app/tre
 It is also possible to overwrite a route from `api.json` by placing it into `custom-api.json`.
 
 Each route in the specification _must_ have an `operationId` property.
-This is the name of the XQuery function that will handle the request to the given route. 
-The XQuery function will be resolved by the lookup-function passed to  `roaster:route`. In order for that to work all route handler functions need to be available in the context of that function. This is why [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
+This is the name of the XQuery function that will handle the request to the given route.
+The XQuery function will be resolved by the lookup-function passed to `roaster:route`. In order for that to work all route handler functions need to be available in the context of that function. This is why [api.xql](test/app/modules/api.xql) imports all modules containing handler functions.
 
 ## Route Handling
 
 The XQuery handler function _must_ expect exactly one argument: `$request as map(*)`. This is a map with a number of keys:
 
-* _id_: a uuid identifying this request (useful to find this exact request in your logfile)
-* _parameters_: a map containing all parameters (path and query) which were defined in the spec. The key is the name of the parameter, the value is the parameter value cast to the defined target type.
-* _body_: the body of the request (if ~requestBody~ was used), cast to the specified media type (currently application/json or application/xml).
-* _config_: the JSON object corresponding to the Open API path configuration for the current route and method
-* _user_: contains the authenticated user, if any authentication was successful
-* _method_: GET, POST, PUT, DELETE, HEAD...
-* _path_: the requested path
-* _spec_: the entire API definition this route is defined in
+- _id_: a uuid identifying this request (useful to find this exact request in your logfile)
+- _parameters_: a map containing all parameters (path and query) which were defined in the spec. The key is the name of the parameter, the value is the parameter value cast to the defined target type.
+- _body_: the body of the request (if ~requestBody~ was used), cast to the specified media type (currently application/json or application/xml).
+- _config_: the JSON object corresponding to the Open API path configuration for the current route and method
+- _user_: contains the authenticated user, if any authentication was successful
+- _method_: GET, POST, PUT, DELETE, HEAD...
+- _path_: the requested path
+- _spec_: the entire API definition this route is defined in
 
 For example, here's a simple function which just echoes the passed in parameters:
 
@@ -80,7 +79,7 @@ To modify responses like HTTP status code, body and headers the handler function
 
 ```xquery
 declare function custom:response($request as map(*)) {
-    roaster:response(427, "application/octet-stream", "101010", 
+    roaster:response(427, "application/octet-stream", "101010",
       map { "x-special": "23", "Content-Length" : "1" })
 };
 ```
@@ -93,12 +92,12 @@ Example:
 
 ```json
 {
-  "module": "/db/apps/oas-test/modules/api.xql",
-  "code": "errors:NOT_FOUND_404",
-  "value": "error details",
-  "line": 34,
-  "column": 5,
-  "description": "document not found"
+    "module": "/db/apps/oas-test/modules/api.xql",
+    "code": "errors:NOT_FOUND_404",
+    "value": "error details",
+    "line": 34,
+    "column": 5,
+    "description": "document not found"
 }
 ```
 
@@ -107,7 +106,7 @@ Request handlers can also throw explicit errors using the variables defined in [
 Example:
 
 ```xquery
-error($errors:NOT_FOUND, "HTML file " || $path || " not found", map { "info": "additional info"})
+error($errors:NOT_FOUND, 'HTML file ' || $path || ' not found', map {'info': 'additional info'})
 ```
 
 The server will respond with the HTTP status code 404 to the client.
@@ -151,8 +150,8 @@ Certain operations may be restricted to defined users or groups. We use an imple
 }
 ```
 
-requires that the *effective user* or *real user* running the operation belongs to the "tei" group.
-The *effective user* will be used, if present.
+requires that the _effective user_ or _real user_ running the operation belongs to the "tei" group.
+The _effective user_ will be used, if present.
 
 **groups** can be an array, too. In that case the user must be in at least one of them.
 
@@ -191,7 +190,7 @@ Please see the [file upload documentation](doc/file-upload.md) for more details 
 
 ## Limitations
 
-The library does not support yet support following OpenAPI feature(s): 
+The library does not support yet support following OpenAPI feature(s):
 
 - `$ref` references in the Open API specification ([issue](https://github.com/eeditiones/roaster/issues/39))
 
@@ -201,13 +200,13 @@ Clone this repository and switch to your local working directory.
 
 ### Requirements
 
--  [node](https://nodejs.org/en/): `v14+`
--  [exist-db](https://www.exist-db.org): `v5.0.0+`
--  [Ant](https://ant.apache.org): `v1.10.9+` (optional)
+- [node](https://nodejs.org/en/): `v14+`
+- [exist-db](https://www.exist-db.org): `v5.0.0+`
+- [Ant](https://ant.apache.org): `v1.10.9+` (optional)
 
 ### Building and Installation
 
-Roaster uses Gulp as its build tool which itself builds on NPM. 
+Roaster uses Gulp as its build tool which itself builds on NPM.
 To initialize the project and load dependencies run
 
 ```bash
@@ -216,12 +215,12 @@ npm i
 
 > Note: the `install` commands below assume that you have a local eXist-db running on port 8080. However the database connection can be modified in .existdb.json.
 
-| Run | Description |
-|---------|-------------|
-|```gulp build```|to just build the roaster routing lib. |
-|```gulp build:all```|to build the routing lib and the demo app.|
-|```gulp install```|To build and install the lib in one go|
-|```gulp install:all```|To build and install lib and demo app run|
+| Run                | Description                                |
+| ------------------ | ------------------------------------------ |
+| `gulp build`       | to just build the roaster routing lib.     |
+| `gulp build:all`   | to build the routing lib and the demo app. |
+| `gulp install`     | To build and install the lib in one go     |
+| `gulp install:all` | To build and install lib and demo app run  |
 
 The resulting xar(s) are found in the root of the project.
 
@@ -236,10 +235,10 @@ The demo app is now available for download as an artefact of a [release](https:/
 1. download the **roasted.xar**
 2. install it in your eXist-db instance
 
-    You can use the **upload** feature of the dashboard. 
+    You can use the **upload** feature of the dashboard.
     The roaster library will be installed as a dependency in the required version.
 
-1. open http://localhost:8080/exist/apps/roasted/
+3. open http://localhost:8080/exist/apps/roasted/
 
     If your instance is running on a different domain replace `localhost:8080` with the correct one.
     This will open a form dynamically created from the definition files [api.json](test/app/api.json) _and_ [api-jwt.json](test/app/api-jwt.json).
@@ -259,7 +258,7 @@ If you want to make modifications to the demo app and test them
 ### Development
 
 Running `gulp watch` will build and install the library and watch
-for file changes. Whenever one of the watched files is changed a 
+for file changes. Whenever one of the watched files is changed a
 fresh version of the xar will be installed in the database.
 This included the test application in `test/app`.
 
@@ -279,8 +278,8 @@ Additional tests that cover this package are contained in the [tei-publisher-app
 
 Roaster uses [Angular Commit Message Conventions](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines) to determine semantic versioning of releases, see these examples:
 
-| Commit message  | Release type |
-|-----------------|--------------|
-| `fix(pencil): stop graphite breaking when too much pressure applied` | Patch Release |
-| `feat(pencil): add 'graphiteWidth' option` | ~~Minor~~ Feature Release |
+| Commit message                                                                                                                                                                                      | Release type               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `fix(pencil): stop graphite breaking when too much pressure applied`                                                                                                                                | Patch Release              |
+| `feat(pencil): add 'graphiteWidth' option`                                                                                                                                                          | ~~Minor~~ Feature Release  |
 | `perf(pencil): remove graphiteWidth option`<br/><br/>`BREAKING CHANGE: The graphiteWidth option has been removed.`<br/>`The default graphite width of 10mm is always used for performance reasons.` | ~~Major~~ Breaking Release |
