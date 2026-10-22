@@ -270,7 +270,7 @@ declare %private function router:process-request(
         200
 
     return (
-        router:write-response($status, $response, $route),
+        router:write-response($status, $response, $route, $logger),
         $logger("debug", ``[[`{$base-request?id}`] `{$base-request?method}` `{$base-request?path}`: `{$status}`]``)
     )
 };
@@ -472,7 +472,7 @@ declare %private function router:error(
             else
                 map {$router:RESPONSE_BODY: $handled-error}
 
-            return router:write-response($code, $error-response, $route)
+            return router:write-response($code, $error-response, $route, $logger)
         } catch * {
             let $_error := map {
                 "code": $err:code,
@@ -511,7 +511,12 @@ declare function router:default-error-handler($code as xs:integer, $error as map
     )
 };
 
-declare %private function router:write-response($default-code as xs:integer, $response as item()*, $config as map(*)) {
+declare %private function router:write-response(
+    $default-code as xs:integer,
+    $response as item()*,
+    $config as map(*),
+    $logger as function (xs:string, item()*) as empty-sequence()
+) {
     let $code := head(($response?($router:RESPONSE_CODE), $default-code))
 
     let $content-type := head(
@@ -522,7 +527,7 @@ declare %private function router:write-response($default-code as xs:integer, $re
 
     return (
         response:set-status-code($code),
-        router:set-additional-headers($response?($router:RESPONSE_HEADERS)),
+        router:set-additional-headers($response?($router:RESPONSE_HEADERS), $logger),
         if ($code = 204) then (
         ) else (
             response:set-header("Content-Type", router:content-type-header($content-type, $method)),
@@ -532,17 +537,24 @@ declare %private function router:write-response($default-code as xs:integer, $re
     )
 };
 
-declare %private function router:set-additional-headers($headers as map(*)?) as empty-sequence() {
+declare %private function router:set-additional-headers(
+    $headers as map(*)?,
+    $logger as function (xs:string, item()*) as empty-sequence()
+) as empty-sequence() {
     if (not(exists($headers))) then (
     ) else
-        map:remove($headers, "Content-Type") => map:for-each(router:safe-set-header#2)
+        map:remove($headers, "Content-Type") => map:for-each(router:safe-set-header(?, ?, $logger))
 };
 
-declare %private function router:safe-set-header($header as xs:string, $value as item()?) as empty-sequence() {
+declare %private function router:safe-set-header(
+    $header as xs:string,
+    $value as item()?,
+    $logger as function (xs:string, item()*) as empty-sequence()
+) as empty-sequence() {
     if (not(exists($value))) (: Q: rather throw here error ? :) then
-        util:log("warn", "Empty header '" || $header || "'")
+        $logger("warn", "Empty header '" || $header || "'")
     else if (not($value castable as xs:string)) (: Q: rather throw here error ? :) then
-        util:log("warn", "Headervalue for '" || $header || "' is not castable to xs:string")
+        $logger("warn", "Headervalue for '" || $header || "' is not castable to xs:string")
     else
         response:set-header($header, $value)
 };
