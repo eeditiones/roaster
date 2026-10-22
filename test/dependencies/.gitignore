@@ -1,0 +1,3 @@
+# XARs the test application depends on are fetched here by CI (and may be
+# placed here by hand for local runs); keep the folder, ignore its contents.
+*.xar

@@ -25,6 +25,9 @@ const existClient = createClient(connectionOptions);
 
 const distFolder = 'dist'
 
+// XARs the test application depends on, installed from local files when present
+const dependenciesFolder = 'test/dependencies'
+
 const library = {
     static: [
         "content/*",
@@ -56,6 +59,25 @@ const packageFilename = `${app.target}-${version}.xar`
  */
 function installXar (packageFilename) {
     return src(packageFilename, {cwd: distFolder, encoding:false })
+        .pipe(existClient.install())
+}
+
+/**
+ * Install any XAR placed in test/dependencies.
+ *
+ * The test application declares dependencies on jwt and, through it,
+ * expath-crypto. When they are not already present, eXist-db resolves them
+ * from the public repository at exist-db.org while installing roasted.xar,
+ * which makes the whole test suite depend on that host being reachable: when
+ * it is down, every leg of CI fails at installTestAppXar with
+ * "experr:EXPATH007 ... Connection refused" before a single test runs.
+ *
+ * Dropping the XARs here instead installs them from a local file. The folder
+ * is normally empty - the task is then a no-op and resolution falls back to
+ * the public repository, so an existing local setup keeps working unchanged.
+ */
+function installDependencies () {
+    return src('*.xar', { cwd: dependenciesFolder, encoding: false, allowEmpty: true })
         .pipe(existClient.install())
 }
 
@@ -172,6 +194,7 @@ export const build_all = series(
 export const install = series(cleanLibrary, packageLibrary, installLibraryXar)
 export const install_all = series(
     cleanAll,
+    installDependencies,
     packageLibrary, installLibraryXar, 
     packageTestApp, installTestAppXar
 )
