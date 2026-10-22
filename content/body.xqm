@@ -77,6 +77,11 @@ declare function body:content-type ($request as map(*)) as map(*) {
     then (map{}) (: this route expects no body, return an empty map :)
     else if (not($request?config?requestBody?content instance of map(*)))
     then error($errors:OPERATION, "requestBody.content is not defined correctly", $request?config)
+    else if (
+        not($request?config?requestBody?required) and
+        normalize-space(request:get-header("Content-Type")) = ""
+    )
+    then (map{}) (: an optional body that was not sent: no body, not one of a disallowed media type :)
     else (
         let $content := $request?config?requestBody?content
         let $defined-content-types := map:keys($content)

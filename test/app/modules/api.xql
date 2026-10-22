@@ -147,6 +147,16 @@ declare variable $api:auth-options := map {
 };
 
 (:~
+ : A route whose request body is optional: whether one was sent, and what it was
+ :)
+declare function api:optional-body ($request as map(*)) {
+    map {
+        "sent": exists($request?body),
+        "body": if (exists($request?body)) then $request?body else map {}
+    }
+};
+
+(:~
  : Example login route handler using non-standard propertys
  : within the request body to authenticate users against exist-db.
  : The data can also be supplied as JSON

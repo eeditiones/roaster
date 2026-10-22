@@ -206,6 +206,78 @@
                 }
             }
         },
+        "/api/session": {
+            "post": {
+                "summary": "Session check, or login",
+                "description": "Roaster's login handler with an optional body, as TEI Publisher declares its /api/login: a POST with no body at all asks who is logged in (pb-login does this), a POST with user and password logs in.",
+                "tags": [
+                    "auth",
+                    "body"
+                ],
+                "operationId": "auth:login",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "user": { "type": "string" },
+                                    "password": { "type": "string", "format": "password" }
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "user": { "type": "string" },
+                                    "password": { "type": "string", "format": "password" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The user logged in, if any",
+                        "content": {
+                            "application/json": {
+                                "schema": { "type": "object" }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/optional-body": {
+            "post": {
+                "summary": "A route whose request body is optional",
+                "description": "Echoes whether a body was sent, and the body",
+                "tags": [
+                    "body"
+                ],
+                "operationId": "api:optional-body",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": { "type": "object" }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "What was received",
+                        "content": {
+                            "application/json": {
+                                "schema": { "type": "object" }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/login": {
             "post": {
                 "summary": "Custom user Login",
