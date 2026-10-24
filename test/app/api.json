@@ -816,6 +816,68 @@
                 }
             }
         },
+        "/api/parameters/location/unknown": {
+            "get": {
+                "description": "Parameter with a location not defined by the OpenAPI specification",
+                "summary": "Test an unknown parameter location",
+                "operationId": "rutil:debug",
+                "tags": ["query"],
+                "parameters": [
+                    {
+                        "name": "misplaced",
+                        "in": "body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/parameters/location/querystring": {
+            "get": {
+                "description": "Parameter in the querystring location defined by OpenAPI 3.2.0",
+                "summary": "Test the unsupported querystring parameter location",
+                "operationId": "rutil:debug",
+                "tags": ["query"],
+                "parameters": [
+                    {
+                        "name": "whole",
+                        "in": "querystring",
+                        "content": {
+                            "application/x-www-form-urlencoded": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/patients": {
             "get": {
                 "summary": "List patients (regression test for issue #122)",

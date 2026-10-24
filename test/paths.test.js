@@ -199,6 +199,29 @@ describe('Query parameters with an empty value', function () {
     })
 })
 
+describe('Parameter locations', function () {
+    const getError = async (request) => {
+        try {
+            await request
+        } catch (e) {
+            return e.response
+        }
+        expect.fail('request should have been rejected')
+    }
+
+    it('rejects a location not defined by the specification', async function () {
+        const res = await getError(util.axios.get('api/parameters/location/unknown', { params: { misplaced: 'a' } }))
+        expect(res.status).to.equal(500)
+        expect(res.data.description).to.include('Unknown location "body" for parameter "misplaced".')
+    })
+
+    it('reports the querystring location as not implemented', async function () {
+        const res = await getError(util.axios.get('api/parameters/location/querystring?a=b'))
+        expect(res.status).to.equal(501)
+        expect(res.data.description).to.include('Unsupported location "querystring" for parameter "whole".')
+    })
+})
+
 describe('Date-time and HTTP-date parameters', function () {
     const getError = async (request) => {
         try {
