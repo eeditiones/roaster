@@ -347,6 +347,78 @@
                 }
             }
         },
+        "/api/auth/basic-first": {
+            "get": {
+                "summary": "Constrained route listing basicAuth before cookieAuth",
+                "operationId": "rutil:debug",
+                "tags": ["auth"],
+                "security": [{ "basicAuth": [] }, { "cookieAuth": [] }],
+                "x-constraints": {
+                    "groups": "dba"
+                },
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized"
+                    }
+                }
+            }
+        },
+        "/api/auth/basic-first/unconstrained": {
+            "get": {
+                "summary": "Unconstrained route listing basicAuth before cookieAuth",
+                "operationId": "rutil:debug",
+                "tags": ["auth"],
+                "security": [{ "basicAuth": [] }, { "cookieAuth": [] }],
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/basic-only": {
+            "get": {
+                "summary": "Constrained route accepting basicAuth only",
+                "operationId": "rutil:debug",
+                "tags": ["auth"],
+                "security": [{ "basicAuth": [] }],
+                "x-constraints": {
+                    "groups": "dba"
+                },
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized"
+                    }
+                }
+            }
+        },
         "/api/arrays": {
             "post": {
                 "summary": "Test array parameters in querys",

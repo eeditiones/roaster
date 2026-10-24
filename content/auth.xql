@@ -219,9 +219,18 @@ declare function auth:use-cookie-auth($request as map(*), $custom-options as map
  : Basic authentication is handled by Jetty
  : the user is already authenticated in the database and we just need to
  : retrieve the information here
+ : Only matches if the request sends Basic credentials, so that strategies
+ : listed after basicAuth are still tried
  :)
-declare function auth:use-basic-auth($request as map(*)) as map(*) {
-    rutil:getDBUser()
+declare function auth:use-basic-auth($request as map(*)) as map(*)? {
+    if (matches(request:get-header("Authorization"), "^\s*Basic\s", "i")) then
+        rutil:getDBUser()
+    else (
+    )
+};
+
+declare %private function auth:declares-basic-auth($defined-auth-methods as array(*)?) as xs:boolean {
+    some $method in $defined-auth-methods?* satisfies map:contains($method, "basicAuth")
 };
 
 declare %private function auth:is-public-route($constraints as map(*)?) as xs:boolean {
@@ -263,7 +272,13 @@ declare %private function auth:authenticate($request as map(*), $response as map
 
     let $methods := array:for-each($defined-auth-methods, auth:map-auth-methods(?, $strategies))
 
-    let $user := array:fold-left($methods, (), auth:use-first-matching-method($request))
+    let $matched-user := array:fold-left($methods, (), auth:use-first-matching-method($request))
+    (: without credentials basicAuth falls back to the current database user (guest) :)
+    let $user := if (empty($matched-user) and auth:declares-basic-auth($defined-auth-methods)) then (
+        rutil:getDBUser()
+    ) else (
+        $matched-user
+    )
     let $constraints := $request?config?x-constraints
     return if (auth:is-public-route($constraints) or auth:is-authorized-user($constraints, $user)) then (
         map:put($request, "user", $user) (: add "user" to request :), $response
