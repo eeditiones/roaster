@@ -1101,6 +1101,63 @@
                 }
             }
         },
+        "/api/errors/handler/missing": {
+            "get": {
+                "summary": "Lookup finds no handler function",
+                "operationId": "api:handler-does-not-exist",
+                "tags": ["errors"],
+                "responses": {
+                    "500": {
+                        "description": "Handler lookup failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/errors/handler/not-a-function": {
+            "get": {
+                "summary": "Lookup returns a string instead of a function",
+                "operationId": "api:handler-not-a-function",
+                "tags": ["errors"],
+                "responses": {
+                    "500": {
+                        "description": "Handler lookup failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/errors/handler/wrong-arity": {
+            "get": {
+                "summary": "Lookup returns a function that takes no arguments",
+                "operationId": "api:handler-wrong-arity",
+                "tags": ["errors"],
+                "responses": {
+                    "500": {
+                        "description": "Handler lookup failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/upload/single/{path}": {
             "post": {
                 "summary": "Upload a single file.",
