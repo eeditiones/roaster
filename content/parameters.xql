@@ -112,7 +112,12 @@ declare %private function parameters:retrieve($parameter as map(*)) as map(*)? {
             case "cookie" return
                 request:get-cookie-value($name)
             default return
-                request:get-parameter($name, ())
+                let $received := request:get-parameter($name, ())
+                (: an empty value stands in for an omitted parameter :)
+                return if (parameters:allows-empty-value($parameter) and empty($received[. ne ""])) then (
+                ) else (
+                    $received
+                )
 
         let $cast := parameters:cast($values, $parameter)
 
@@ -125,6 +130,20 @@ declare %private function parameters:retrieve($parameter as map(*)) as map(*)? {
             map {$name: $cast}
         )
     )
+};
+
+(:~
+ : With allowEmptyValue set to true, clients may send a query parameter with
+ : an empty value instead of omitting it, and the server treats it as unused.
+ : The field is ignored for styles that cannot serialize an empty value.
+ : Without it, an empty value is passed on as the empty string.
+ : [3.0.4](https://spec.openapis.org/oas/v3.0.4.html#parameter-allow-empty-value)
+ : [3.2.0](https://spec.openapis.org/oas/v3.2.0.html#parameter-allow-empty-value)
+ :)
+declare %private function parameters:allows-empty-value($parameter as map(*)) as xs:boolean {
+    $parameter?in eq "query" and
+        $parameter?allowEmptyValue eq true() and
+        (empty($parameter?style) or $parameter?style eq "form")
 };
 
 declare %private function parameters:get-parameter-default-value($schema as map(*)?) as item()? {

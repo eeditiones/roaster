@@ -705,6 +705,117 @@
                 }
             }
         },
+        "/api/parameters/empty": {
+            "get": {
+                "description": "Query parameters sent with an empty value",
+                "summary": "Test allowEmptyValue on query parameters",
+                "operationId": "rutil:debug",
+                "tags": ["query"],
+                "parameters": [
+                    {
+                        "name": "unusedString",
+                        "in": "query",
+                        "allowEmptyValue": true,
+                        "schema": {
+                            "type": "string",
+                            "default": "abcdefg"
+                        }
+                    },
+                    {
+                        "name": "unusedInt",
+                        "in": "query",
+                        "allowEmptyValue": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "unusedArray",
+                        "in": "query",
+                        "allowEmptyValue": true,
+                        "schema": {
+                            "type": "array",
+                            "default": [1],
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    {
+                        "name": "spaceArray",
+                        "in": "query",
+                        "style": "spaceDelimited",
+                        "explode": false,
+                        "allowEmptyValue": true,
+                        "schema": {
+                            "type": "array",
+                            "default": ["abc"],
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    {
+                        "name": "emptyString",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "abcdefg"
+                        }
+                    },
+                    {
+                        "name": "emptyInt",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/parameters/empty/required": {
+            "get": {
+                "description": "Required query parameter sent with an empty value",
+                "summary": "Test allowEmptyValue on a required query parameter",
+                "operationId": "rutil:debug",
+                "tags": ["query"],
+                "parameters": [
+                    {
+                        "name": "required",
+                        "in": "query",
+                        "required": true,
+                        "allowEmptyValue": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON dump of request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/patients": {
             "get": {
                 "summary": "List patients (regression test for issue #122)",
