@@ -317,6 +317,30 @@ declare %private function router:execute-handler(
                     'Operation not found for operationId:"' || $base-request?config?operationId || '"',
                     $base-request?config
                 )
+            ) else if (
+                (: maps and arrays are functions too, but can never handle a request :)
+                count($fn) ne 1 or
+                    $fn instance of map(*) or
+                    $fn instance of array(*) or
+                    not($fn instance of function(*))
+            ) then (
+                error(
+                    $errors:OPERATION,
+                    'Lookup for operationId:"' ||
+                        $base-request?config?operationId ||
+                        '" did not return a function, got ' ||
+                        router:describe-items($fn),
+                    $base-request?config
+                )
+            ) else if (function-arity($fn) ne 1) then (
+                error(
+                    $errors:OPERATION,
+                    'Handler for operationId:"' ||
+                        $base-request?config?operationId ||
+                        '" must take exactly one argument (the request map), but takes ' ||
+                        function-arity($fn),
+                    $base-request?config
+                )
             ) else (
                 $fn($request)
             )
@@ -361,6 +385,29 @@ declare %private function router:execute-handler(
                 }
             )
         }
+};
+
+(:~
+ : Describe what a value is, for error messages
+ :)
+declare %private function router:describe-items($items as item()*) as xs:string {
+    if (count($items) gt 1) then
+        "a sequence of " || count($items) || " items"
+    else
+        typeswitch ($items)
+            case map(*) return
+                "a map"
+            case array(*) return
+                "an array"
+            case node() return
+                "a node"
+            case xs:string return
+                'the string "' || $items || '"'
+            case xs:anyAtomicType return
+                "an atomic value"
+
+            default return
+                "an item"
 };
 
 (: content types :)
