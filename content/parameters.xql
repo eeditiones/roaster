@@ -66,7 +66,8 @@ declare %private function parameters:is-path-parameter($parameter as map(*)) as 
 
 declare %private function parameters:get-path-parameter-map-from-config($parameters as array(*)?) as map(*)? {
     if (not(exists($parameters))) then (
-    ) (: no parameters defined :) else
+        (: no parameters defined :)
+    ) else
         let $path-parameters := for-each(
             $parameters?*,
             function ($parameter as map(*)) as map(*)? {
@@ -88,10 +89,9 @@ declare %private function parameters:get-path-parameter-map-from-config($paramet
  :)
 declare function parameters:in-request($request as map(*), $response as map(*)) as map(*)+ {
     if (not(map:contains($request?config, "parameters"))) then (
+        (: route expects no parameters, return request unchanged :)
         $request, $response
-    ) (: route expects no parameters, return request unchanged :) else if (
-        not($request?config?parameters instance of array(*))
-    ) then
+    ) else if (not($request?config?parameters instance of array(*))) then
         error($errors:OPERATION, "Parameter definition must be an array: " || $request?pattern, $request)
     else
         let $maps := for-each($request?config?parameters?*, parameters:retrieve#1)
@@ -113,8 +113,8 @@ declare %private function parameters:retrieve($parameter as map(*)) as map(*)? {
                 request:get-cookie-value($name)
             default return
                 let $received := request:get-parameter($name, ())
-                (: an empty value stands in for an omitted parameter :)
                 return if (parameters:allows-empty-value($parameter) and empty($received[. ne ""])) then (
+                    (: an sequence of only empty strings stands in for an omitted parameter :)
                 ) else (
                     $received
                 )
