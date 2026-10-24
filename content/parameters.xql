@@ -111,13 +111,14 @@ declare %private function parameters:retrieve($parameter as map(*)) as map(*)? {
                 try { request:get-header($name) } catch * { () }
             case "cookie" return
                 request:get-cookie-value($name)
+            case "query" return
+                parameters:maybe-treat-as-empty($parameter, request:get-parameter($name, ()))
             default return
-                let $received := request:get-parameter($name, ())
-                return if (parameters:allows-empty-value($parameter) and empty($received[. ne ""])) then (
-                    (: an sequence of only empty strings stands in for an omitted parameter :)
-                ) else (
-                    $received
-                )
+                (:
+                 : fallback to query parameter handling - might be revised in future versions
+                 : needed for OpenAPI 3.2.0 which defines querystring as an additional location
+                 :)
+                request:get-parameter($name, ())
 
         let $cast := parameters:cast($values, $parameter)
 
@@ -133,6 +134,8 @@ declare %private function parameters:retrieve($parameter as map(*)) as map(*)? {
 };
 
 (:~
+ : Returns `$received` or the empty sequence depending on whether the parameter should be handled as if it was omitted.
+ :
  : With allowEmptyValue set to true, clients may send a query parameter with
  : an empty value instead of omitting it, and the server treats it as unused.
  : The field is ignored for styles that cannot serialize an empty value.
@@ -140,10 +143,16 @@ declare %private function parameters:retrieve($parameter as map(*)) as map(*)? {
  : [3.0.4](https://spec.openapis.org/oas/v3.0.4.html#parameter-allow-empty-value)
  : [3.2.0](https://spec.openapis.org/oas/v3.2.0.html#parameter-allow-empty-value)
  :)
-declare %private function parameters:allows-empty-value($parameter as map(*)) as xs:boolean {
-    $parameter?in eq "query" and
+declare %private function parameters:maybe-treat-as-empty($parameter as map(*), $received as xs:string*) as xs:string* {
+    if (
         $parameter?allowEmptyValue eq true() and
-        (empty($parameter?style) or $parameter?style eq "form")
+            (empty($parameter?style) or $parameter?style eq "form") and
+            (every $value in $received satisfies $value eq "")
+    ) then (
+        (: handle as if the parameter was omitted :)
+    ) else (
+        $received
+    )
 };
 
 declare %private function parameters:get-parameter-default-value($schema as map(*)?) as item()? {
