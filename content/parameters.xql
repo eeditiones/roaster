@@ -66,7 +66,8 @@ declare %private function parameters:is-path-parameter($parameter as map(*)) as 
 
 declare %private function parameters:get-path-parameter-map-from-config($parameters as array(*)?) as map(*)? {
     if (not(exists($parameters))) then (
-    ) (: no parameters defined :) else
+        (: no parameters defined :)
+    ) else
         let $path-parameters := for-each(
             $parameters?*,
             function ($parameter as map(*)) as map(*)? {
@@ -88,10 +89,9 @@ declare %private function parameters:get-path-parameter-map-from-config($paramet
  :)
 declare function parameters:in-request($request as map(*), $response as map(*)) as map(*)+ {
     if (not(map:contains($request?config, "parameters"))) then (
+        (: route expects no parameters, return request unchanged :)
         $request, $response
-    ) (: route expects no parameters, return request unchanged :) else if (
-        not($request?config?parameters instance of array(*))
-    ) then
+    ) else if (not($request?config?parameters instance of array(*))) then
         error($errors:OPERATION, "Parameter definition must be an array: " || $request?pattern, $request)
     else
         let $maps := for-each($request?config?parameters?*, parameters:retrieve#1)
@@ -111,8 +111,13 @@ declare %private function parameters:retrieve($parameter as map(*)) as map(*)? {
                 try { request:get-header($name) } catch * { () }
             case "cookie" return
                 request:get-cookie-value($name)
+            case "query" return
+                parameters:maybe-treat-as-empty($parameter, request:get-parameter($name, ()))
+            case "querystring" return
+                (: OpenAPI 3.2.0 defines querystring as an additional location :)
+                error($errors:NOT_IMPLEMENTED, 'Unsupported location "querystring" for parameter "' || $name || '".')
             default return
-                request:get-parameter($name, ())
+                error($errors:OPERATION, 'Unknown location "' || $parameter?in || '" for parameter "' || $name || '".')
 
         let $cast := parameters:cast($values, $parameter)
 
@@ -124,6 +129,28 @@ declare %private function parameters:retrieve($parameter as map(*)) as map(*)? {
         ) else (
             map {$name: $cast}
         )
+    )
+};
+
+(:~
+ : Returns `$received` or the empty sequence depending on whether the parameter should be handled as if it was omitted.
+ :
+ : With allowEmptyValue set to true, clients may send a query parameter with
+ : an empty value instead of omitting it, and the server treats it as unused.
+ : The field is ignored for styles that cannot serialize an empty value.
+ : Without it, an empty value is passed on as the empty string.
+ : [3.0.4](https://spec.openapis.org/oas/v3.0.4.html#parameter-allow-empty-value)
+ : [3.2.0](https://spec.openapis.org/oas/v3.2.0.html#parameter-allow-empty-value)
+ :)
+declare %private function parameters:maybe-treat-as-empty($parameter as map(*), $received as xs:string*) as xs:string* {
+    if (
+        $parameter?allowEmptyValue eq true() and
+            (empty($parameter?style) or $parameter?style eq "form") and
+            (every $value in $received satisfies $value eq "")
+    ) then (
+        (: handle as if the parameter was omitted :)
+    ) else (
+        $received
     )
 };
 
