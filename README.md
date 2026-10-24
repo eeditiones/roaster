@@ -208,6 +208,42 @@ declare function custom-router:use-beep-boop ($request as map(*), $response as m
 Roaster transparently handles data from multipart/form-data requests to keep route handlers short and readable.
 Please see the [file upload documentation](doc/file-upload.md) for more details on this.
 
+## Logging
+
+Roaster allows to pass in a fourth parameter to `roaster:route#4`.
+It defaults to using util:log as before.
+
+The logging function is also available to route handlers and middlewares as `$request?logger`:
+
+```xquery
+declare function my:route($request as map(*)) {
+    $request?logger("info", "my:route was called"),
+    "Hello World!"
+};
+```
+
+Because `$request?logger` is a function, remove it before serializing the request map,
+for example `map:remove($request, "logger")`.
+
+A custom logger could look like this:
+
+```xquery
+declare function my:log($level as xs:string, $data as item()*) as empty-sequence() {
+    util:log-system-out(
+        upper-case($level) || " " ||
+        serialize($data, map{ "method": "adaptive" }))
+};
+```
+
+A custom logging function must expect two parameters:
+
+- The $level with the possible values 'trace', 'debug', 'info', 'warn', and 'error'
+- $data is a sequence of items, you might want to serialize it to your needs
+
+```xquery
+roaster:route($my:api, my:lookup#1, $my:middlewares, my:log#2)
+```
+
 ## Limitations
 
 The library does not support yet support following OpenAPI feature(s):
@@ -286,7 +322,16 @@ This included the test application in `test/app`.
 
 To run the local test suite you need an instance of eXist running on `localhost:8080` and `npm` to be available in your path. To test against a different different server, or use a different user or password you can copy `.env.example` to `.env` and edit it to your needs.
 
-Run the test suite with
+The custom logger tests read the output of `docker logs`, so they only work if eXist runs in a docker container.
+The container name defaults to `roaster-test-db` and can be changed with the environment variable `EXISTDB_CONTAINER_NAME` (CI sets it to the id of its service container).
+
+So a normal setup to test on your local machine is
+
+```sh
+docker run --name roaster-test-db -p 8443:8443 -p 8080:8080 existdb/existdb:6.4.1
+```
+
+And then run the test suite with
 
 ```shell
 npm test
