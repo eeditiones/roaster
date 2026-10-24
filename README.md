@@ -153,6 +153,11 @@ The key based authentication type corresponds to eXist's persistent login mechan
 
 The security scheme must be named **cookieAuth**. The `name` property defines the login session name to be used.
 
+The schemes listed in `security` are tried in order and the first one that authenticates the request wins.
+`basicAuth` only matches requests with an `Authorization: Basic …` header, so a scheme listed after it is still tried.
+If no scheme matches and `basicAuth` is listed, the request runs as the current database user, which is `guest`
+for requests without credentials.
+
 Custom authentication strategies are possible. The test application has an example for JSON Web Tokens.
 
 ## Access Constraints
