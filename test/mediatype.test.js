@@ -769,3 +769,33 @@ describe('Retrieving an SVG image', function () {
         expect(response.data).to.equal(avatarImage)
     })
 })
+
+describe('form body with more than one required property', function () {
+    const post = (fields) => util.axios.post('api/required-properties', new URLSearchParams(fields))
+    const getError = async (request) => {
+        try {
+            await request
+        } catch (e) {
+            return e.response
+        }
+        expect.fail('request should have been rejected')
+    }
+
+    it('is accepted when all required properties are present', async function () {
+        const res = await post({ path: 'a/b', file: 'c.xml' })
+        expect(res.status).to.equal(200)
+        expect(res.data).to.deep.equal({ path: 'a/b', file: 'c.xml' })
+    })
+
+    it('is rejected when the first required property is missing', async function () {
+        const res = await getError(post({ file: 'c.xml' }))
+        expect(res.status).to.equal(400)
+        expect(res.data.value).to.equal('Property "path" is required!')
+    })
+
+    it('is rejected when the second required property is missing', async function () {
+        const res = await getError(post({ path: 'a/b' }))
+        expect(res.status).to.equal(400)
+        expect(res.data.value).to.equal('Property "file" is required!')
+    })
+})

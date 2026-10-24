@@ -820,6 +820,44 @@
                 }
             }
         },
+        "/api/required-properties": {
+            "post": {
+                "summary": "Form body with more than one required property",
+                "operationId": "api:required-properties",
+                "tags": ["body"],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["path", "file"],
+                                "properties": {
+                                    "path": {
+                                        "type": "string"
+                                    },
+                                    "file": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The parsed body",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/paths/{path}": {
             "get": {
                 "summary": "Parameter specified in last path component",
