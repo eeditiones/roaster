@@ -113,12 +113,11 @@ declare %private function parameters:retrieve($parameter as map(*)) as map(*)? {
                 request:get-cookie-value($name)
             case "query" return
                 parameters:maybe-treat-as-empty($parameter, request:get-parameter($name, ()))
+            case "querystring" return
+                (: OpenAPI 3.2.0 defines querystring as an additional location :)
+                error($errors:NOT_IMPLEMENTED, 'Unsupported location "querystring" for parameter "' || $name || '".')
             default return
-                (:
-                 : fallback to query parameter handling - might be revised in future versions
-                 : needed for OpenAPI 3.2.0 which defines querystring as an additional location
-                 :)
-                request:get-parameter($name, ())
+                error($errors:OPERATION, 'Unknown location "' || $parameter?in || '" for parameter "' || $name || '".')
 
         let $cast := parameters:cast($values, $parameter)
 
