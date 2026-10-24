@@ -38,4 +38,35 @@ describe('Error reporting', function () {
             expect(error.response.data).to.contain('$undefined')
         })
     })
+
+    describe('handler lookup', function () {
+        // resolves with the error response, fails the test if the request succeeds
+        async function expectError(path) {
+            const response = await util.axios.get(path, { validateStatus: () => true })
+            expect(response.status).to.equal(500)
+            return response.data
+        }
+
+        it('reports an operationId without handler function', async function () {
+            const data = await expectError('api/errors/handler/missing')
+            expect(data.code).to.contain('OPERATION')
+            expect(data.description).to.equal('Operation not found for operationId:"api:handler-does-not-exist"')
+        })
+
+        it('reports a lookup that returns something other than a function', async function () {
+            const data = await expectError('api/errors/handler/not-a-function')
+            expect(data.code).to.contain('OPERATION')
+            expect(data.description).to.equal(
+                'Lookup for operationId:"api:handler-not-a-function" did not return a function, got the string "not a function"'
+            )
+        })
+
+        it('reports a handler function with the wrong arity', async function () {
+            const data = await expectError('api/errors/handler/wrong-arity')
+            expect(data.code).to.contain('OPERATION')
+            expect(data.description).to.equal(
+                'Handler for operationId:"api:handler-wrong-arity" must take exactly one argument (the request map), but takes 0'
+            )
+        })
+    })
 })

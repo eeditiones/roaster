@@ -208,7 +208,14 @@ declare function api:logout($request as map(*)) {
  : You can leave it as it is, but it has to be here
  :)
 declare function api:lookup($name as xs:string) {
-    function-lookup(xs:QName($name), 1)
+    switch ($name)
+        (: broken lookups to test error reporting, see error.test.js :)
+        case "api:handler-not-a-function" return
+            "not a function"
+        case "api:handler-wrong-arity" return
+            function () { "no request parameter" }
+        default return
+            function-lookup(xs:QName($name), 1)
 };
 
 (: util:declare-option("output:indent", "no"), :)
