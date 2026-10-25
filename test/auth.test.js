@@ -572,6 +572,15 @@ describe('Auth strategy matching (#121)', function () {
         ...extra
     })
     const basicAuth = { auth: util.adminCredentials }
+    const bearer = { Authorization: 'Bearer not-a-basic-credential' }
+
+    // eXist-db 6.0.1 answers 401 to any non-Basic Authorization header before roaster runs,
+    // probe with the static api.html, which the controller serves without roaster
+    let existRejectsBearer
+    before(async function () {
+        const res = await util.axios.get('api.html', options(bearer))
+        existRejectsBearer = res.status === 401
+    })
 
     async function loginCookie() {
         const res = await util.axios.post(
@@ -597,11 +606,9 @@ describe('Auth strategy matching (#121)', function () {
         })
 
         it('authenticates with a valid login cookie and a non-Basic Authorization header', async function () {
+            if (existRejectsBearer) this.skip()
             const cookie = await loginCookie()
-            const res = await util.axios.get(
-                'api/auth/basic-first',
-                options({ Cookie: cookie, Authorization: 'Bearer not-a-basic-credential' })
-            )
+            const res = await util.axios.get('api/auth/basic-first', options({ Cookie: cookie, ...bearer }))
             expect(res.status).to.equal(200)
             expect(res.data.user.name).to.equal(util.adminCredentials.username)
         })
@@ -653,10 +660,8 @@ describe('Auth strategy matching (#121)', function () {
         })
 
         it('ignores a non-Basic Authorization header', async function () {
-            const res = await util.axios.get(
-                'api/auth/cookie-only',
-                options({ Authorization: 'Bearer not-a-basic-credential' })
-            )
+            if (existRejectsBearer) this.skip()
+            const res = await util.axios.get('api/auth/cookie-only', options(bearer))
             expect(res.status).to.equal(200)
         })
     })
