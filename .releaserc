@@ -7,8 +7,9 @@
       "prepareCmd": "npm version ${nextRelease.version} --no-git-tag-version --allow-same-version && npm i --package-lock-only",
       "publishCmd": "npm run build:all"
     }],
+    "@existdb/repo-xml-changelog-generator",
     ["@semantic-release/git", {
-      "assets": ["package.json", "package-lock.json"],
+      "assets": ["package.json", "package-lock.json", "repo.xml.tmpl"],
       "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
     }],
     ["@semantic-release/github", {
