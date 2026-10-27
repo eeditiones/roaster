@@ -19,6 +19,16 @@ describe('Error reporting', function () {
         })
     })
 
+    it('keeps the source location on a server error', function () {
+        // The location is the diagnosis when the server is at fault, so 5xx
+        // responses keep module/line/column (4xx drop them — see mediatype).
+        return util.axios.post('api/errors').catch(function (error) {
+            expect(error.response.status).to.equal(500)
+            expect(error.response.data).to.have.property('module')
+            expect(error.response.data).to.have.property('column')
+        })
+    })
+
     it('receives explicit error', function () {
         return util.axios.delete('api/errors').catch(function (error) {
             expect(error.response.status).to.equal(403)

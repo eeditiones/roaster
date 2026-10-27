@@ -62,8 +62,10 @@ describe('jwt authorization with an empty token', function () {
     it('should return status code for bad request', function () {
         expect(authorizeWithEmptyTokenResponse.status).to.equal(400)
     })
-    it('should have failed in authentication module', function () {
-        expect(authorizeWithEmptyTokenResponse.data.module).to.equal('/db/apps/roasted/modules/jwt-auth.xqm')
+    it("should not expose roaster's source location", function () {
+        expect(authorizeWithEmptyTokenResponse.data).to.not.have.property('module')
+        expect(authorizeWithEmptyTokenResponse.data).to.not.have.property('line')
+        expect(authorizeWithEmptyTokenResponse.data).to.not.have.property('column')
     })
     it('should return status code for bad request', function () {
         expect(authorizeWithEmptyTokenResponse.data.description).to.contain('token invalid')
@@ -89,8 +91,10 @@ describe('jwt authorization with an invalid token', function () {
     it('should return status code for bad request', function () {
         expect(authorizeWithEmptyTokenResponse.status).to.equal(400)
     })
-    it('should have failed in authentication module', function () {
-        expect(authorizeWithEmptyTokenResponse.data.module).to.equal('/db/apps/roasted/modules/jwt-auth.xqm')
+    it("should not expose roaster's source location", function () {
+        expect(authorizeWithEmptyTokenResponse.data).to.not.have.property('module')
+        expect(authorizeWithEmptyTokenResponse.data).to.not.have.property('line')
+        expect(authorizeWithEmptyTokenResponse.data).to.not.have.property('column')
     })
     it('should return status code for bad request', function () {
         expect(authorizeWithEmptyTokenResponse.data.description).to.contain('token invalid')
@@ -184,8 +188,10 @@ describe('requesting a token as guest', function () {
             expect(authorizationAsGuestResult.status).to.equal(401)
         })
 
-        it('should fail in auth library module', function () {
-            expect(authorizationAsGuestResult.data.module).to.contain('content/auth.xql')
+        it("should not expose roaster's source location", function () {
+            expect(authorizationAsGuestResult.data).to.not.have.property('module')
+            expect(authorizationAsGuestResult.data).to.not.have.property('line')
+            expect(authorizationAsGuestResult.data).to.not.have.property('column')
         })
         it('should fail with a useful error message', function () {
             expect(authorizationAsGuestResult.data.description).to.contain('Access denied')
