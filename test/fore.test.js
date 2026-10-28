@@ -277,6 +277,23 @@ describe('Documentation and demo page', function () {
         ])
     })
 
+    it('checks the HTML input types of its controls', async function () {
+        const email = await postOrder(order().replace('<note>', '<email>ann@</email><note>'))
+        expect(email.status).to.equal(422)
+        expect(email.data.value.errors[0]).to.include({
+            ref: 'email[1]',
+            kind: 'type',
+            alert: 'Please enter a valid email address'
+        })
+
+        const delivery = await postOrder(order().replace('<note>', '<delivery>31.12.2030</delivery><note>'))
+        expect(delivery.status).to.equal(422)
+        expect(delivery.data.value.errors[0].ref).to.equal('delivery[1]')
+
+        const fine = order().replace('<note>', '<email>ann@example.org</email><delivery>2030-12-31</delivery><note>')
+        expect((await postOrder(fine)).status).to.equal(200)
+    })
+
     it('requires a note only for large orders', async function () {
         expect((await postOrder(order({ amount: '100' }))).status).to.equal(200)
 
@@ -285,5 +302,93 @@ describe('Documentation and demo page', function () {
         expect(res.data.value.errors[0]).to.include({ ref: 'note[1]', alert: 'Orders above 100 need a note' })
 
         expect((await postOrder(order({ amount: '101', note: 'approved' }))).status).to.equal(200)
+    })
+})
+
+describe('HTML input types', function () {
+    const valid = {
+        email: 'ann@example.org',
+        site: 'https://example.org/path?q=1',
+        born: '1990-02-28',
+        start: '09:30',
+        meeting: '2030-01-31T14:05',
+        month: '2030-12',
+        week: '2030-W07',
+        qty: '-12.5e3',
+        color: '#a0B1c2',
+        phone: 'not checked',
+        other: '5'
+    }
+    const data = (overrides) =>
+        '<data>' +
+        Object.entries({ ...valid, ...overrides })
+            .map(([name, value]) => `<${name}>${value}</${name}>`)
+            .join('') +
+        '</data>'
+    const postData = (body) =>
+        util.axios.post('api/fore/html-types', body, {
+            headers: { 'Content-Type': 'application/xml' },
+            validateStatus: () => true
+        })
+
+    before(async function () {
+        await util.login()
+    })
+
+    after(async function () {
+        await util.logout()
+    })
+
+    it('accepts valid values and empty ones', async function () {
+        expect((await postData(data())).status).to.equal(200)
+
+        // the constraint of `other` is not met by an empty value, the HTML types are
+        const empty = await postData(
+            data(Object.fromEntries(Object.keys(valid).map((name) => [name, name === 'other' ? '5' : ''])))
+        )
+        expect(empty.status).to.equal(200)
+    })
+
+    const invalid = {
+        email: ['ann@', 'ann example.org', '@example.org', 'ann@@example.org'],
+        site: ['example.org', 'https://exa mple.org'],
+        born: ['1990-02-30', '28.02.1990', '1990-2-8'],
+        start: ['25:00', '9:30', '09:30:61'],
+        meeting: ['2030-01-31 14:05', '2030-13-01T10:00', '2030-01-31T25:00'],
+        month: ['2030-13', '2030-1'],
+        week: ['2030-W54', '2030-W00', '2030-07'],
+        qty: ['abc', '1,5', '--1'],
+        color: ['red', '#fff', '#12345g']
+    }
+
+    for (const [name, values] of Object.entries(invalid)) {
+        it(`rejects invalid ${name} values`, async function () {
+            for (const value of values) {
+                const res = await postData(data({ [name]: value }))
+                expect(res.status, `${name}=${value}`).to.equal(422)
+                expect(res.data.value.errors, `${name}=${value}`).to.have.length(1)
+                expect(res.data.value.errors[0]).to.include({ ref: `${name}[1]`, kind: 'type' })
+            }
+        })
+    }
+
+    it('uses the alert of the bind, or says which type is expected', async function () {
+        const email = await postData(data({ email: 'nope' }))
+        expect(email.data.value.errors[0].alert).to.equal('Not an email address')
+
+        const date = await postData(data({ born: 'nope' }))
+        expect(date.data.value.errors[0].alert).to.equal('Please enter a valid date')
+    })
+
+    it('does not check types that have no rule and matches the type case-insensitively', async function () {
+        // tel and text are not checked, the input type DATE is the same as date
+        expect((await postData(data({ phone: 'anything at all' }))).status).to.equal(200)
+        expect((await postData(data({ born: 'nope' }))).status).to.equal(422)
+    })
+
+    it('combines an HTML type with other rules of the bind', async function () {
+        const res = await postData(data({ other: '-3' }))
+        expect(res.status).to.equal(422)
+        expect(res.data.value.errors[0].kind).to.equal('constraint')
     })
 })

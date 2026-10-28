@@ -2,5 +2,7 @@
     <name/>
     <amount>5</amount>
     <code>A</code>
+    <email/>
+    <delivery/>
     <note/>
 </order>

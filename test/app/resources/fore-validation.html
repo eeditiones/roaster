@@ -77,6 +77,8 @@
                             alert="The amount must be a whole number from 1 to the limit"
                         ></fx-bind>
                         <fx-bind ref="code" constraint=". = $rates/rate/@code" alert="Unknown rate code"></fx-bind>
+                        <fx-bind ref="email" alert="Please enter a valid email address"></fx-bind>
+                        <fx-bind ref="delivery" alert="Please enter a valid date"></fx-bind>
                         <fx-bind
                             ref="note"
                             required="number($default/amount) &gt; 100"
@@ -85,12 +87,8 @@
 
                         <fx-submission id="send" url="../api/fore/demo" method="post" mediatype="application/xml" replace="none">
                             <fx-message event="submit-done">The server accepted the order.</fx-message>
-                            <fx-message event="submit-error" if="number(event('status')) = 0">
-                                Fore found invalid fields, nothing was sent.
-                            </fx-message>
-                            <fx-message event="submit-error" if="number(event('status')) != 0">
-                                The server rejected the order.
-                            </fx-message>
+                            <fx-message event="submit-error" if="number(event('status')) = 0">Fore found invalid fields, nothing was sent.</fx-message>
+                            <fx-message event="submit-error" if="number(event('status')) != 0">The server rejected the order.</fx-message>
                         </fx-submission>
                     </fx-model>
 
@@ -105,6 +103,14 @@
                     <fx-control ref="code">
                         <label>Rate code</label>
                         <input class="widget" type="text"/>
+                    </fx-control>
+                    <fx-control ref="email">
+                        <label>Email</label>
+                        <input class="widget" type="email"/>
+                    </fx-control>
+                    <fx-control ref="delivery">
+                        <label>Delivery</label>
+                        <input class="widget" type="date"/>
                     </fx-control>
                     <fx-control ref="note">
                         <label>Note</label>
@@ -127,6 +133,8 @@
     &lt;name&gt;&lt;/name&gt;
     &lt;amount&gt;5000&lt;/amount&gt;
     &lt;code&gt;Z&lt;/code&gt;
+    &lt;email&gt;ann at example&lt;/email&gt;
+    &lt;delivery&gt;31.12.2030&lt;/delivery&gt;
     &lt;note&gt;&lt;/note&gt;
 &lt;/order&gt;</textarea>
                 <p><button type="button">Send without validation</button></p>
@@ -181,6 +189,33 @@ roaster:route($definitions, $lookup, (auth:standard-authorization#2, fore:valida
                 Binds nest like in Fore. If a <code>type</code> is wrong only the type is reported, not also the
                 constraint. An expression that raises an error, for example because a tampered value can not be
                 compared, counts as a violation, it never fails the request.
+            </p>
+
+            <h2>HTML input types</h2>
+            <p>
+                Fore reads the native validity of the widget, so an <code>&lt;input type="email"&gt;</code> is
+                checked by the browser. The server applies the same rule, taking the type from the control that edits
+                the node, so Email and Delivery above need no rule in their binds. The message is the
+                <code>alert</code> of the bind, or "Please enter a valid email" if it has none.
+            </p>
+            <table>
+                <tr><th>Input type</th><th>Valid value</th></tr>
+                <tr><td><code>email</code></td><td>An address like the HTML specification allows: <code>ann@example.org</code></td></tr>
+                <tr><td><code>url</code></td><td>An absolute URL: <code>https://example.org/path</code></td></tr>
+                <tr><td><code>date</code></td><td><code>2030-12-31</code>, and a date that exists</td></tr>
+                <tr><td><code>time</code></td><td><code>09:30</code> or <code>09:30:15.5</code></td></tr>
+                <tr><td><code>datetime-local</code></td><td><code>2030-12-31T09:30</code></td></tr>
+                <tr><td><code>month</code>, <code>week</code></td><td><code>2030-12</code>, <code>2030-W07</code></td></tr>
+                <tr><td><code>number</code>, <code>range</code></td><td>A floating-point number like <code>-12.5e3</code></td></tr>
+                <tr><td><code>color</code></td><td><code>#a0b1c2</code></td></tr>
+            </table>
+            <p>
+                Other types, like <code>text</code> or <code>tel</code>, have nothing to check. Empty values are left
+                to <code>required</code>. A control belongs to a bind if its <code>ref</code> is the ref of the bind
+                or the path of nested bind refs. The attributes <code>min</code>, <code>max</code>,
+                <code>step</code> and <code>pattern</code> are not checked on the server, use a
+                <code>constraint</code> for those, or a <code>type</code> such as <code>xs:date</code> to
+                check a value without a control.
             </p>
 
             <h2>Other instances</h2>

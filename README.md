@@ -234,6 +234,32 @@ The Fore page has to be well-formed XML. Its default instance (the `fx-instance`
 
 An expression that raises an error, for example because a tampered value can not be compared, counts as a violation instead of failing the request.
 
+### HTML input types
+
+Fore reads the native validity of a control's widget, so an `<input type="email">` is checked by the browser. The server applies the same rule. It takes the type from the control that edits the node, so the bind needs no `type` for it:
+
+```html
+<fx-bind ref="email" alert="Please enter a valid email address"></fx-bind>
+
+<fx-control ref="email">
+    <label>Email</label>
+    <input class="widget" type="email" />
+</fx-control>
+```
+
+| Input type        | Valid value                                   |
+| ----------------- | --------------------------------------------- |
+| `email`           | an address like the HTML specification allows |
+| `url`             | an absolute URL, `https://example.org/path`   |
+| `date`            | `2030-12-31`, a date that exists              |
+| `time`            | `09:30` or `09:30:15.5`                       |
+| `datetime-local`  | `2030-12-31T09:30`                            |
+| `month`, `week`   | `2030-12`, `2030-W07`                         |
+| `number`, `range` | a floating-point number like `-12.5e3`        |
+| `color`           | `#a0b1c2`                                     |
+
+Other types, like `text` or `tel`, have nothing to check. Empty values are left to `required`. A violation is reported with `kind` `type` and the `alert` of the bind, or "Please enter a valid email" if it has none. A control belongs to a bind if its `ref` is the ref of the bind or the path of nested bind refs. The attributes `min`, `max`, `step` and `pattern` are not checked on the server, use a `constraint` for those. To check a value that has no control, put an XML Schema `type` on the bind, like `xs:date`.
+
 If the body is invalid the handler is not called and the response is a `422` with the violations as error value:
 
 ```json

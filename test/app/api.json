@@ -1230,6 +1230,28 @@
                 }
             }
         },
+        "/api/fore/html-types": {
+            "post": {
+                "summary": "Fore page whose controls use HTML input types such as email and date",
+                "tags": ["body"],
+                "operationId": "api:fore-invoice",
+                "x-fore": "forms/html-types.html",
+                "requestBody": {
+                    "required": true,
+                    "content": { "application/xml": { "schema": { "type": "object" } } }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Valid",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    }
+                }
+            }
+        },
         "/upload/single/{path}": {
             "post": {
                 "summary": "Upload a single file.",

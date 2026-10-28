@@ -57,6 +57,33 @@ declare %private variable $fcompile:TYPES := (
     "IDREF"
 );
 
+(:
+ : HTML input types that are checked like the browser does. Fore reads the validity of the widget, so
+ : the type of the input of a control is the rule on the client. The server applies the same rule.
+ : Other types (text, tel, checkbox, ...) have nothing to check.
+ :)
+declare %private variable $fcompile:HTML-TYPES := (
+    "email", "url", "date", "time", "datetime-local", "month", "week", "number", "range", "color"
+);
+
+(: source of the function that checks an HTML input type, added to each compiled module :)
+declare %private variable $fcompile:HTML-VALID :=
+    '(: whether a value is valid for an HTML input type, empty values are left to required :)
+declare function local:html-valid($type as xs:string, $value as xs:string) as xs:boolean {
+    switch ($type)
+        case "email" return matches($value, "^[a-zA-Z0-9.!#$%&amp;amp;''*+/=?^_`{|}~-]+@[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+        case "url" return matches($value, "^[a-zA-Z][a-zA-Z0-9+.\-]*:[^\s]+$")
+        case "date" return matches($value, "^\d{4,}-\d{2}-\d{2}$") and $value castable as xs:date
+        case "time" return matches($value, "^\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$") and (if (string-length($value) = 5) then $value || ":00" else $value) castable as xs:time
+        case "datetime-local" return matches($value, "^\d{4,}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$") and (if (matches($value, "T\d{2}:\d{2}$")) then $value || ":00" else $value) castable as xs:dateTime
+        case "month" return matches($value, "^\d{4,}-(0[1-9]|1[0-2])$")
+        case "week" return matches($value, "^\d{4,}-W(0[1-9]|[1-4][0-9]|5[0-3])$")
+        case "number" case "range" return matches($value, "^-?(\d+|\d*\.\d+)([eE][-+]?\d+)?$")
+        case "color" return matches($value, "^#[0-9a-fA-F]{6}$")
+        default return true()
+};
+';
+
 (: the instance a ref starts with: `instance('id')` or `$id`, a ref without one addresses the default instance :)
 declare %private variable $fcompile:REF-INSTANCE := "^(instance\(\s*(['""]([^'""]*)['""])?\s*\)|\$([\w.\-]+))";
 
@@ -175,6 +202,7 @@ declare function local:instance($id as xs:string?) as element()? {{
 }};
 
 </code>
+                <code>{ $fcompile:HTML-VALID || "&#10;" }</code>
                 <function name="local:validate">
                     <param>$instances as map(*)</param>
                     <body>
@@ -210,8 +238,7 @@ declare %private function fcompile:targets-default-instance($bind as element()) 
 declare %private function fcompile:ref-instance($ref as xs:string) as xs:string? {
     let $match := analyze-string($ref, $fcompile:REF-INSTANCE)/*:match[1]
     return if (empty($match)) then (
-    ) (: the groups are nested :)
-    else
+    ) (: the groups are nested :) else
         string(($match//*:group[@nr = 4], $match//*:group[@nr = 3])[1])
 };
 
@@ -246,6 +273,7 @@ declare %private function fcompile:bind(
     let $label := string(($bind/@id, $bind/@ref)[1])
     let $alert := fcompile:alert($bind)
     let $type := fcompile:type($bind/@type)
+    let $html := fcompile:html-type($bind)
     let $children := fcompile:binds($bind/*:fx-bind, $node, $depth + 1)
     return <code>for ${ $node } in { $ref }
 let $relevant := {
@@ -275,7 +303,7 @@ return
                     " else ()"
             else
                 "()"
-            return if ($type) then
+            let $xs-check := if ($type) then
                 "if (string($" ||
                     $node ||
                     ") != '' and not(string($" ||
@@ -284,10 +312,22 @@ return
                     $type ||
                     ")) then " ||
                     fcompile:error($node, $label, "type", $alert) ||
-                    " else " ||
-                    $constraint
+                    " else "
             else
-                $constraint
+                ""
+            let $html-check := if ($html) then
+                "if (string($" ||
+                    $node ||
+                    ") != '' and not(local:html-valid('" ||
+                    $html ||
+                    "', string($" ||
+                    $node ||
+                    ")))) then " ||
+                    fcompile:error($node, $label, "type", ($alert[. != ""], "Please enter a valid " || $html)[1]) ||
+                    " else "
+            else
+                ""
+            return $xs-check || $html-check || $constraint
         },
         { xqgen:generate($children, 2) }
     )</code>
@@ -481,4 +521,18 @@ declare function fcompile:reference-instances($page as node(), $base as xs:strin
         (: a copy, so the expressions can not navigate into the page :)
         return map {string($instance/@id): document { $root }/*}
     )
+};
+
+(:~
+ : The HTML input type of the control that edits the node of a bind, if it is one the browser
+ : validates. A control belongs to a bind if its ref is the ref of the bind or the path of nested
+ : bind refs.
+ :)
+declare %private function fcompile:html-type($bind as element()) as xs:string? {
+    let $paths := (string-join($bind/ancestor-or-self::*:fx-bind/@ref, "/"), string($bind/@ref))
+    let $types :=
+        for $control in root($bind)//*:fx-control[normalize-space(@ref) = $paths]
+        let $widget := ($control/*[tokenize(@class, "\s+") = "widget"], $control//*:input)[1]
+        return lower-case($widget/@type)
+    return ($types[. = $fcompile:HTML-TYPES])[1]
 };
