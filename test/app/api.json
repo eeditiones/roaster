@@ -1101,6 +1101,47 @@
                 }
             }
         },
+        "/api/fore/invoice": {
+            "post": {
+                "summary": "Validate an invoice against a Fore page",
+                "description": "The request body is validated against the binds of forms/invoice.html",
+                "tags": ["body"],
+                "operationId": "api:fore-invoice",
+                "x-fore": "forms/invoice.html",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/xml": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Valid",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/upload/single/{path}": {
             "post": {
                 "summary": "Upload a single file.",

@@ -1,0 +1,33 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <body>
+        <fx-fore>
+            <fx-model>
+                <fx-instance>
+                    <data xmlns="">
+                        <name />
+                        <amount>5</amount>
+                        <note />
+                    </data>
+                </fx-instance>
+                <fx-instance id="rates">
+                    <rates xmlns=""><rate /></rates>
+                </fx-instance>
+
+                <fx-bind ref="name" required="true()" alert="Name is required" />
+                <fx-bind
+                    ref="amount"
+                    type="xs:integer"
+                    constraint=". &gt; 0"
+                    alert="Amount must be a positive integer"
+                />
+                <fx-bind
+                    ref="note"
+                    relevant="../amount &gt; 100"
+                    required="true()"
+                    alert="Orders above 100 need a note"
+                />
+                <fx-bind ref="instance('rates')/rate" required="true()" />
+            </fx-model>
+        </fx-fore>
+    </body>
+</html>

@@ -203,6 +203,54 @@ declare function custom-router:use-beep-boop ($request as map(*), $response as m
 };
 ```
 
+## Validation with Fore
+
+An operation can validate its XML request body against the binds of a [Fore](https://github.com/Jinntec/Fore) page, so client and server share one set of rules. Add the vendor extension `x-fore` with a path, relative to the app, to the Fore page:
+
+```json
+"/invoices": {
+    "post": {
+        "operationId": "app:create-invoice",
+        "x-fore": "forms/invoice.html"
+    }
+}
+```
+
+and pass `fore:validate#2` as middleware. Keep the standard authorization first, so unauthenticated requests never trigger a compilation:
+
+```xquery
+import module namespace fore = 'http://e-editiones.org/roaster/fore-validation';
+
+roaster:route($definitions, $lookup, (auth:standard-authorization#2, fore:validate#2))
+```
+
+The Fore page has to be well-formed XML. Its default instance (the `fx-instance` without an `id`) describes the body; binds on other instances are ignored. For each node selected by an `fx-bind`:
+
+- `required` is an XPath expression. If it is true the node must not be empty.
+- `constraint` is an XPath expression that must be true.
+- `type` must be an XML Schema type that the value can be cast to. Empty values are only checked by `required`.
+- `relevant` is an XPath expression. For non-relevant nodes `required`, `constraint` and `type` are skipped.
+- `alert` (attribute) or `fx-alert` (child element) is returned as message.
+
+An expression that raises an error, for example because a tampered value can not be compared, counts as a violation instead of failing the request.
+
+If the body is invalid the handler is not called and the response is a `422` with the violations as error value:
+
+```json
+{
+    "description": "Validation failed",
+    "value": {
+        "errors": [
+            { "ref": "amount[1]", "bind": "amount", "kind": "constraint", "alert": "Amount must be a positive integer" }
+        ]
+    }
+}
+```
+
+The page is compiled to XQuery once. The result is stored in the collection `fore-cache` of the app, which the user running the request must be able to write to, and is rebuilt when the page is newer than the compiled version. If the collection is not writable the page is compiled on every request and a warning is logged.
+
+Functions that only exist in Fore (like `instance()` with other instances) are not available on the server yet.
+
 ## File Uploads
 
 Roaster transparently handles data from multipart/form-data requests to keep route handlers short and readable.
