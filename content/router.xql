@@ -167,7 +167,17 @@ declare function router:route(
             else
                 errors:get-status-code-from-error($err:code)
 
-            return router:error($status-code, $error, $lookup)
+            let $content := $error?_request?config?requestBody?content
+            let $defined-content-types := map:keys($content)
+            
+            return (
+                if ( $status-code = 415 ) then
+                        response:set-header("Accept", string-join($defined-content-types, ' '))
+                    else
+                        ()
+                ,
+                router:error($status-code, $error, $lookup)
+            )
         }
     )
 };
