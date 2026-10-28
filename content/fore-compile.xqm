@@ -4,12 +4,12 @@ xquery version "3.1";
  : Compiles the binds of a Fore page into an XQuery main module.
  :
  : The generated module expects a map from instance id to instance data in the external variable
- : `$instances`, with the submitted payload under `default`. Today only the default instance is
- : compiled; the map is the seam for further instances (see docs/fore-validation-plan.md). It
- : returns a sequence of error maps `{ ref, bind, kind, alert }`. An empty sequence means the
- : payload is valid.
+ : `$instances`, with the submitted payload under `default`. It returns a sequence of error maps
+ : `{ ref, bind, kind, alert }`. An empty sequence means the payload is valid.
  :
- : Only binds targeting the default instance are compiled.
+ : Only binds targeting the default instance are compiled. Expressions may read other instances
+ : with `instance('id')` or `$id`. These reference instances come from the Fore page itself (see
+ : fcompile:reference-instances) and never from the request.
  :)
 module namespace fcompile = "http://e-editiones.org/roaster/fore-compile";
 
@@ -57,21 +57,93 @@ declare %private variable $fcompile:TYPES := (
     "IDREF"
 );
 
-(: `instance()` or `instance('default')` at the start of a ref addresses the payload itself :)
-declare %private variable $fcompile:DEFAULT-INSTANCE := "^instance\(\s*(''|'default'|""default"")?\s*\)";
+(: the instance a ref starts with: `instance('id')` or `$id`, a ref without one addresses the default instance :)
+declare %private variable $fcompile:REF-INSTANCE := "^(instance\(\s*(['""]([^'""]*)['""])?\s*\)|\$([\w.\-]+))";
 
-declare %private variable $fcompile:ANY-INSTANCE := "^instance\(";
+(: string literals of an XPath expression :)
+declare %private variable $fcompile:STRING-LITERAL := "'[^']*'|""[^""]*""";
+
+(: function libraries that Fore (fontoxpath) and eXist have in common, by prefix :)
+declare %private variable $fcompile:FUNCTION-NAMESPACES := map {
+    "": "http://www.w3.org/2005/xpath-functions",
+    "fn": "http://www.w3.org/2005/xpath-functions",
+    "math": "http://www.w3.org/2005/xpath-functions/math",
+    "map": "http://www.w3.org/2005/xpath-functions/map",
+    "array": "http://www.w3.org/2005/xpath-functions/array",
+    "xs": "http://www.w3.org/2001/XMLSchema"
+};
+
+(: names that are followed by a parenthesis in XPath without being a function call :)
+declare %private variable $fcompile:NOT-FUNCTIONS := (
+    "node",
+    "text",
+    "comment",
+    "processing-instruction",
+    "element",
+    "attribute",
+    "document-node",
+    "item",
+    "empty-sequence",
+    "schema-element",
+    "schema-attribute",
+    "namespace-node",
+    "map",
+    "array",
+    "function",
+    "if",
+    "and",
+    "or",
+    "in",
+    "return",
+    "then",
+    "else",
+    "satisfies",
+    "div",
+    "mod",
+    "idiv",
+    "to",
+    "union",
+    "intersect",
+    "except",
+    "eq",
+    "ne",
+    "lt",
+    "le",
+    "gt",
+    "ge",
+    "is",
+    "of",
+    "as",
+    "cast",
+    "castable",
+    "treat",
+    "some",
+    "every",
+    "for",
+    "let",
+    "switch",
+    "typeswitch",
+    "case",
+    "default"
+);
 
 (:~
  : Compile a Fore page into the source of an XQuery main module.
  :
  : @param $page the Fore page as parsed XML
- : @error errors:BAD_REQUEST when the page has no default instance or a bind can not be compiled
+ : @error errors:SERVER_ERROR when the page has no default instance or a bind can not be compiled,
+ : for example because it calls a function that is not available on the server
  :)
 declare function fcompile:compile($page as node()) as xs:string {
     let $instance := fcompile:default-instance($page)
+    let $unsupported := fcompile:root-binds($page)/descendant-or-self::*:fx-bind!fcompile:unsupported(.)
     return if (empty($instance)) then
-        error($errors:BAD_REQUEST, "Fore page has no default instance")
+        error($errors:SERVER_ERROR, "Fore page has no default instance")
+    else if (exists($unsupported)) then
+        error(
+            $errors:SERVER_ERROR,
+            "Fore page uses functions that are not available on the server: " || string-join($unsupported, "; ")
+        )
     else
         xqgen:generate(
             <xquery>
@@ -91,15 +163,24 @@ declare function local:ref($n as node(), $root as node()) as xs:string {{
 }};
 
 </code>
+                <code
+                >(: root element of an instance, the default one if no id is given :)
+declare function local:instance() as element()? {{
+    local:instance("default")
+}};
+
+declare function local:instance($id as xs:string?) as element()? {{
+    let $instance := $instances(if (empty($id) or $id = "") then "default" else $id)
+    return if ($instance instance of document-node()) then $instance/* else $instance
+}};
+
+</code>
                 <function name="local:validate">
                     <param>$instances as map(*)</param>
                     <body>
                         {
                             <let var="root">
-                                <expr>
-                                    <code
-                                    >let $default := $instances?default return if ($default instance of document-node()) then $default/* else $default</code>
-                                </expr>
+                                <expr><code>local:instance("default")</code></expr>
                                 <return>{ fcompile:binds(fcompile:root-binds($page), "root", 0) }</return>
                             </let>
                         }
@@ -121,7 +202,17 @@ declare %private function fcompile:root-binds($page as node()) as element()* {
 };
 
 declare %private function fcompile:targets-default-instance($bind as element()) as xs:boolean {
-    not(matches($bind/@ref, $fcompile:ANY-INSTANCE)) or matches($bind/@ref, $fcompile:DEFAULT-INSTANCE)
+    let $id := fcompile:ref-instance($bind/@ref)
+    return empty($id) or $id = ("", "default")
+};
+
+(: the id of the instance a ref starts with, empty if it does not start with one :)
+declare %private function fcompile:ref-instance($ref as xs:string) as xs:string? {
+    let $match := analyze-string($ref, $fcompile:REF-INSTANCE)/*:match[1]
+    return if (empty($match)) then (
+    ) (: the groups are nested :)
+    else
+        string(($match//*:group[@nr = 4], $match//*:group[@nr = 3])[1])
 };
 
 (:~
@@ -202,12 +293,9 @@ return
     )</code>
 };
 
-(: a ref is evaluated with the parent node as context, `instance()` stands for the payload :)
-declare %private function fcompile:ref($ref as xs:string, $context as xs:string) as xs:string {
-    if (matches($ref, $fcompile:DEFAULT-INSTANCE)) then
-        "$root/(" || replace($ref, $fcompile:DEFAULT-INSTANCE, ".") || ")"
-    else
-        "$" || $context || "/(" || $ref || ")"
+(: a ref is evaluated with the parent node as context :)
+declare %private function fcompile:ref($ref as attribute(), $context as xs:string) as xs:string {
+    "$" || $context || "/(" || fcompile:rewrite($ref) || ")"
 };
 
 (:~
@@ -222,7 +310,7 @@ declare %private function fcompile:test(
     $on-error as xs:string
 ) as xs:string {
     if (exists($expression) and normalize-space($expression) != "") then
-        "try { boolean($" || $node || " ! (" || $expression || ")) } catch * { " || $on-error || " }"
+        "try { boolean($" || $node || " ! (" || fcompile:rewrite($expression) || ")) } catch * { " || $on-error || " }"
     else
         $default
 };
@@ -234,7 +322,7 @@ declare %private function fcompile:type($type as attribute()?) as xs:string? {
         return if ($name = $fcompile:TYPES) then
             $name
         else
-            error($errors:BAD_REQUEST, "Unsupported type '" || $type || "' in bind " || $type/../@ref)
+            error($errors:SERVER_ERROR, "Unsupported type '" || $type || "' in bind " || $type/../@ref)
 };
 
 declare %private function fcompile:alert($bind as element()) as xs:string {
@@ -260,4 +348,137 @@ declare %private function fcompile:error(
 
 declare %private function fcompile:literal($value as xs:string) as xs:string {
     '"' || replace(replace($value, "&amp;", "&amp;amp;"), '"', '""') || '"'
+};
+
+(:~
+ : Fore expressions run on fontoxpath plus Fore's own function library, the server on eXist.
+ : Report each function call of a bind that eXist does not know, so that a form is never
+ : silently validated with different semantics.
+ :)
+declare %private function fcompile:unsupported($bind as element()) as xs:string* {
+    for $attribute in $bind/(@ref, @required, @constraint, @relevant)
+    let $where := "bind '" || string(($bind/@id, $bind/@ref)[1]) || "' (" || name($attribute) || "): "
+    return (
+        for $name in distinct-values(fcompile:called-functions($attribute))
+        where not(fcompile:available($name))
+        return $where || $name || "()",
+        for $id in distinct-values(fcompile:referenced-instances($attribute))
+        let $problem := fcompile:instance-problem(root($bind), $id)
+        where exists($problem)
+        return $where || $problem
+    )
+};
+
+(: ids of the instances an expression reads with `instance('id')` or `$id` :)
+declare %private function fcompile:referenced-instances($expression as attribute()) as xs:string* {
+    (
+        analyze-string($expression, "instance\(\s*['""]([^'""]*)['""]\s*\)")/*:match/*:group,
+        for $id in fcompile:instance-ids(root($expression))
+        where fcompile:uses-variable(string($expression), $id)
+        return $id
+    )!string(.)
+};
+
+(: why a referenced instance can not be provided by the server :)
+declare %private function fcompile:instance-problem($page as node(), $id as xs:string) as xs:string? {
+    if ($id = ("", "default")) then (
+    ) else
+        let $instance := ($page//*:fx-instance[@id = $id])[1]
+        return if (empty($instance)) then
+            "instance '" || $id || "' is not defined"
+        else if ($instance/@type = "json" or ends-with($instance/@src, ".json")) then
+            "instance '" || $id || "' holds JSON, which is not supported yet"
+        else if (matches($instance/@src, "^([a-zA-Z][a-zA-Z0-9+.\-]*:|/|#)")) then
+            "instance '" || $id || "' has src '" || $instance/@src || "', only paths relative to the page are supported"
+        else (
+        )
+};
+
+declare %private function fcompile:called-functions($expression as xs:string) as xs:string* {
+    (: string literals may contain anything :)
+    let $code := replace($expression, $fcompile:STRING-LITERAL, "''")
+    for $match in analyze-string($code, "[\w.\-]+(:[\w.\-]+)?\s*\(")/*:match
+    let $name := replace($match, "\s*\($", "")
+    let $before := string($match/preceding-sibling::*[1])
+    where not(matches($name, "^[0-9]")) and not(ends-with($before, "$")) and not($name = $fcompile:NOT-FUNCTIONS)
+    return $name
+};
+
+declare %private function fcompile:available($name as xs:string) as xs:boolean {
+    let $prefix := if (contains($name, ":")) then
+        substring-before($name, ":")
+    else
+        ""
+    let $local := if (contains($name, ":")) then
+        substring-after($name, ":")
+    else
+        $name
+    return $name = "instance" or
+        map:contains($fcompile:FUNCTION-NAMESPACES, $prefix) and
+            (
+                some
+                    $arity in
+                    0 to 10 satisfies
+                    exists(function-lookup(QName($fcompile:FUNCTION-NAMESPACES?($prefix), $local), $arity))
+            )
+};
+
+(: all instance ids of a page, the default instance can be addressed as "default" :)
+declare %private function fcompile:instance-ids($page as node()) as xs:string+ {
+    distinct-values(("default", $page//*:fx-instance/@id[. != ""]!string(.)))
+};
+
+(: does the code read `$id`, and not a variable of the same name that it binds itself? :)
+declare %private function fcompile:uses-variable($expression as xs:string, $id as xs:string) as xs:boolean {
+    let $name := replace($id, "([.\-])", "\\$1")
+    let $code := string-join(analyze-string($expression, $fcompile:STRING-LITERAL)/*:non-match)
+    return matches($code, "\$" || $name || "([^\w.\-]|$)") and not(matches($code, "\$" || $name || "(\s+in\s|\s*:=)"))
+};
+
+(:~
+ : Rewrite what Fore resolves at runtime to calls of the generated `local:instance`:
+ : `instance('id')` and `$id`, for each instance id of the page. String literals are left alone.
+ :)
+declare %private function fcompile:rewrite($expression as attribute()) as xs:string {
+    let $ids := fcompile:instance-ids(root($expression))
+    return string-join(
+        for $part in analyze-string($expression, $fcompile:STRING-LITERAL)/*
+        return if ($part/self::*:match) then
+            string($part)
+        else
+            fold-left(
+                $ids,
+                replace(string($part), "(^|[^\w.\-:$])instance\s*\(", "$1local:instance("),
+                function ($code, $id) {
+                    if (fcompile:uses-variable($code, $id)) then
+                        replace(
+                            $code,
+                            "\$" || replace($id, "([.\-])", "\\$1") || "([^\w.\-]|$)",
+                            "local:instance('" || $id || "')$1"
+                        )
+                    else
+                        $code
+                }
+            )
+    )
+};
+
+(:~
+ : The instances a validator reads besides the payload: every other instance of the page, with
+ : the data given inline or loaded from a `src` relative to the page. They come from the page, not from
+ : the request, so a tampered request can not change the data rules are checked against.
+ :
+ : @param $base the collection of the page, a `src` is relative to it like it is in the browser
+ :)
+declare function fcompile:reference-instances($page as node(), $base as xs:string) as map(*) {
+    map:merge(
+        for $instance in $page//*:fx-instance[@id != "" and @id != "default"]
+        let $root := if ($instance/@src != "") then
+            doc($base || "/" || $instance/@src)/*
+        else
+            $instance/*[1]
+        where exists($root)
+        (: a copy, so the expressions can not navigate into the page :)
+        return map {string($instance/@id): document { $root }/*}
+    )
 };

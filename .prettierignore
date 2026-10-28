@@ -1,3 +1,4 @@
 build/
 dist/
 package-lock.json
+test/app/resources/fore-validation.html

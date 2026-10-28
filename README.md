@@ -249,7 +249,29 @@ If the body is invalid the handler is not called and the response is a `422` wit
 
 The page is compiled to XQuery once. The result is stored in the collection `fore-cache` of the app, which the user running the request must be able to write to, and is rebuilt when the page is newer than the compiled version. If the collection is not writable the page is compiled on every request and a warning is logged.
 
-Functions that only exist in Fore (like `instance()` with other instances) are not available on the server yet.
+Fore evaluates its expressions with fontoxpath and its own function library, the server with eXist. To make sure that a form is never validated with different rules, a page can only call functions from the `fn`, `math`, `map`, `array` and `xs` libraries that eXist provides too. Compiling a page that calls anything else, like `now()` or `depends()`, fails with a `500` that lists every unsupported function and the bind it is used in:
+
+```
+Fore page uses functions that are not available on the server: bind 'name' (required): now(); bind 'limit' (constraint): depends()
+```
+
+Rules can read other instances with `instance('id')` and the `$id` shorthand (`$default` is the default instance, `instance()` too):
+
+```html
+<fx-instance id="limits"
+    ><limits><max>10</max></limits></fx-instance
+>
+<fx-instance id="rates" src="rates.xml" />
+
+<fx-bind ref="qty" constraint="number(.) &lt;= number(instance('limits')/max)" />
+<fx-bind ref="code" constraint=". = $rates/rate/@code" />
+```
+
+The default instance is the request body. All other instances are reference data that the server takes from the page itself, either from the inline content or from a `src` relative to the page, and never from the request. A tampered request can therefore not change the data its own rules are checked against. Using an instance that is not defined, holds JSON or has a remote `src` fails compilation like an unsupported function.
+
+Functions that exist on both sides can still differ in details, for example in how they treat the empty sequence.
+
+The server has no typed nodes, so comparing two nodes compares their text: `"5" <= "10"` is false, as in Fore. Cast explicitly when you mean numbers or dates, e.g. `number(.) <= number(instance('limits')/max)`.
 
 ## File Uploads
 

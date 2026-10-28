@@ -1,0 +1,218 @@
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <title>Validating requests with Fore</title>
+        <link rel="stylesheet" href="https://unpkg.com/@jinntec/fore@5.2.0/resources/vars.css"/>
+        <link rel="stylesheet" href="https://unpkg.com/@jinntec/fore@5.2.0/resources/fore.css"/>
+        <script type="module" src="https://unpkg.com/@jinntec/fore@5.2.0/dist/fore.js"> </script>
+        <script type="module" src="fore-validation.js"> </script>
+        <style>
+            :root {
+                --bg: #fff; --fg: #1d2330; --muted: #5d6677; --line: #d9dde5;
+                --panel: #f5f7fa; --accent: #1f5fbf; --ok: #1a7f45; --bad: #b3261e;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #14171d; --fg: #e6e9ef; --muted: #9aa3b2; --line: #2d3340;
+                    --panel: #1c2028; --accent: #6ea2f2; --ok: #52c47f; --bad: #f2877f;
+                }
+            }
+            body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 system-ui, sans-serif; }
+            main { max-width: 52rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+            h1 { margin: 0 0 .25rem; font-size: 1.9rem; }
+            h2 { margin: 2.5rem 0 .5rem; font-size: 1.3rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+            p, li { max-width: 46rem; }
+            .lead { color: var(--muted); font-size: 1.1rem; }
+            code, pre { font: .9em ui-monospace, Menlo, monospace; }
+            :not(pre) > code { background: var(--panel); padding: .1em .35em; border-radius: 4px; }
+            pre { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .8rem 1rem; overflow-x: auto; }
+            table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+            th, td { text-align: left; vertical-align: top; padding: .45rem .6rem; border-bottom: 1px solid var(--line); }
+            th { color: var(--muted); font-weight: 600; font-size: .85rem; }
+            .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
+            .panel h3 { margin: 0 0 .5rem; font-size: 1rem; }
+            fx-control { display: block; margin: .6rem 0; }
+            fx-control label { display: inline-block; min-width: 7rem; }
+            fx-control input { font: inherit; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+            fx-control[invalid] input { border-color: var(--bad); }
+            fx-control[required] label::after { content: " *"; color: var(--bad); }
+            fx-alert { display: none; color: var(--bad); font-size: .9rem; margin-left: 7rem; }
+            [invalid] fx-alert { display: block; }
+            button { font: inherit; padding: .4rem .9rem; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--bg); cursor: pointer; }
+            textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: .9em ui-monospace, Menlo, monospace; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: .5rem; }
+            output { display: block; margin-top: .75rem; white-space: pre-wrap; font: .9em ui-monospace, Menlo, monospace; }
+            output[data-status="ok"] { color: var(--ok); }
+            output[data-status="rejected"] { color: var(--bad); }
+            .curl { color: var(--muted); font-size: .85rem; word-break: break-all; }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Validating requests with Fore</h1>
+            <p class="lead">
+                A Roaster operation can point to a Fore page. The server reads the binds of that page and checks
+                the request body against them, so the rules are written once and enforced on both sides.
+            </p>
+            <p>
+                This page is that Fore page. The browser runs the form below. The server compiles the same
+                <code>fx-bind</code> elements into an XQuery validator for <code>POST api/fore/demo</code>.
+                Everything else on the page, like this text, is ignored by the server.
+            </p>
+
+            <h2>Try it</h2>
+            <div class="panel">
+                <h3>1. In the browser: Fore validates first</h3>
+                <fx-fore>
+                    <fx-model>
+                        <fx-instance src="fore-validation-order.xml"> </fx-instance>
+                        <fx-instance id="limits" src="fore-validation-limits.xml"> </fx-instance>
+                        <fx-instance id="rates" src="fore-validation-rates.xml"> </fx-instance>
+
+                        <fx-bind ref="name" required="true()" alert="A name is required"></fx-bind>
+                        <fx-bind
+                            ref="amount"
+                            type="xs:integer"
+                            constraint=". &gt; 0 and number(.) &lt;= number(instance('limits')/max)"
+                            alert="The amount must be a whole number from 1 to the limit"
+                        ></fx-bind>
+                        <fx-bind ref="code" constraint=". = $rates/rate/@code" alert="Unknown rate code"></fx-bind>
+                        <fx-bind
+                            ref="note"
+                            required="number($default/amount) &gt; 100"
+                            alert="Orders above 100 need a note"
+                        ></fx-bind>
+
+                        <fx-submission id="send" url="../api/fore/demo" method="post" mediatype="application/xml" replace="none">
+                            <fx-message event="submit-done">The server accepted the order.</fx-message>
+                            <fx-message event="submit-error" if="number(event('status')) = 0">
+                                Fore found invalid fields, nothing was sent.
+                            </fx-message>
+                            <fx-message event="submit-error" if="number(event('status')) != 0">
+                                The server rejected the order.
+                            </fx-message>
+                        </fx-submission>
+                    </fx-model>
+
+                    <fx-control ref="name">
+                        <label>Name</label>
+                        <input class="widget" type="text" required="required"/>
+                    </fx-control>
+                    <fx-control ref="amount">
+                        <label>Amount</label>
+                        <input class="widget" type="text"/>
+                    </fx-control>
+                    <fx-control ref="code">
+                        <label>Rate code</label>
+                        <input class="widget" type="text"/>
+                    </fx-control>
+                    <fx-control ref="note">
+                        <label>Note</label>
+                        <input class="widget" type="text"/>
+                    </fx-control>
+                    <fx-trigger>
+                        <button>Send to server</button>
+                        <fx-send submission="send"></fx-send>
+                    </fx-trigger>
+                </fx-fore>
+            </div>
+
+            <div class="panel" id="tamper">
+                <h3>2. Skip the browser: the server validates again</h3>
+                <p>
+                    A tampered or hand-made client does not run Fore. Edit the payload and send it directly, the
+                    server reports the same alerts.
+                </p>
+                <textarea spellcheck="false">&lt;order&gt;
+    &lt;name&gt;&lt;/name&gt;
+    &lt;amount&gt;5000&lt;/amount&gt;
+    &lt;code&gt;Z&lt;/code&gt;
+    &lt;note&gt;&lt;/note&gt;
+&lt;/order&gt;</textarea>
+                <p><button type="button">Send without validation</button></p>
+                <output>Nothing sent yet.</output>
+                <p class="curl"> </p>
+            </div>
+
+            <h2>Enable it for an operation</h2>
+            <p>
+                Add the vendor extension <code>x-fore</code> to the operation in your <code>api.json</code>. The
+                path is relative to the app.
+            </p>
+<pre><code>"/api/fore/demo": {
+    "post": {
+        "operationId": "api:create-order",
+        "x-fore": "resources/fore-validation.html",
+        ...
+    }
+}</code></pre>
+            <p>Then pass the middleware to the router. Keep the standard authorization first.</p>
+<pre><code>import module namespace fore = "http://e-editiones.org/roaster/fore-validation";
+
+roaster:route($definitions, $lookup, (auth:standard-authorization#2, fore:validate#2))</code></pre>
+            <p>
+                If the body is valid the handler runs as usual. If not, it is never called and the response is a
+                <code>422</code>:
+            </p>
+<pre><code>{
+    "description": "Validation failed",
+    "value": {
+        "errors": [
+            { "ref": "amount[1]", "bind": "amount", "kind": "constraint",
+              "alert": "The amount must be a whole number from 1 to the limit" }
+        ]
+    }
+}</code></pre>
+
+            <h2>What is checked</h2>
+            <p>
+                The default instance, the <code>fx-instance</code> without an <code>id</code>, describes the request
+                body. For every node selected by an <code>fx-bind</code>:
+            </p>
+            <table>
+                <tr><th>Attribute</th><th>Meaning on the server</th></tr>
+                <tr><td><code>required</code></td><td>An XPath expression. If it is true the node must not be empty.</td></tr>
+                <tr><td><code>constraint</code></td><td>An XPath expression that must be true.</td></tr>
+                <tr><td><code>type</code></td><td>The value must be castable to the XML Schema type. Empty values are left to <code>required</code>.</td></tr>
+                <tr><td><code>relevant</code></td><td>For a node that is not relevant, <code>required</code>, <code>constraint</code> and <code>type</code> are skipped. Fore 5.2 still counts an empty required node that is not relevant as invalid, so prefer an expression in <code>required</code>, like the note above.</td></tr>
+                <tr><td><code>alert</code></td><td>The message returned for a violation, also as child element <code>fx-alert</code>.</td></tr>
+            </table>
+            <p>
+                Binds nest like in Fore. If a <code>type</code> is wrong only the type is reported, not also the
+                constraint. An expression that raises an error, for example because a tampered value can not be
+                compared, counts as a violation, it never fails the request.
+            </p>
+
+            <h2>Other instances</h2>
+            <p>
+                Rules can read other instances with <code>instance('id')</code> or <code>$id</code>, like
+                <code>$rates</code> and <code>instance('limits')</code> above. The request is the only input: all
+                other instances are taken from this page, from a <code>src</code> relative to it or inline, never
+                from the request. In a browser an inline XML instance is parsed as HTML, which is why this page loads
+                its instances with <code>src</code>. A tampered client can therefore not change the data its own rules are checked
+                against. Binds that start on another instance are not validated.
+            </p>
+
+            <h2>Functions and comparisons</h2>
+            <p>
+                Fore runs expressions with fontoxpath, the server with eXist. To make sure a form is never
+                validated with different rules, a page may only call functions from the <code>fn</code>,
+                <code>math</code>, <code>map</code>, <code>array</code> and <code>xs</code> libraries. Anything else, like
+                <code>now()</code>, makes compiling the page fail with a message that names the bind and the function.
+            </p>
+            <p>
+                Nodes have no type on the server, so comparing two nodes compares their text and
+                <code>"5" &lt;= "10"</code> is false, as in Fore. Cast explicitly:
+                <code>number(.) &lt;= number(instance('limits')/max)</code>.
+            </p>
+
+            <h2>How it works</h2>
+            <ul>
+                <li>On the first request the binds are compiled to XQuery and stored in the collection <code>fore-cache</code> of the app.</li>
+                <li>The compiled validator is used until this page changes. Editing the page takes effect on the next request.</li>
+                <li>If the cache can not be written, the page is compiled on each request and a warning is logged.</li>
+                <li>The page has to be well-formed XML, because eXist reads it as a document.</li>
+            </ul>
+        </main>
+    </body>
+</html>

@@ -46,7 +46,17 @@ declare function fore:violations($app as xs:string, $page-path as xs:string, $bo
         error($errors:UNSUPPORTED_MEDIA_TYPE, "Validation against a Fore page requires an XML body")
     else
         let $validator := fore:validator($app, $page-path)
-        return util:eval($validator, false(), (xs:QName("instances"), map {"default": $body}))
+        (: the payload is the default instance, all others come from the page itself :)
+        let $instances := map:merge(
+            (
+                fcompile:reference-instances(
+                    doc($app || "/" || $page-path),
+                    util:collection-name($app || "/" || $page-path)
+                ),
+                map {"default": $body}
+            )
+        )
+        return util:eval($validator, false(), (xs:QName("instances"), $instances))
 };
 
 (:~

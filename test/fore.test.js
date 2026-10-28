@@ -144,3 +144,146 @@ describe('Validator cache', function () {
         expect(res.data.value.errors[0].alert).to.equal('Please enter a name')
     })
 })
+
+describe('Function check of Fore pages', function () {
+    const postTo = (path, body) =>
+        util.axios.post(path, body, { headers: { 'Content-Type': 'application/xml' }, validateStatus: () => true })
+
+    before(async function () {
+        await util.login()
+    })
+
+    after(async function () {
+        await util.logout()
+    })
+
+    it('accepts functions the server provides', async function () {
+        const valid = await postTo('api/fore/functions', '<data><name>abc</name><amount>5</amount></data>')
+        expect(valid.status).to.equal(200)
+
+        const invalid = await postTo('api/fore/functions', '<data><name>abx</name><amount>5</amount></data>')
+        expect(invalid.status).to.equal(422)
+        expect(invalid.data.value.errors[0].alert).to.equal('Lower case letters only, at least 3, no x')
+    })
+
+    it('does not mistake string literals and operators for function calls', async function () {
+        // 'a(b)' in a string and "div (" must not be reported
+        const res = await postTo('api/fore/functions', '<data><name>a(b</name><amount>100</amount></data>')
+        expect(res.status).to.equal(422)
+        expect(res.data.value.errors.map((e) => e.ref)).to.deep.equal(['amount[1]'])
+    })
+
+    it('fails compilation naming the bind and every unsupported function', async function () {
+        const res = await postTo('api/fore/unsupported', '<data><name>abc</name><amount>5</amount></data>')
+        expect(res.status).to.equal(500)
+        const message = res.data.description
+        expect(message).to.contain('functions that are not available on the server')
+        expect(message).to.contain("bind 'name' (required): now()")
+        expect(message).to.contain("bind 'limit' (constraint): depends()")
+        expect(message).to.contain("bind 'limit' (constraint): instance 'rates' is not defined")
+        // not reported: names inside string literals
+        expect(message).to.not.contain('(constraint): string-length()')
+    })
+})
+
+describe('Rules that read other instances', function () {
+    const order = ({ qty = '1', code = 'A', note = '' } = {}) =>
+        `<order><qty>${qty}</qty><code>${code}</code><note>${note}</note></order>`
+    const postOrder = (body) =>
+        util.axios.post('api/fore/instances', body, {
+            headers: { 'Content-Type': 'application/xml' },
+            validateStatus: () => true
+        })
+
+    before(async function () {
+        await util.login()
+    })
+
+    after(async function () {
+        await util.logout()
+    })
+
+    it('accepts an order within the limits of the inline instance and a known rate', async function () {
+        const res = await postOrder(order({ qty: '10', code: 'A' }))
+        expect(res.status).to.equal(200)
+    })
+
+    it('reads an inline instance with instance(id)', async function () {
+        const res = await postOrder(order({ qty: '11' }))
+        expect(res.status).to.equal(422)
+        expect(res.data.value.errors).to.have.length(1)
+        expect(res.data.value.errors[0]).to.include({ ref: 'qty[1]', alert: 'Quantity above the limit' })
+    })
+
+    it('reads an instance loaded from src with $id', async function () {
+        const res = await postOrder(order({ code: 'Z' }))
+        expect(res.status).to.equal(422)
+        expect(res.data.value.errors[0]).to.include({ ref: 'code[1]', alert: 'Unknown rate code' })
+    })
+
+    it('reads the payload with $default and instance()', async function () {
+        const small = await postOrder(order({ qty: '5', code: 'B' }))
+        expect(small.status).to.equal(200)
+
+        const largeA = await postOrder(order({ qty: '8', code: 'A' }))
+        expect(largeA.status).to.equal(200)
+
+        const largeB = await postOrder(order({ qty: '8', code: 'B' }))
+        expect(largeB.status).to.equal(422)
+        expect(largeB.data.value.errors[0]).to.include({
+            ref: 'note[1]',
+            alert: 'Large orders with rate B need a note'
+        })
+    })
+
+    it('can not be given its reference data by the request', async function () {
+        // extra elements in the payload are not instances
+        const res = await postOrder('<order><qty>50</qty><code>A</code><note/><limits><max>100</max></limits></order>')
+        expect(res.status).to.equal(422)
+        expect(res.data.value.errors[0].ref).to.equal('qty[1]')
+    })
+})
+
+describe('Documentation and demo page', function () {
+    const order = ({ name = 'Ann', amount = '5', code = 'A', note = '' } = {}) =>
+        `<order><name>${name}</name><amount>${amount}</amount><code>${code}</code><note>${note}</note></order>`
+    const postOrder = (body) =>
+        util.axios.post('api/fore/demo', body, {
+            headers: { 'Content-Type': 'application/xml' },
+            validateStatus: () => true
+        })
+
+    it('serves the page and the files of its instances', async function () {
+        const page = await util.axios.get('static/fore-validation.html')
+        expect(page.headers['content-type']).to.contain('text/html')
+        expect(page.data).to.contain('<fx-fore')
+        expect(page.data).to.contain('Validating requests with Fore')
+
+        for (const file of ['order', 'limits', 'rates']) {
+            const res = await util.axios.get(`static/fore-validation-${file}.xml`)
+            expect(res.status).to.equal(200)
+        }
+    })
+
+    it('validates with the binds of the page that the browser runs', async function () {
+        expect((await postOrder(order())).status).to.equal(200)
+
+        const res = await postOrder(order({ name: '', amount: '5000', code: 'Z', note: 'big' }))
+        expect(res.status).to.equal(422)
+        expect(res.data.value.errors.map((e) => e.alert)).to.deep.equal([
+            'A name is required',
+            'The amount must be a whole number from 1 to the limit',
+            'Unknown rate code'
+        ])
+    })
+
+    it('requires a note only for large orders', async function () {
+        expect((await postOrder(order({ amount: '100' }))).status).to.equal(200)
+
+        const res = await postOrder(order({ amount: '101' }))
+        expect(res.status).to.equal(422)
+        expect(res.data.value.errors[0]).to.include({ ref: 'note[1]', alert: 'Orders above 100 need a note' })
+
+        expect((await postOrder(order({ amount: '101', note: 'approved' }))).status).to.equal(200)
+    })
+})
