@@ -258,6 +258,8 @@ describe('Documentation and demo page', function () {
         expect(page.headers['content-type']).to.contain('text/html')
         expect(page.data).to.contain('<fx-fore')
         expect(page.data).to.contain('Validating requests with Fore')
+        // the binds are listed from the page itself by its script
+        expect(page.data).to.contain('id="binds"')
 
         for (const file of ['order', 'limits', 'rates']) {
             const res = await util.axios.get(`static/fore-validation-${file}.xml`)

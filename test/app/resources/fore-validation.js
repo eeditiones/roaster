@@ -42,3 +42,23 @@ document.addEventListener(
     },
     true
 )
+
+// Shows the binds of this page, the same elements the server compiles. They are read from the page,
+// so what is displayed can not differ from what is validated.
+function describeBinds(binds, depth = 0) {
+    const indent = '    '.repeat(depth)
+    return [...binds]
+        .map((bind) => {
+            const attributes = [...bind.attributes].map(({ name, value }) => `${name}="${value}"`)
+            const open = `${indent}<fx-bind ${attributes.join(`\n${indent}         `)}`
+            const children = bind.querySelectorAll(':scope > fx-bind')
+            return children.length
+                ? `${open}>\n${describeBinds(children, depth + 1)}\n${indent}</fx-bind>`
+                : `${open}></fx-bind>`
+        })
+        .join('\n')
+}
+
+const listing = document.querySelector('#binds code')
+const binds = document.querySelectorAll('fx-model > fx-bind')
+if (listing && binds.length) listing.textContent = describeBinds(binds)
