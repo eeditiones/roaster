@@ -22,7 +22,7 @@
   "devDependencies": {
     "@existdb/gulp-exist": "^6.0.0",
     "@existdb/gulp-replace-tmpl": "^1.0.4",
-    "@existdb/repo-xml-changelog-generator": "^2.0.0",
+    "@existdb/repo-xml-changelog-generator": "^2.0.1",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^11.0.1",
     "@semantic-release/github": "^12.0.10",
