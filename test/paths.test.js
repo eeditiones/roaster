@@ -139,6 +139,89 @@ describe('Query parameters in GET request', function () {
     })
 })
 
+describe('Query parameters with an empty value', function () {
+    const getError = async (request) => {
+        try {
+            await request
+        } catch (e) {
+            return e.response
+        }
+        expect.fail('request should have been rejected')
+    }
+
+    const getEmpty = (params) => util.axios.get('api/parameters/empty', { params })
+
+    it('treats an empty value as unused when allowEmptyValue is true', async function () {
+        const res = await getEmpty({ unusedString: '', unusedInt: '', unusedArray: '' })
+        expect(res.status).to.equal(200)
+        const { parameters } = res.data
+        expect(parameters.unusedString).to.equal('abcdefg')
+        expect(parameters.unusedInt).to.be.null
+        expect(parameters.unusedArray).to.deep.equal([1])
+    })
+
+    it('treats repeated empty values as unused when allowEmptyValue is true', async function () {
+        const res = await util.axios.get('api/parameters/empty?unusedArray=&unusedArray=')
+        expect(res.status).to.equal(200)
+        expect(res.data.parameters.unusedArray).to.deep.equal([1])
+    })
+
+    it('passes non-empty values when allowEmptyValue is true', async function () {
+        const res = await getEmpty({ unusedString: 'xyz', unusedInt: 3 })
+        expect(res.status).to.equal(200)
+        expect(res.data.parameters.unusedString).to.equal('xyz')
+        expect(res.data.parameters.unusedInt).to.equal(3)
+    })
+
+    it('ignores allowEmptyValue for styles that cannot serialize an empty value', async function () {
+        const res = await getEmpty({ spaceArray: '' })
+        expect(res.status).to.equal(200)
+        // the default would apply if the empty value counted as unused
+        expect(res.data.parameters.spaceArray).to.be.null
+    })
+
+    it('passes an empty string when allowEmptyValue is not set', async function () {
+        const res = await getEmpty({ emptyString: '' })
+        expect(res.status).to.equal(200)
+        expect(res.data.parameters.emptyString).to.equal('')
+    })
+
+    it('rejects an empty integer when allowEmptyValue is not set', async function () {
+        const res = await getError(getEmpty({ emptyInt: '' }))
+        expect(res.status).to.equal(400)
+        expect(res.data.description).to.include('query-parameter "emptyInt" could not be cast to integer')
+    })
+
+    it('rejects an empty value for a required parameter when allowEmptyValue is true', async function () {
+        const res = await getError(util.axios.get('api/parameters/empty/required', { params: { required: '' } }))
+        expect(res.status).to.equal(400)
+        expect(res.data.description).to.include('Required query-parameter "required" missing or empty.')
+    })
+})
+
+describe('Parameter locations', function () {
+    const getError = async (request) => {
+        try {
+            await request
+        } catch (e) {
+            return e.response
+        }
+        expect.fail('request should have been rejected')
+    }
+
+    it('rejects a location not defined by the specification', async function () {
+        const res = await getError(util.axios.get('api/parameters/location/unknown', { params: { misplaced: 'a' } }))
+        expect(res.status).to.equal(500)
+        expect(res.data.description).to.include('Unknown location "body" for parameter "misplaced".')
+    })
+
+    it('reports the querystring location as not implemented', async function () {
+        const res = await getError(util.axios.get('api/parameters/location/querystring?a=b'))
+        expect(res.status).to.equal(501)
+        expect(res.data.description).to.include('Unsupported location "querystring" for parameter "whole".')
+    })
+})
+
 describe('Date-time and HTTP-date parameters', function () {
     const getError = async (request) => {
         try {
