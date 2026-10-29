@@ -19,8 +19,10 @@ jobs:
         # Set `experimental: true` on an entry to let it fail without failing
         # the run again, e.g. while an upcoming eXist version breaks things.
         include:
+          # multipart uploads fail since eXist-db/exist#6731: a map holding an
+          # uploaded file throws a NullPointerException in containsReference
           - exist-version: latest
-            experimental: false
+            experimental: true
           - exist-version: release
             experimental: false
     services:
