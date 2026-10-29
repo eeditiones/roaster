@@ -203,6 +203,102 @@ declare function custom-router:use-beep-boop ($request as map(*), $response as m
 };
 ```
 
+## Validation with Fore
+
+An operation can validate its XML request body against the binds of a [Fore](https://github.com/Jinntec/Fore) page, so client and server share one set of rules. Add the vendor extension `x-fore` with a path, relative to the app, to the Fore page:
+
+```json
+"/invoices": {
+    "post": {
+        "operationId": "app:create-invoice",
+        "x-fore": "forms/invoice.html"
+    }
+}
+```
+
+and pass `fore:validate#2` as middleware. Keep the standard authorization first, so unauthenticated requests never trigger a compilation:
+
+```xquery
+import module namespace fore = 'http://e-editiones.org/roaster/fore-validation';
+
+roaster:route($definitions, $lookup, (auth:standard-authorization#2, fore:validate#2))
+```
+
+The Fore page has to be well-formed XML. Its default instance (the `fx-instance` without an `id`) describes the body; binds on other instances are ignored. For each node selected by an `fx-bind`:
+
+- `required` is an XPath expression. If it is true the node must not be empty.
+- `constraint` is an XPath expression that must be true.
+- `type` must be an XML Schema type that the value can be cast to. Empty values are only checked by `required`.
+- `relevant` is an XPath expression. For non-relevant nodes `required`, `constraint` and `type` are skipped.
+- `alert` (attribute) or `fx-alert` (child element) is returned as message.
+
+An expression that raises an error, for example because a tampered value can not be compared, counts as a violation instead of failing the request.
+
+### HTML input types
+
+Fore reads the native validity of a control's widget, so an `<input type="email">` is checked by the browser. The server applies the same rule. It takes the type from the control that edits the node, so the bind needs no `type` for it:
+
+```html
+<fx-bind ref="email" alert="Please enter a valid email address"></fx-bind>
+
+<fx-control ref="email">
+    <label>Email</label>
+    <input class="widget" type="email" />
+</fx-control>
+```
+
+| Input type        | Valid value                                   |
+| ----------------- | --------------------------------------------- |
+| `email`           | an address like the HTML specification allows |
+| `url`             | an absolute URL, `https://example.org/path`   |
+| `date`            | `2030-12-31`, a date that exists              |
+| `time`            | `09:30` or `09:30:15.5`                       |
+| `datetime-local`  | `2030-12-31T09:30`                            |
+| `month`, `week`   | `2030-12`, `2030-W07`                         |
+| `number`, `range` | a floating-point number like `-12.5e3`        |
+| `color`           | `#a0b1c2`                                     |
+
+Other types, like `text` or `tel`, have nothing to check. Empty values are left to `required`. A violation is reported with `kind` `type` and the `alert` of the bind, or "Please enter a valid email" if it has none. A control belongs to a bind if its `ref` is the ref of the bind or the path of nested bind refs. The attributes `min`, `max`, `step` and `pattern` are not checked on the server, use a `constraint` for those. To check a value that has no control, put an XML Schema `type` on the bind, like `xs:date`.
+
+If the body is invalid the handler is not called and the response is a `422` with the violations as error value:
+
+```json
+{
+    "description": "Validation failed",
+    "value": {
+        "errors": [
+            { "ref": "amount[1]", "bind": "amount", "kind": "constraint", "alert": "Amount must be a positive integer" }
+        ]
+    }
+}
+```
+
+The page is compiled to XQuery once. The result is stored in the collection `fore-cache` of the app, which the user running the request must be able to write to, and is rebuilt when the page is newer than the compiled version. If the collection is not writable the page is compiled on every request and a warning is logged.
+
+Fore evaluates its expressions with fontoxpath and its own function library, the server with eXist. To make sure that a form is never validated with different rules, a page can only call functions from the `fn`, `math`, `map`, `array` and `xs` libraries that eXist provides too. Compiling a page that calls anything else, like `now()` or `depends()`, fails with a `500` that lists every unsupported function and the bind it is used in:
+
+```
+Fore page uses functions that are not available on the server: bind 'name' (required): now(); bind 'limit' (constraint): depends()
+```
+
+Rules can read other instances with `instance('id')` and the `$id` shorthand (`$default` is the default instance, `instance()` too):
+
+```html
+<fx-instance id="limits"
+    ><limits><max>10</max></limits></fx-instance
+>
+<fx-instance id="rates" src="rates.xml" />
+
+<fx-bind ref="qty" constraint="number(.) &lt;= number(instance('limits')/max)" />
+<fx-bind ref="code" constraint=". = $rates/rate/@code" />
+```
+
+The default instance is the request body. All other instances are reference data that the server takes from the page itself, either from the inline content or from a `src` relative to the page, and never from the request. A tampered request can therefore not change the data its own rules are checked against. Using an instance that is not defined, holds JSON or has a remote `src` fails compilation like an unsupported function.
+
+Functions that exist on both sides can still differ in details, for example in how they treat the empty sequence.
+
+The server has no typed nodes, so comparing two nodes compares their text: `"5" <= "10"` is false, as in Fore. Cast explicitly when you mean numbers or dates, e.g. `number(.) <= number(instance('limits')/max)`.
+
 ## File Uploads
 
 Roaster transparently handles data from multipart/form-data requests to keep route handlers short and readable.

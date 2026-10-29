@@ -1,0 +1,33 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <body>
+        <fx-fore>
+            <fx-model>
+                <fx-instance>
+                    <order xmlns="">
+                        <qty>1</qty>
+                        <code>A</code>
+                        <note />
+                    </order>
+                </fx-instance>
+                <fx-instance id="limits">
+                    <limits xmlns=""><max>10</max></limits>
+                </fx-instance>
+                <fx-instance id="rates" src="rates.xml" />
+
+                <fx-bind
+                    ref="qty"
+                    constraint="number(.) &lt;= number(instance('limits')/max)"
+                    alert="Quantity above the limit"
+                />
+                <fx-bind ref="code" constraint=". = $rates/rate/@code" alert="Unknown rate code" />
+                <fx-bind
+                    ref="note"
+                    relevant="number($default/qty) &gt; 5 and instance()/code = 'B'"
+                    required="true()"
+                    alert="Large orders with rate B need a note"
+                />
+                <fx-bind ref="$limits/max" constraint=". &gt; 0" />
+            </fx-model>
+        </fx-fore>
+    </body>
+</html>

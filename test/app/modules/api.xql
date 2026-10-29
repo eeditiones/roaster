@@ -9,6 +9,7 @@ import module namespace auth = "http://e-editiones.org/roaster/auth";
 import module namespace rutil = "http://e-editiones.org/roaster/util";
 import module namespace errors = "http://e-editiones.org/roaster/errors";
 import module namespace cookie = "http://e-editiones.org/roaster/cookie";
+import module namespace fore = "http://e-editiones.org/roaster/fore-validation";
 import module namespace upload = "http://e-editiones.org/roasted/upload" at "upload.xqm";
 
 (:~
@@ -207,9 +208,16 @@ declare function api:logout($request as map(*)) {
  : that are imported here
  : You can leave it as it is, but it has to be here
  :)
+(:~
+ : Only reached when the body passed the validation of forms/invoice.html
+ :)
+declare function api:fore-invoice($request as map(*)) {
+    map {"valid": true(), "name": string($request?body//name)}
+};
+
 declare function api:lookup($name as xs:string) {
     function-lookup(xs:QName($name), 1)
 };
 
 (: util:declare-option("output:indent", "no"), :)
-roaster:route($api:definitions, api:lookup#1)
+roaster:route($api:definitions, api:lookup#1, (auth:standard-authorization#2, fore:validate#2))

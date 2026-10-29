@@ -34,7 +34,7 @@ const library = {
 
 // test application metadata
 const testApp = {
-    files: ['test/app/*.*', 'test/app/modules/*', 'test/app/resources/*', 'test/app/uploads/*'],
+    files: ['test/app/*.*', 'test/app/modules/*', 'test/app/forms/*', 'test/app/resources/*', 'test/app/uploads/*'],
     packageFilename: 'roasted.xar',
     build: 'test/app/build',
     base: 'test/app'

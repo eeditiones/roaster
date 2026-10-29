@@ -1,0 +1,21 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <body>
+        <fx-fore>
+            <fx-model>
+                <fx-instance>
+                    <data xmlns="">
+                        <name />
+                        <amount>5</amount>
+                    </data>
+                </fx-instance>
+
+                <fx-bind ref="name" required="now() &gt; 0" />
+                <fx-bind
+                    id="limit"
+                    ref="amount"
+                    constraint=". &lt; instance('rates')/limit and depends(.) and string-length('now()') &gt; 0"
+                />
+            </fx-model>
+        </fx-fore>
+    </body>
+</html>

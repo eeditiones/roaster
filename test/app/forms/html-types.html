@@ -1,0 +1,46 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <body>
+        <fx-fore>
+            <fx-model>
+                <fx-instance>
+                    <data xmlns="">
+                        <email></email>
+                        <site></site>
+                        <born></born>
+                        <start></start>
+                        <meeting></meeting>
+                        <month></month>
+                        <week></week>
+                        <qty></qty>
+                        <color></color>
+                        <phone></phone>
+                        <other></other>
+                    </data>
+                </fx-instance>
+                <fx-bind ref="email" alert="Not an email address"></fx-bind>
+                <fx-bind ref="site"></fx-bind>
+                <fx-bind ref="born"></fx-bind>
+                <fx-bind ref="start"></fx-bind>
+                <fx-bind ref="meeting"></fx-bind>
+                <fx-bind ref="month"></fx-bind>
+                <fx-bind ref="week"></fx-bind>
+                <fx-bind ref="qty"></fx-bind>
+                <fx-bind ref="color"></fx-bind>
+                <fx-bind ref="phone"></fx-bind>
+                <fx-bind ref="other" type="xs:integer" constraint=". &gt; 0"></fx-bind>
+            </fx-model>
+
+            <fx-control ref="email"><label>Email</label><input class="widget" type="email" /></fx-control>
+            <fx-control ref="site"><label>Site</label><input type="url" /></fx-control>
+            <fx-control ref="born"><label>Born</label><input class="widget" type="DATE" /></fx-control>
+            <fx-control ref="start"><label>Start</label><input type="time" /></fx-control>
+            <fx-control ref="meeting"><label>Meeting</label><input type="datetime-local" /></fx-control>
+            <fx-control ref="month"><label>Month</label><input type="month" /></fx-control>
+            <fx-control ref="week"><label>Week</label><input type="week" /></fx-control>
+            <fx-control ref="qty"><label>Qty</label><input type="number" /></fx-control>
+            <fx-control ref="color"><label>Color</label><input type="color" /></fx-control>
+            <fx-control ref="phone"><label>Phone</label><input type="tel" /></fx-control>
+            <fx-control ref="other"><label>Other</label><input type="text" /></fx-control>
+        </fx-fore>
+    </body>
+</html>

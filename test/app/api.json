@@ -1101,6 +1101,157 @@
                 }
             }
         },
+        "/api/fore/invoice": {
+            "post": {
+                "summary": "Validate an invoice against a Fore page",
+                "description": "The request body is validated against the binds of forms/invoice.html",
+                "tags": ["body"],
+                "operationId": "api:fore-invoice",
+                "x-fore": "forms/invoice.html",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/xml": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Valid",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/fore/functions": {
+            "post": {
+                "summary": "Fore page that only uses functions available on the server",
+                "tags": ["body"],
+                "operationId": "api:fore-invoice",
+                "x-fore": "forms/functions.html",
+                "requestBody": {
+                    "required": true,
+                    "content": { "application/xml": { "schema": { "type": "object" } } }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Valid",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    }
+                }
+            }
+        },
+        "/api/fore/unsupported": {
+            "post": {
+                "summary": "Fore page that uses functions which are not available on the server",
+                "tags": ["body"],
+                "operationId": "api:fore-invoice",
+                "x-fore": "forms/unsupported.html",
+                "requestBody": {
+                    "required": true,
+                    "content": { "application/xml": { "schema": { "type": "object" } } }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Valid",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    }
+                }
+            }
+        },
+        "/api/fore/instances": {
+            "post": {
+                "summary": "Fore page whose rules read further instances",
+                "tags": ["body"],
+                "operationId": "api:fore-invoice",
+                "x-fore": "forms/instances.html",
+                "requestBody": {
+                    "required": true,
+                    "content": { "application/xml": { "schema": { "type": "object" } } }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Valid",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    }
+                }
+            }
+        },
+        "/api/fore/demo": {
+            "post": {
+                "summary": "Documentation and demo of Fore validation: the page validated here is served at static/fore-validation.html",
+                "tags": ["body"],
+                "operationId": "api:fore-invoice",
+                "x-fore": "resources/fore-validation.html",
+                "requestBody": {
+                    "required": true,
+                    "content": { "application/xml": { "schema": { "type": "object" } } }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Valid",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    }
+                }
+            }
+        },
+        "/api/fore/html-types": {
+            "post": {
+                "summary": "Fore page whose controls use HTML input types such as email and date",
+                "tags": ["body"],
+                "operationId": "api:fore-invoice",
+                "x-fore": "forms/html-types.html",
+                "requestBody": {
+                    "required": true,
+                    "content": { "application/xml": { "schema": { "type": "object" } } }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Valid",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": { "application/json": { "schema": { "type": "object" } } }
+                    }
+                }
+            }
+        },
         "/upload/single/{path}": {
             "post": {
                 "summary": "Upload a single file.",

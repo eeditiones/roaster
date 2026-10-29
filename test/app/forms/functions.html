@@ -1,0 +1,26 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <body>
+        <fx-fore>
+            <fx-model>
+                <fx-instance>
+                    <data xmlns="">
+                        <name />
+                        <amount>5</amount>
+                    </data>
+                </fx-instance>
+
+                <fx-bind
+                    ref="name"
+                    required="string-length(normalize-space(../amount)) &gt; 0"
+                    constraint="matches(., '^[a-z(]+$') and not(contains(., 'x')) and string-length(.) &gt; 2"
+                    alert="Lower case letters only, at least 3, no x"
+                />
+                <fx-bind
+                    ref="amount"
+                    constraint="math:pow(xs:integer(.), 2) &lt; 10000 and (every $c in tokenize(., ',') satisfies number($c) = number($c))"
+                    alert="Amount too large"
+                />
+            </fx-model>
+        </fx-fore>
+    </body>
+</html>
