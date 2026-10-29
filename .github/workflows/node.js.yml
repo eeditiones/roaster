@@ -3,7 +3,13 @@
 
 name: Test
 
-on: [push, pull_request]
+# push only on main: release.yml needs the push run there, and branches with
+# a pull request are tested by the pull_request event, merged into main
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
