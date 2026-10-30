@@ -38,4 +38,20 @@ describe('Error reporting', function () {
             expect(error.response.data).to.contain('$undefined')
         })
     })
+
+    it('reports a misconfigured path parameter as JSON', async function () {
+        const res = await util.axios.get('api/errors/misconfigured').catch((error) => error.response)
+        expect(res.status).to.equal(500)
+        expect(res.headers['content-type']).to.match(/^application\/json/)
+        expect(res.data.description).to.contain('Path pattern has no substitutions')
+    })
+
+    it('reports an error with the request map as its value as JSON', async function () {
+        const res = await util.axios.get('api/errors/with-request').catch((error) => error.response)
+        expect(res.status).to.equal(400)
+        expect(res.headers['content-type']).to.match(/^application\/json/)
+        expect(res.data.description).to.equal('invalid request')
+        expect(res.data.value.path).to.equal('/api/errors/with-request')
+        expect(res.data.value.logger).to.equal('function(*)')
+    })
 })

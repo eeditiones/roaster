@@ -53,6 +53,13 @@ declare function api:error-dynamic($request as map(*)) {
 };
 
 (:~
+ : Raise an error with the request map, which contains function items, as its value
+ :)
+declare function api:error-with-request($request as map(*)) {
+    error($errors:BAD_REQUEST, "invalid request", $request)
+};
+
+(:~
  : Handlers can also respond with an error directly
  :)
 declare function api:error-explicit($request as map(*)) {

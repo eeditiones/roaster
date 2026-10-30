@@ -1119,6 +1119,54 @@
                 }
             }
         },
+        "/api/errors/misconfigured": {
+            "get": {
+                "summary": "Declares a path parameter without a placeholder in the path pattern",
+                "operationId": "api:error-triggered",
+                "tags": ["errors"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "never reached",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/errors/with-request": {
+            "get": {
+                "summary": "Handler raises an error with the request map as its value",
+                "operationId": "api:error-with-request",
+                "tags": ["errors"],
+                "responses": {
+                    "200": {
+                        "description": "never reached",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/errors/handle": {
             "get": {
                 "summary": "Test error handler",
