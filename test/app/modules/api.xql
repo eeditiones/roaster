@@ -204,6 +204,48 @@ declare function api:logout($request as map(*)) {
     map {"message": "Logged out"}
 };
 
+(:~
+ : Returns an undeclared response status (500) with a body of varying shape.
+ : Used to test resolving a content type for #127: since the operation
+ : declares only a 200/application/json response, an undeclared 500 borrows
+ : that content type. A map/array body is natively representable as JSON
+ : as-is; an element body is not, so it is wrapped as `{"error": ...}`
+ : rather than discarding its markup or reverting to XML. An explicit media
+ : type is never overridden, even when that means a guaranteed failure.
+ :)
+declare function api:response-type-undeclared($request as map(*)) {
+    switch ($request?parameters?shape)
+        case "map" return
+            roaster:response(500, map {"error": "boom"})
+        case "array" return
+            roaster:response(500, [1, 2, 3])
+        case "element" return
+            roaster:response(500, <error>boom</error>)
+        case "string" return
+            roaster:response(500, "boom")
+        case "explicit-xml" return
+            roaster:response(500, "application/xml", map {"error": "boom"})
+        default return
+            error(xs:QName("errors:OPERATION"), "unknown shape")
+};
+
+(:~
+ : Returns an undeclared response status (500) on an operation with no
+ : declared responses at all, so there is nothing to borrow a content type
+ : from. Used to test the last-resort Accept-header negotiation for #127.
+ :)
+declare function api:response-type-no-declared-response($request as map(*)) {
+    switch ($request?parameters?shape)
+        case "string" return
+            roaster:response(500, "boom")
+        case "map" return
+            roaster:response(500, map {"error": "boom"})
+        case "element" return
+            roaster:response(500, <error>boom</error>)
+        default return
+            error(xs:QName("errors:OPERATION"), "unknown shape")
+};
+
 (: end of route handlers :)
 
 (:~
