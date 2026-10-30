@@ -562,3 +562,177 @@ describe('Routes using new login', function () {
         })
     })
 })
+
+describe('Auth strategy matching (#121)', function () {
+    // do not throw on 4xx, every test asserts the status explicitly
+    const options = (headers = {}, extra = {}) => ({
+        // override a cookie possibly left in the defaults by util.login()
+        headers: { Cookie: '', ...headers },
+        validateStatus: () => true,
+        ...extra
+    })
+    const basicAuth = { auth: util.adminCredentials }
+    const bearer = { Authorization: 'Bearer not-a-basic-credential' }
+
+    // eXist-db 6.0.1 answers 401 to any non-Basic Authorization header before roaster runs,
+    // probe with the static api.html, which the controller serves without roaster
+    let existRejectsBearer
+    before(async function () {
+        const res = await util.axios.get('api.html', options(bearer))
+        existRejectsBearer = res.status === 401
+    })
+
+    async function loginCookie() {
+        const res = await util.axios.post(
+            'api/login',
+            { usr: util.adminCredentials.username, pwd: util.adminCredentials.password },
+            { headers: { 'Content-Type': 'application/json' } }
+        )
+        return res.headers['set-cookie']
+    }
+
+    describe('with basicAuth listed before cookieAuth', function () {
+        it('rejects a request without credentials', async function () {
+            const res = await util.axios.get('api/auth/basic-first', options())
+            expect(res.status).to.equal(401)
+        })
+
+        it('authenticates with a valid login cookie', async function () {
+            const cookie = await loginCookie()
+            const res = await util.axios.get('api/auth/basic-first', options({ Cookie: cookie }))
+            expect(res.status).to.equal(200)
+            expect(res.data.user.name).to.equal(util.adminCredentials.username)
+            expect(res.data.user.dba).to.equal(true)
+        })
+
+        it('authenticates with a valid login cookie and a non-Basic Authorization header', async function () {
+            if (existRejectsBearer) this.skip()
+            const cookie = await loginCookie()
+            const res = await util.axios.get('api/auth/basic-first', options({ Cookie: cookie, ...bearer }))
+            expect(res.status).to.equal(200)
+            expect(res.data.user.name).to.equal(util.adminCredentials.username)
+        })
+
+        it('authenticates with Basic credentials', async function () {
+            const res = await util.axios.get('api/auth/basic-first', options({}, basicAuth))
+            expect(res.status).to.equal(200)
+            expect(res.data.user.name).to.equal(util.adminCredentials.username)
+            expect(res.data.user.dba).to.equal(true)
+        })
+
+        it('rejects an invalid login cookie', async function () {
+            const res = await util.axios.get('api/auth/basic-first', options({ Cookie: 'roasted.com.login=deleted' }))
+            expect(res.status).to.equal(401)
+        })
+
+        it('falls back to guest on an unconstrained route without credentials', async function () {
+            const res = await util.axios.get('api/auth/basic-first/unconstrained', options())
+            expect(res.status).to.equal(200)
+            expect(res.data.user.name).to.equal('guest')
+            expect(res.data.user.dba).to.equal(false)
+        })
+    })
+
+    describe('with cookieAuth only', function () {
+        it('serves a request without credentials without a user', async function () {
+            const res = await util.axios.get('api/auth/cookie-only', options())
+            expect(res.status).to.equal(200)
+            expect(res.data.user).to.be.null
+        })
+
+        it('authenticates with a valid login cookie', async function () {
+            const cookie = await loginCookie()
+            const res = await util.axios.get('api/auth/cookie-only', options({ Cookie: cookie }))
+            expect(res.status).to.equal(200)
+            expect(res.data.user.name).to.equal(util.adminCredentials.username)
+        })
+
+        it('rejects Basic credentials', async function () {
+            const res = await util.axios.get('api/auth/cookie-only', options({}, basicAuth))
+            expect(res.status).to.equal(401)
+            expect(res.data.description).to.contain('Basic authentication is not allowed for this route')
+        })
+
+        it('rejects Basic credentials even with a valid login cookie', async function () {
+            const cookie = await loginCookie()
+            const res = await util.axios.get('api/auth/cookie-only', options({ Cookie: cookie }, basicAuth))
+            expect(res.status).to.equal(401)
+        })
+
+        it('ignores a non-Basic Authorization header', async function () {
+            if (existRejectsBearer) this.skip()
+            const res = await util.axios.get('api/auth/cookie-only', options(bearer))
+            expect(res.status).to.equal(200)
+        })
+    })
+
+    describe('without security requirements', function () {
+        it('serves a request without credentials without a user', async function () {
+            const res = await util.axios.get('api/auth/public', options())
+            expect(res.status).to.equal(200)
+            expect(res.data.user).to.be.null
+        })
+
+        it('serves a request with Basic credentials without a user', async function () {
+            const res = await util.axios.get('api/auth/public', options({}, basicAuth))
+            expect(res.status).to.equal(200)
+            expect(res.data.user).to.be.null
+        })
+    })
+
+    describe('with basicAuth only', function () {
+        it('rejects a request without credentials', async function () {
+            const res = await util.axios.get('api/auth/basic-only', options())
+            expect(res.status).to.equal(401)
+        })
+
+        it('authenticates with Basic credentials', async function () {
+            const res = await util.axios.get('api/auth/basic-only', options({}, basicAuth))
+            expect(res.status).to.equal(200)
+            expect(res.data.user.name).to.equal(util.adminCredentials.username)
+        })
+    })
+})
+
+describe('Java session cookie without a login cookie (#121)', function () {
+    let sessionCookie
+
+    before(async function () {
+        const res = await util.axios.post('login', util.authForm, {
+            headers: { 'Content-Type': 'multipart/form-data', Cookie: '' }
+        })
+        // keep only the JSESSIONID, drop the login domain cookie
+        sessionCookie = res.headers['set-cookie']
+            .map((cookie) => cookie.split(';')[0])
+            .filter((cookie) => cookie.startsWith(jettySessionId + '='))
+            .join('; ')
+    })
+
+    const get = (path) =>
+        util.axios.get(path, {
+            headers: { Cookie: sessionCookie },
+            validateStatus: () => true
+        })
+
+    it('has a session cookie', function () {
+        expect(sessionCookie).to.match(/^JSESSIONID=/)
+    })
+
+    it('authenticates the session user on a route listing basicAuth', async function () {
+        const res = await get('api/parameters')
+        expect(res.status).to.equal(200)
+        expect(res.data.user.name).to.equal(util.adminCredentials.username)
+    })
+
+    // as in 2.1.1: use-cookie-auth only reads the login cookie, not the session
+    it('does not set the session user on a route listing only cookieAuth', async function () {
+        const res = await get('api/auth/cookie-only')
+        expect(res.status).to.equal(200)
+        expect(res.data.user).to.be.null
+    })
+
+    it('rejects the session user on a constrained route listing only a custom strategy', async function () {
+        const res = await get('jwt/test/is-dba')
+        expect(res.status).to.equal(401)
+    })
+})

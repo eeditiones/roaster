@@ -153,6 +153,24 @@ The key based authentication type corresponds to eXist's persistent login mechan
 
 The security scheme must be named **cookieAuth**. The `name` property defines the login session name to be used.
 
+The schemes listed in `security` are tried in order and the first one that authenticates the request wins.
+`basicAuth` only matches requests with an `Authorization: Basic …` header, so a scheme listed after it is still tried.
+If no scheme matches and the route allows HTTP Basic authentication, the user is the current database user, which is
+`guest` for requests without credentials. Otherwise the request has no user.
+
+Basic credentials are checked by eXist-db before roaster runs. A route allows them if its `security` lists a scheme
+declared with `"type": "http"` and `"scheme": "basic"`, such as:
+
+```json
+"basicAuth": {
+    "type": "http",
+    "scheme": "basic"
+}
+```
+
+Other routes reject requests that send Basic credentials with 401. Routes with `"security": []` have no
+requirements and serve such requests.
+
 Custom authentication strategies are possible. The test application has an example for JSON Web Tokens.
 
 ## Access Constraints

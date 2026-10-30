@@ -216,12 +216,34 @@ declare function auth:use-cookie-auth($request as map(*), $custom-options as map
 };
 
 (:~
- : Basic authentication is handled by Jetty
- : the user is already authenticated in the database and we just need to
- : retrieve the information here
+ : Basic authentication is handled by eXist-db before roaster runs:
+ : wrong credentials are rejected with 401, valid ones make the request run as
+ : that user, and we just need to retrieve the information here.
+ : Only matches if the request sends Basic credentials, so that strategies
+ : listed after basicAuth are still tried.
  :)
-declare function auth:use-basic-auth($request as map(*)) as map(*) {
-    rutil:getDBUser()
+declare function auth:use-basic-auth($request as map(*)) as map(*)? {
+    if (auth:sends-basic-credentials()) then
+        rutil:getDBUser()
+    else (
+    )
+};
+
+declare %private function auth:sends-basic-credentials() as xs:boolean {
+    matches(request:get-header("Authorization"), "^\s*Basic\s", "i")
+};
+
+(:~
+ : Does any of the security requirements refer to an HTTP Basic security scheme?
+ :)
+declare %private function auth:allows-basic-auth($defined-auth-methods as array(*)?, $spec as map(*)) as xs:boolean {
+    let $names := $defined-auth-methods?*!map:keys(.)
+    return exists($names[auth:is-basic-scheme($spec?components?securitySchemes?(.))])
+};
+
+(: auth-scheme names are case-insensitive (RFC 7235) :)
+declare %private function auth:is-basic-scheme($scheme as item()?) as xs:boolean {
+    $scheme instance of map(*) and $scheme?type = "http" and lower-case($scheme?scheme) = "basic"
 };
 
 declare %private function auth:is-public-route($constraints as map(*)?) as xs:boolean {
@@ -261,14 +283,29 @@ declare %private function auth:authenticate($request as map(*), $response as map
     ) else (
     )
 
-    let $methods := array:for-each($defined-auth-methods, auth:map-auth-methods(?, $strategies))
-
-    let $user := array:fold-left($methods, (), auth:use-first-matching-method($request))
-    let $constraints := $request?config?x-constraints
-    return if (auth:is-public-route($constraints) or auth:is-authorized-user($constraints, $user)) then (
-        map:put($request, "user", $user) (: add "user" to request :), $response
+    let $allows-basic-auth := auth:allows-basic-auth($defined-auth-methods, $request?spec)
+    return if (exists($defined-auth-methods?*) and not($allows-basic-auth) and auth:sends-basic-credentials()) then (
+        (: eXist-db already logged in the user, roaster can only refuse to serve the request :)
+        error($errors:UNAUTHORIZED, "Basic authentication is not allowed for this route")
     ) else
-        error($errors:UNAUTHORIZED, "Access denied")
+        let $methods := array:for-each($defined-auth-methods, auth:map-auth-methods(?, $strategies))
+        let $matched-user := array:fold-left($methods, (), auth:use-first-matching-method($request))
+        (:
+         : basicAuth accepts the user eXist-db established, guest without credentials.
+         : Other routes must not fall back to it: it may come from a session (JSESSIONID).
+         :)
+        let $user := (
+            $matched-user,
+            if ($allows-basic-auth) then
+                rutil:getDBUser()
+            else (
+            )
+        )[1]
+        let $constraints := $request?config?x-constraints
+        return if (auth:is-public-route($constraints) or auth:is-authorized-user($constraints, $user)) then (
+            map:put($request, "user", $user) (: add "user" to request :), $response
+        ) else
+            error($errors:UNAUTHORIZED, "Access denied")
 };
 
 declare %private function auth:map-auth-methods($method-config as map(*), $strategies as map(*)) as function(*) {
