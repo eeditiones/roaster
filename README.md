@@ -292,6 +292,8 @@ Run the test suite with
 npm test
 ```
 
+The test application depends on [jwt](https://github.com/eXistSolutions/exist-jwt), which in turn depends on [expath-crypto](https://github.com/eXist-db/expath-crypto-module). eXist-db resolves both from the public repository while installing the test application, so an unreachable `exist-db.org` makes the whole suite fail before any test runs. To install them from local files instead, drop their `.xar` files into `test/dependencies` and they will be installed ahead of the test application. The folder is empty by default and the step is skipped when it stays that way.
+
 Additional tests that cover this package are contained in the [tei-publisher-app](https://github.com/eeditiones/tei-publisher-app) repository.
 
 ## Contributing
