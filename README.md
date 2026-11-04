@@ -85,6 +85,17 @@ Roaster is more lenient than the referenced RFCs, because it relies on the under
 
 A value that cannot be parsed results in a `400 Bad Request` response.
 
+### Empty query parameters
+
+A query parameter sent without a value (`?q=`) is passed to the handler as the empty string.
+For types other than `string` this results in a `400 Bad Request` response, because the empty string cannot be cast.
+
+If the parameter declares `allowEmptyValue: true`, an empty value is treated as if the parameter had been omitted:
+the `default` from its schema applies, and a `required` parameter is reported as missing.
+This follows the clarified wording of [OpenAPI 3.0.4](https://spec.openapis.org/oas/v3.0.4.html#parameter-allow-empty-value) and later.
+The field only applies to `form` style (the default for query parameters) and is ignored for all other styles.
+Note that `allowEmptyValue` is deprecated as of OpenAPI 3.2.0.
+
 ## Responses
 
 If the function returns a value, it is sent to the client with a HTTP status code of 200 (OK). The returned value is converted into the specified target media type (if any, otherwise `application/xml` is assumed).
