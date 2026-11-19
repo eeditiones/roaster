@@ -25,7 +25,7 @@
     "@existdb/repo-xml-changelog-generator": "^2.0.1",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^11.0.1",
-    "@semantic-release/github": "^12.0.10",
+    "@semantic-release/github": "^12.0.11",
     "axios": "^1.20.0",
     "chai": "^6.3.0",
     "delete": "^1.1.0",
@@ -40,7 +40,7 @@
     "mocha": "^12.0.3",
     "prettier": "^3.9.10",
     "prettier-plugin-xquery": "^1.7.0",
-    "semantic-release": "^25.0.9"
+    "semantic-release": "^26.0.1"
   },
   "private": true,
   "lint-staged": {
